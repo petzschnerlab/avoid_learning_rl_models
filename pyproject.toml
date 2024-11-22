@@ -1,0 +1,20 @@
+[project]
+name = "soma_rl"
+version = "0.0.1"
+authors = [
+  { name="Chad Williams", email="chad_williams@brown.edu" },
+]
+description = "This package is for the modelling of SOMA data relative to the avoidance learning task. It was written by Chad Williams as part of the Psychiatry, Embodiment and Computation (PEAC) Lab at Brown University, led by Frederike Petzschner."
+readme = "README.md"
+requires-python = ">=3.7"
+
+dependencies = [
+    
+]
+
+[project.urls]
+"Repository" = "https://github.com/petzschnerlab/SOMA_avoidance_learning"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
