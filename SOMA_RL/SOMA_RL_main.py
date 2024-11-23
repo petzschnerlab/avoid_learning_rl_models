@@ -14,6 +14,8 @@ if __name__ == "__main__":
     #Run experiment
     trial_design = {'learning_phase': {'number_of_trials': 100, 'number_of_blocks': 4}}
     al_task.run_experiment(trial_design)
+
+    #Extract model
     q_learning = al_task.rl_model
 
     #Plot Q-values
