@@ -22,22 +22,14 @@ class AvoidanceLearningTask:
         self.stimuli_probabilities = [.25, .75]
 
         #Populate model with data matrices
-        self.rl_model.q_values = {f'State AB': pd.DataFrame([[0,0]], columns=['Q1', 'Q2']),
-                             f'State CD': pd.DataFrame([[0,0]], columns=['Q1', 'Q2']),
-                             f'State EF': pd.DataFrame([[0,0]], columns=['Q1', 'Q2']),
-                             f'State GH': pd.DataFrame([[0,0]], columns=['Q1', 'Q2'])}
-        
-        self.rl_model.prediction_errors = {f'State AB': pd.DataFrame([[0,0]], columns=['PE1', 'PE2']),
-                        f'State CD': pd.DataFrame([[0,0]], columns=['PE1', 'PE2']),
-                        f'State EF': pd.DataFrame([[0,0]], columns=['PE1', 'PE2']),
-                        f'State GH': pd.DataFrame([[0,0]], columns=['PE1', 'PE2'])}
-        
         self.rl_model.task_data_columns = ['block_number', 'trial_number', 'state_index', 
                                            'state_id', 'stim_id', 'context', 'feedback', 
                                            'probabilities', 'rewards', 'q_values', 'action', 
                                            'prediction_errors']
-        self.rl_model.task_data = pd.DataFrame(columns=self.rl_model.task_data_columns)
-
+        
+        self.rl_model.create_matrices(states=['State AB', 'State CD', 'State EF', 'State GH'],
+                                      number_actions=2)
+        
     def run_learning_phase(self, trial_design):
 
         number_of_trials = trial_design['learning_phase']['number_of_trials']
@@ -72,7 +64,6 @@ class AvoidanceLearningTask:
     def run_transfer_phase(self):
         pass
 
-    def run_experiment(self, 
-                       trial_design = {'learning_phase': {'number_of_trials': 100, 'number_of_blocks': 4}}):
+    def run_experiment(self, trial_design = {'learning_phase': {'number_of_trials': 100, 'number_of_blocks': 4}}):
         self.run_learning_phase(trial_design)
         self.run_transfer_phase()

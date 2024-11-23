@@ -7,6 +7,11 @@ import matplotlib.pyplot as plt
 
 class RLToolbox:
 
+    def create_matrices(self, states, number_actions):
+        self.q_values = {state: pd.DataFrame([[0]*number_actions], columns=[f'Q{i+1}' for i in range(number_actions)]) for state in states}
+        self.prediction_errors = {state: pd.DataFrame([[0]*number_actions], columns=[f'PE{i+1}' for i in range(number_actions)]) for state in states}
+        self.task_data = pd.DataFrame(columns=self.task_data_columns)
+
     def get_q_value(self, state):
         state['q_values'] = list(self.q_values[state['state_id']].iloc[-1])
         return state
@@ -17,8 +22,6 @@ class RLToolbox:
         self.update_task_data(state)
 
     def update_task_data(self, state):
-
-        #TODO: Fill state with necessary data
         self.task_data = pd.concat([self.task_data, 
                                     pd.DataFrame([[state[col_name] for col_name in self.task_data_columns]], 
                                     columns=self.task_data_columns)], 
@@ -84,9 +87,6 @@ class QLearning(RLToolbox):
         self.temperature = temperature   
 
     def select_action(self, state):
-        #TODO: So far this is just greedy selection
-        #Implement softmax action selection
-
         probabilities = []
         for i in range(len(state['q_values'])):
             numerator = np.exp(state['q_values'][i] / self.temperature)
@@ -96,7 +96,7 @@ class QLearning(RLToolbox):
         #Use random number and select action
         probabilities = np.cumsum(probabilities)
         random_number = rnd.random()
-        action = np.argwhere(probabilities > random_number)[0][0]
+        action = np.argwhere(probabilities >= random_number)[0][-1]
         state['action'] = action
 
         return state
