@@ -87,17 +87,11 @@ class QLearning(RLToolbox):
         self.temperature = temperature   
 
     def select_action(self, state):
-        probabilities = []
-        for i in range(len(state['q_values'])):
-            numerator = np.exp(state['q_values'][i] / self.temperature)
-            denominator = np.sum([np.exp(state['q_values'][j] / self.temperature) for j in range(len(state['q_values']))])
-            probabilities.append(numerator / denominator)
 
-        #Use random number and select action
-        probabilities = np.cumsum(probabilities)
-        random_number = rnd.random()
-        action = np.argwhere(probabilities >= random_number)[0][-1]
-        state['action'] = action
+        transformed_q_values = np.exp(np.divide(state['q_values'], self.temperature))
+        probability_q_values = (transformed_q_values/np.sum(transformed_q_values)).cumsum()
+        action = np.where(probability_q_values >= rnd.random())[0] #TODO: Something is wrong here
+        state['action'] = rnd.choice(action)
 
         return state
     
