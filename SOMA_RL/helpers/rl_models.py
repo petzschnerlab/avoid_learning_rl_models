@@ -47,14 +47,14 @@ class RLToolbox:
     
         fig, ax = plt.subplots(2, 4, figsize=(10,5))
         for i, key in enumerate(self.q_values.keys()):
-            self.q_values[key].plot(ax=ax[0,i])
+            self.q_values[key][1:].plot(ax=ax[0,i])
             ax[0,i].set_title(key)
             ax[0,i].set_ylim(-1, 1)
             ax[0,i].set_ylabel('Q-Value')
             ax[0,i].set_xlabel('Trial')
         
         for i, key in enumerate(self.prediction_errors.keys()):
-            self.prediction_errors[key].plot(ax=ax[1,i])
+            self.prediction_errors[key][1:].plot(ax=ax[1,i])
             ax[1,i].set_title(key)
             ax[1,i].set_ylim(-1, 1)
             ax[1,i].set_ylabel('Prediction Error')
