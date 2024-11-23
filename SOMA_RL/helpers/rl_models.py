@@ -90,8 +90,7 @@ class QLearning(RLToolbox):
 
         transformed_q_values = np.exp(np.divide(state['q_values'], self.temperature))
         probability_q_values = (transformed_q_values/np.sum(transformed_q_values)).cumsum()
-        action = np.where(probability_q_values >= rnd.random())[0] #TODO: Something is wrong here
-        state['action'] = rnd.choice(action)
+        state['action'] = np.where(probability_q_values >= rnd.random())[0][0]
 
         return state
     
