@@ -45,22 +45,61 @@ class RLToolbox:
 
     def plot_progress(self):
     
-        fig, ax = plt.subplots(2, 4, figsize=(10,5))
+        fig, ax = plt.subplots(3, 4, figsize=(15,5))
+
+        #Plot q-values
         for i, key in enumerate(self.q_values.keys()):
-            self.q_values[key][1:].plot(ax=ax[0,i])
+            for ci, col in enumerate(self.q_values[key].columns):
+                rolling_q_values = self.q_values[key][col].reset_index(drop=True).rolling(window=2).mean()
+                ax[0,i].plot(rolling_q_values, label=['Stim 1', 'Stim 2'][ci])
             ax[0,i].set_title(key)
             ax[0,i].set_ylim(-1, 1)
-            ax[0,i].set_ylabel('Q-Value')
-            ax[0,i].set_xlabel('Trial')
+            if i == 0:
+                ax[0,i].set_ylabel('Q-Value')
+            ax[0,i].set_xlabel('')
+            if i == len(self.q_values.keys())-1:
+                ax[0,i].legend(loc='center left', bbox_to_anchor=(1, 0.5))
+            ax[0,i].set_xticklabels([])
+            if i > 0:
+                ax[0,i].set_yticklabels([])
         
+        #Plot prediction errors
         for i, key in enumerate(self.prediction_errors.keys()):
-            self.prediction_errors[key][1:].plot(ax=ax[1,i])
-            ax[1,i].set_title(key)
+            for ci, col in enumerate(self.prediction_errors[key].columns):
+                rolling_prediction_errors = self.prediction_errors[key][col].reset_index(drop=True).rolling(window=2).mean()
+                ax[1,i].plot(rolling_prediction_errors, label=['Stim 1', 'Stim 2'][ci])
+            ax[1,i].set_title('')
             ax[1,i].set_ylim(-1, 1)
-            ax[1,i].set_ylabel('Prediction Error')
-            ax[1,i].set_xlabel('Trial')
+            if i == 0:
+                ax[1,i].set_ylabel('Prediction Error')
+            ax[1,i].set_xlabel('')
+            ax[1,i].set_xticklabels([])
+            if i > 0:
+                ax[1,i].set_yticklabels([])
+
+        #Plot accuracy
+        for i, key in enumerate(self.accuracy.keys()):
+            rolling_accuracy = self.accuracy[key].reset_index(drop=True).rolling(window=2).mean()
+            ax[2,i].plot(rolling_accuracy)
+            ax[2,i].set_title('')
+            ax[2,i].set_ylim(-.05, 1.05)
+            if i == 0:
+                ax[2,i].set_ylabel('Accuracy')
+            ax[2,i].set_xlabel('Trial')
+            if i > 0:
+                ax[2,i].set_yticklabels([])
         
         plt.show()
+
+    def run_computations(self):
+        self.compute_accuracy()
+
+    def compute_accuracy(self):
+
+        self.accuracy = {}
+        for state in self.task_data['state_id'].unique():
+            state_data = self.task_data[self.task_data['state_id'] == state]
+            self.accuracy[state] = state_data['accuracy']
 
 #Q-Learning Model
 class QLearning(RLToolbox):
@@ -91,6 +130,7 @@ class QLearning(RLToolbox):
         transformed_q_values = np.exp(np.divide(state['q_values'], self.temperature))
         probability_q_values = (transformed_q_values/np.sum(transformed_q_values)).cumsum()
         state['action'] = np.where(probability_q_values >= rnd.random())[0][0]
+        state['accuracy'] = int(state['action'] == state['correct_action'])
 
         return state
     

@@ -25,7 +25,7 @@ class AvoidanceLearningTask:
         self.rl_model.task_data_columns = ['block_number', 'trial_number', 'state_index', 
                                            'state_id', 'stim_id', 'context', 'feedback', 
                                            'probabilities', 'rewards', 'q_values', 'action', 
-                                           'prediction_errors']
+                                           'prediction_errors', 'correct_action', 'accuracy']
         
         self.rl_model.create_matrices(states=['State AB', 'State CD', 'State EF', 'State GH'],
                                       number_actions=2)
@@ -49,6 +49,10 @@ class AvoidanceLearningTask:
                 stimuli_context = self.stimuli_context[stimuli_index]
                 stimuli_feedback = self.stimuli_feedback[stimuli_index]
                 stimuli_probabilities = self.stimuli_probabilities
+                if stimuli_context == 'Reward':
+                    correct_action = stimuli_probabilities.index(max(stimuli_probabilities))
+                else:
+                    correct_action = stimuli_probabilities.index(min(stimuli_probabilities))
                 state = {'block_number': block,
                          'trial_number': trial,
                          'state_index': stimuli_index, 
@@ -56,7 +60,8 @@ class AvoidanceLearningTask:
                          'stim_id': stimuli_id,
                          'context': stimuli_context,
                          'feedback': stimuli_feedback,
-                         'probabilities': stimuli_probabilities}
+                         'probabilities': stimuli_probabilities,
+                         'correct_action': correct_action}
 
                 #Run model
                 self.rl_model.run_trial(state)
