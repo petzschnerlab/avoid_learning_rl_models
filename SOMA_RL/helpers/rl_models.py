@@ -7,6 +7,10 @@ import matplotlib.pyplot as plt
 
 class RLToolbox:
 
+    def load_methods(self, methods):
+        for key in methods:
+            setattr(self, key, methods[key])
+
     def get_q_value(self, state):
         state['q_values'] = list(self.q_values[state['state_id']].iloc[-1])
         return state
@@ -21,21 +25,10 @@ class RLToolbox:
             self.update_prediction_errors(state)
         self.update_task_data(state, phase=phase)
 
-    def update_task_data(self, state, phase='learning'):
-        if phase == 'learning':
-            self.task_learning_data = pd.concat([self.task_learning_data, 
-                                        pd.DataFrame([[state[col_name] for col_name in self.task_learning_data_columns]], 
-                                                     columns=self.task_learning_data_columns)], 
-                                        ignore_index=True)
-        else:
-            self.task_transfer_data = pd.concat([self.task_transfer_data, 
-                                        pd.DataFrame([[state[col_name] for col_name in self.task_transfer_data_columns]], 
-                                                     columns=self.task_transfer_data_columns)],
-                                        ignore_index=True)
-
     def update_prediction_errors(self, state):
         self.prediction_errors[state['state_id']] = pd.concat([self.prediction_errors[state['state_id']], 
-                                                               pd.DataFrame([state['prediction_errors']], columns=['PE1', 'PE2'])], 
+                                                               pd.DataFrame([state['prediction_errors']], 
+                                                                            columns=self.prediction_errors[state['state_id']].columns)], 
                                                                ignore_index=True)
 
     def update_q_values(self, state):
@@ -45,9 +38,11 @@ class RLToolbox:
         new_q_values = []
         for i in range(len(state['rewards'])):
             new_q_values.append(state['q_values'][i] + (learning_rates[i] * state['prediction_errors'][i]))
-        new_q_values = pd.DataFrame([new_q_values], columns=['Q1', 'Q2'])
 
-        self.q_values[state['state_id']] = pd.concat([self.q_values[state['state_id']], new_q_values], ignore_index=True)
+        self.q_values[state['state_id']] = pd.concat([self.q_values[state['state_id']],
+                                                      pd.DataFrame([new_q_values], 
+                                                                   columns=self.q_values[state['state_id']].columns)], 
+                                                    ignore_index=True)
 
     def plot_model(self):
     
@@ -103,43 +98,6 @@ class RLToolbox:
         ax[3,0].set_xticklabels(x_tick_labels)
 
         plt.show()
-        
-    def run_computations(self):
-        self.compute_accuracy()
-        self.compute_choice_rate()
-
-    def compute_accuracy(self):
-
-        self.accuracy = {}
-        for state in self.task_learning_data['state_id'].unique():
-            state_data = self.task_learning_data[self.task_learning_data['state_id'] == state]
-            self.accuracy[state] = state_data['accuracy']
-
-    def compute_choice_rate(self):
-    
-        choice_rate = {}
-        for stimulus in self.transfer_stimuli:
-            #find rows where stim_id contains stimulus
-            stimulus_data = self.task_transfer_data.loc[self.task_transfer_data['stim_id'].apply(lambda x: stimulus in x)]
-            #find whether stimulus is action 0 or 1
-            stimulus_data.loc[:,'stim_index'] = stimulus_data['stim_id'].apply(lambda x: 0 if stimulus == x[0] else 1)
-            stimulus_data.loc[:,'stim_chosen'] = stimulus_data.apply(lambda x: int(x['action'] == x['stim_index']), axis=1)
-            choice_rate[stimulus] = int((stimulus_data['stim_chosen'].sum()/len(stimulus_data))*100)
-
-        #Average column pairs:
-        pairs = [['A','C'],['B','D'],['E','G'],['F','H']]
-        self.choice_rate = {}
-        for pair in pairs:
-            self.choice_rate[pair[0]] = (choice_rate[pair[0]] + choice_rate[pair[1]])/2
-        self.choice_rate['N'] = choice_rate['N']
-
-    def combine_q_values(self):
-
-        stimuli = ['A','B','C','D','E','F','G','H']
-        self.q_values_summary = pd.concat([self.q_values[state] for state in self.q_values.keys()], axis=1)
-        self.q_values_summary.columns = stimuli
-        self.final_q_values = self.q_values_summary.iloc[-1]
-        self.final_q_values['N'] = 0
 
 #Q-Learning Model
 class QLearning(RLToolbox):

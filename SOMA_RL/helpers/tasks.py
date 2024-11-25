@@ -20,28 +20,83 @@ class AvoidanceLearningTask:
         
         self.stimuli_probabilities = [[.75, .25], [.25, .75]]
 
+        #Populate model with data matrices
+        self.task_learning_data_columns = ['block_number', 'trial_number', 'state_index', 
+                                           'state_id', 'stim_id', 'context', 'feedback', 
+                                           'probabilities', 'rewards', 'q_values', 'action', 
+                                           'prediction_errors', 'correct_action', 'accuracy']
+        
+        self.task_transfer_data_columns = ['block_number', 'trial_number', 'state_id',
+                                                    'stim_id', 'q_values', 'action']
+
     def create_model_matrices(self, states, number_actions):
         self.rl_model.q_values = {state: pd.DataFrame([[0]*number_actions], columns=[f'Q{i+1}' for i in range(number_actions)]) for state in states}
         self.rl_model.prediction_errors = {state: pd.DataFrame([[0]*number_actions], columns=[f'PE{i+1}' for i in range(number_actions)]) for state in states}
         self.rl_model.task_learning_data = pd.DataFrame(columns=self.task_learning_data_columns)
         self.rl_model.task_transfer_data = pd.DataFrame(columns=self.task_transfer_data_columns)
 
+    def update_task_data(self, state, phase='learning'):
+        if phase == 'learning':
+            self.rl_model.task_learning_data = pd.concat([self.rl_model.task_learning_data, 
+                                        pd.DataFrame([[state[col_name] for col_name in self.task_learning_data_columns]], 
+                                                     columns=self.task_learning_data_columns)], 
+                                        ignore_index=True)
+        else:
+            self.rl_model.task_transfer_data = pd.concat([self.rl_model.task_transfer_data, 
+                                        pd.DataFrame([[state[col_name] for col_name in self.task_transfer_data_columns]], 
+                                                     columns=self.task_transfer_data_columns)],
+                                        ignore_index=True)
+            
+    def compute_accuracy(self):
+
+        self.rl_model.accuracy = {}
+        for state in self.rl_model.task_learning_data['state_id'].unique():
+            state_data = self.rl_model.task_learning_data[self.rl_model.task_learning_data['state_id'] == state]
+            self.rl_model.accuracy[state] = state_data['accuracy']
+
+    def compute_choice_rate(self):
+    
+        choice_rate = {}
+        for stimulus in self.rl_model.transfer_stimuli:
+            stimulus_data = self.rl_model.task_transfer_data.loc[self.rl_model.task_transfer_data['stim_id'].apply(lambda x: stimulus in x)]
+            stimulus_data.loc[:,'stim_index'] = stimulus_data['stim_id'].apply(lambda x: 0 if stimulus == x[0] else 1)
+            stimulus_data.loc[:,'stim_chosen'] = stimulus_data.apply(lambda x: int(x['action'] == x['stim_index']), axis=1)
+            choice_rate[stimulus] = int((stimulus_data['stim_chosen'].sum()/len(stimulus_data))*100)
+
+        #Average column pairs:
+        pairs = [['A','C'],['B','D'],['E','G'],['F','H']]
+        self.rl_model.choice_rate = {}
+        for pair in pairs:
+            self.rl_model.choice_rate[pair[0]] = (choice_rate[pair[0]] + choice_rate[pair[1]])/2
+        self.rl_model.choice_rate['N'] = choice_rate['N']
+    
+    def run_computations(self):
+        self.compute_accuracy()
+        self.compute_choice_rate()
+
+    def combine_q_values(self):
+
+        stimuli = ['A','B','C','D','E','F','G','H']
+        self.rl_model.q_values_summary = pd.concat([self.rl_model.q_values[state] for state in self.rl_model.q_values.keys()], axis=1)
+        self.rl_model.q_values_summary.columns = stimuli
+        self.rl_model.final_q_values = self.rl_model.q_values_summary.iloc[-1]
+        self.rl_model.final_q_values['N'] = 0
+
     def initiate_model(self, rl_model):
 
-        #Initialize model
-        self.rl_model = rl_model
-
-        #Populate model with data matrices
-        self.rl_model.task_learning_data_columns = ['block_number', 'trial_number', 'state_index', 
-                                           'state_id', 'stim_id', 'context', 'feedback', 
-                                           'probabilities', 'rewards', 'q_values', 'action', 
-                                           'prediction_errors', 'correct_action', 'accuracy']
-        
-        self.rl_model.task_transfer_data_columns = ['block_number', 'trial_number', 'state_id',
-                                                    'stim_id', 'q_values', 'action']
-        
+        #Initialize model, create dataframes, and load methods
+        self.rl_model = rl_model        
         self.create_model_matrices(states=['State AB', 'State CD', 'State EF', 'State GH'],
                                             number_actions=2)
+        
+        methods = {
+            'update_task_data': self.update_task_data,
+            'compute_accuracy': self.compute_accuracy,
+            'compute_choice_rate': self.compute_choice_rate,
+            'run_computations': self.run_computations,
+            'combine_q_values': self.combine_q_values
+        }
+        self.rl_model.load_methods(methods)
         
     def run_learning_phase(self, task_design):
 
