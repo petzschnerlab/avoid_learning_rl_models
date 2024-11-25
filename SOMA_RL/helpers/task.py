@@ -19,13 +19,16 @@ class AvoidanceLearningTask:
         
         self.stimuli_feedback = [1, 1, -1, -1]
         
-        self.stimuli_probabilities = [.25, .75]
+        self.stimuli_probabilities = [[.75, .25], [.25, .75]]
 
         #Populate model with data matrices
-        self.rl_model.task_data_columns = ['block_number', 'trial_number', 'state_index', 
+        self.rl_model.task_learning_data_columns = ['block_number', 'trial_number', 'state_index', 
                                            'state_id', 'stim_id', 'context', 'feedback', 
                                            'probabilities', 'rewards', 'q_values', 'action', 
                                            'prediction_errors', 'correct_action', 'accuracy']
+        
+        self.rl_model.task_transfer_data_columns = ['block_number', 'trial_number', 'state_id',
+                                                    'stim_id', 'q_values', 'action']
         
         self.rl_model.create_matrices(states=['State AB', 'State CD', 'State EF', 'State GH'],
                                       number_actions=2)
@@ -47,12 +50,14 @@ class AvoidanceLearningTask:
                 stimuli_index = trial_order[trial]
                 stimuli_id = self.stimuli_ids[stimuli_index]
                 stimuli_context = self.stimuli_context[stimuli_index]
+                context_index = 0 if stimuli_context == 'Reward' else 1
                 stimuli_feedback = self.stimuli_feedback[stimuli_index]
-                stimuli_probabilities = self.stimuli_probabilities
+                stimuli_probabilities = self.stimuli_probabilities[context_index]
                 if stimuli_context == 'Reward':
                     correct_action = stimuli_probabilities.index(max(stimuli_probabilities))
                 else:
                     correct_action = stimuli_probabilities.index(min(stimuli_probabilities))
+                
                 state = {'block_number': block,
                          'trial_number': trial,
                          'state_index': stimuli_index, 
@@ -64,11 +69,40 @@ class AvoidanceLearningTask:
                          'correct_action': correct_action}
 
                 #Run model
-                self.rl_model.run_trial(state)
+                self.rl_model.run_trial(state, phase='learning')
     
-    def run_transfer_phase(self):
-        pass
+    def run_transfer_phase(self, trial_design):
 
-    def run_experiment(self, trial_design = {'learning_phase': {'number_of_trials': 100, 'number_of_blocks': 4}}):
+        #Get arguments
+        times_repeated = trial_design['transfer_phase']['times_repeated']
+        
+        #Setup pairs
+        self.rl_model.transfer_stimuli = ['A','B','C','D','E','F','G','H','N'] #N is a novel stimulus
+        exclusion_pairs = [['A','C'], ['B','D'], ['E','G'], ['F','H']]
+        self.transfer_pairs = [[self.rl_model.transfer_stimuli[i], self.rl_model.transfer_stimuli[j]] 
+                               for i in range(len(self.rl_model.transfer_stimuli)) for j in range(i+1, len(self.rl_model.transfer_stimuli)) 
+                               if [self.rl_model.transfer_stimuli[i], self.rl_model.transfer_stimuli[j]] not in exclusion_pairs]
+        self.transfer_pairs = self.transfer_pairs * times_repeated
+        rnd.shuffle(self.transfer_pairs)
+
+        #Setup q-values
+        self.rl_model.combine_q_values()
+
+        #Run transfer phase
+        for trial, pair in enumerate(self.transfer_pairs):
+
+            #Select stimuli
+            stimuli_id = pair
+            
+            state = {'block_number': 0,
+                     'trial_number': trial,
+                     'state_id': f'State {"".join(stimuli_id)}',
+                     'stim_id': stimuli_id}
+        
+            #Run model
+            self.rl_model.run_trial(state, phase='transfer')
+
+    def run_experiment(self, trial_design = {'learning_phase': {'number_of_trials': 100, 'number_of_blocks': 4},
+                                             'transfer_phase': {'times_repeated': 4}}):
         self.run_learning_phase(trial_design)
-        self.run_transfer_phase()
+        self.run_transfer_phase(trial_design)
