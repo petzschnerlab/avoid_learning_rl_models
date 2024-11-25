@@ -169,7 +169,10 @@ class QLearning(RLToolbox):
         #Set parameters
         self.factual_lr = factual_lr
         self.counterfactual_lr = counterfactual_lr
-        self.temperature = temperature   
+        self.temperature = temperature  
+        self.parameters = {'factual_lr': self.factual_lr, 
+                           'counterfactual_lr': self.counterfactual_lr, 
+                           'temperature': self.temperature}
 
     def select_action(self, state):
 

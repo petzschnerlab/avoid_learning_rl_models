@@ -1,3 +1,5 @@
+import sys
+sys.dont_write_bytecode = True
 from helpers.tasks import AvoidanceLearningTask
 from helpers.rl_models import QLearning
 
