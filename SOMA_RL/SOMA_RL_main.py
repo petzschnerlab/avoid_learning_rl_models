@@ -1,5 +1,8 @@
 import sys
 sys.dont_write_bytecode = True
+import random as rnd
+import pandas as pd
+
 from helpers.tasks import AvoidanceLearningTask
 from helpers.rl_models import QLearning
 
@@ -17,7 +20,7 @@ class RLPipeline:
         trial_design : dict
             Dictionary containing trial design parameters
         """
-        
+
         def __init__(self, task, model, trial_design):
 
             #Get parameters
@@ -35,6 +38,10 @@ class RLPipeline:
 
 if __name__ == "__main__":
 
+    # =========================================== #
+    # === EXAMPLE RUNNING A SINGLE SIMULATION === #
+    # =========================================== #
+
     #Initialize task, model, and task design
     task = AvoidanceLearningTask()
     model = QLearning(factual_lr=0.1, counterfactual_lr=0.05, temperature=0.1)
@@ -46,6 +53,42 @@ if __name__ == "__main__":
 
     #Finalize and view model
     q_learning.plot_model()
+
+    '''
+    # ============================================== #
+    # === EXAMPLE RUNNING SEQUENTIAL SIMULATIONS === #
+    # ============================================== #
+
+    parameters = []
+    for i in range(100):
+        print(f'\nRunning simulation {i}')
+
+        task = AvoidanceLearningTask()
+        model = QLearning(factual_lr=rnd.random(), #Randomize parameters
+                          counterfactual_lr=rnd.random(), 
+                          temperature=rnd.random())
+
+        task_design = {'learning_phase': {'number_of_trials': 24, 'number_of_blocks': 4},
+                       'transfer_phase': {'times_repeated': 4}}
+
+        q_learning = RLPipeline(task, model, task_design).simulate()
+
+        model_data = {'index': i, 
+                      'factual_lr': model.factual_lr, 
+                      'counterfactual_lr': model.counterfactual_lr, 
+                      'temperature': model.temperature, 
+                      '75R': model.choice_rate['A'],
+                      '25R': model.choice_rate['B'],
+                      '25P': model.choice_rate['E'],
+                      '75P': model.choice_rate['F'],
+                      'N': model.choice_rate['N']}
+        
+        if not type(parameters) == pd.DataFrame:
+            parameters = pd.DataFrame([model_data])
+        else:
+            parameters = pd.concat([parameters, pd.DataFrame([model_data])], ignore_index=True)
+    
+    '''
     
     #Debug stop
     print()
