@@ -32,6 +32,8 @@ class AvoidanceLearningTask:
     def create_model_matrices(self, states, number_actions):
         self.rl_model.q_values = {state: pd.DataFrame([[0]*number_actions], columns=[f'Q{i+1}' for i in range(number_actions)]) for state in states}
         self.rl_model.prediction_errors = {state: pd.DataFrame([[0]*number_actions], columns=[f'PE{i+1}' for i in range(number_actions)]) for state in states}
+        self.rl_model.context_values = {state: pd.DataFrame([[0]], columns=['C']) for state in states}
+        self.rl_model.context_prediction_errors = {state: pd.DataFrame([[0]], columns=['PE']) for state in states}
         self.rl_model.task_learning_data = pd.DataFrame(columns=self.task_learning_data_columns)
         self.rl_model.task_transfer_data = pd.DataFrame(columns=self.task_transfer_data_columns)
 
@@ -106,7 +108,7 @@ class AvoidanceLearningTask:
         for block in range(number_of_blocks):
 
             #Determine trial order
-            trial_order =[0, 1, 2, 3]*int(number_of_trials/4)
+            trial_order = [0, 1, 2, 3]*int(number_of_trials/4)
             rnd.shuffle(trial_order)
 
             for trial in range(number_of_trials):

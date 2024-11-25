@@ -133,7 +133,7 @@ class QLearning(RLToolbox):
                            'temperature': self.temperature}
 
     #RL functions
-    def determine_reward(self, state):
+    def get_reward(self, state):
         random_numbers = [rnd.random() for i in range(len(state['stim_id']))]
         reward = [int(random_numbers[i] < state['probabilities'][i]) for i in range(len(state['stim_id']))]
         reward = [reward[i] * state['feedback'] for i in range(len(state['stim_id']))]
@@ -155,11 +155,11 @@ class QLearning(RLToolbox):
     def compute_prediction_error(rewards, state):
         state['prediction_errors'] = [state['rewards'][i] - state['q_values'][i] for i in range(len(state['rewards']))]
         return state
-
+    
     #Run trial functions
     def run_trial(self, state, phase = 'learning'):
         if phase == 'learning':
-            state = self.determine_reward(state)
+            state = self.get_reward(state)
             state = self.get_q_value(state)
             state = self.select_action(state)
             state = self.compute_prediction_error(state)
@@ -169,6 +169,98 @@ class QLearning(RLToolbox):
             state = self.select_action(state)
         self.update_task_data(state, phase=phase)
 
+#Actor-Critic Model
+class Relative(RLToolbox):
 
+    """
+    Reinforcement Learning Model: Relative (Palminteri et al., 2015)
 
+    Parameters:
+    ------------
+    factual_lr: float
+        Learning rate for factual Q-value update
+    counterfactual_lr: float
+        Learning rate for counterfactual Q-value update
+    temperature: float
+        Temperature parameter for softmax action selection
+    """
+
+    def __init__(self, factual_lr, counterfactual_lr, contextual_lr, temperature):
+        super().__init__()
+
+        #Set parameters
+        self.factual_lr = factual_lr
+        self.counterfactual_lr = counterfactual_lr
+        self.contextual_lr = contextual_lr
+        self.temperature = temperature
+        self.parameters = {'factual_lr': self.factual_lr, 
+                           'counterfactual_lr': self.counterfactual_lr, 
+                           'contextual_lr': self.contextual_lr,
+                           'temperature': self.temperature}
+        
+        #Create context value dataframe
+        
+    #RL functions
+    def get_context_value(self, state):
+        state['context_value'] = list(self.context_values[state['state_id']].iloc[-1])
+        return state
+    
+    def get_reward(self, state):
+        random_numbers = [rnd.random() for i in range(len(state['stim_id']))]
+        reward = [int(random_numbers[i] < state['probabilities'][i]) for i in range(len(state['stim_id']))]
+        reward = [reward[i] * state['feedback'] for i in range(len(state['stim_id']))]
+
+        state['rewards'] = reward
+        state['context_reward'] = np.average(state['rewards'])
+
+        return state
+    
+    def compute_prediction_error(rewards, state):
+        state['prediction_errors'] = [state['rewards'][i] - state['context_value'][0] - state['q_values'][i] for i in range(len(state['rewards']))]
+        state['context_prediction_error'] = state['context_reward'] - state['context_value']
+        return state
+    
+    def select_action(self, state):
+
+        transformed_q_values = np.exp(np.divide(state['q_values'], self.temperature))
+        probability_q_values = (transformed_q_values/np.sum(transformed_q_values)).cumsum()
+        state['action'] = np.where(probability_q_values >= rnd.random())[0][0]
+        if 'correct_action' in state.keys():
+            state['accuracy'] = int(state['action'] == state['correct_action'])
+
+        return state
+
+    def update_context_values(self, state):
+
+        new_context_value = state['context_value'] + (self.contextual_lr * state['context_prediction_error'])
+
+        self.context_values[state['state_id']] = pd.concat([self.context_values[state['state_id']], 
+                                                            pd.DataFrame([new_context_value], 
+                                                                         columns=self.context_values[state['state_id']].columns)], 
+                                                            ignore_index=True)
+    
+    def update_context_prediction_errors(self, state):
+        self.context_prediction_errors[state['state_id']] = pd.concat([self.context_prediction_errors[state['state_id']], 
+                                                                      pd.DataFrame([state['context_prediction_error']], 
+                                                                                   columns=self.context_prediction_errors[state['state_id']].columns)], 
+                                                                      ignore_index=True)
+
+    def update_context(self, state):
+        self.update_context_values(state)
+        self.update_context_prediction_errors(state)            
+
+    #Run trial functions
+    def run_trial(self, state, phase = 'learning'):
+        if phase == 'learning':
+            state = self.get_reward(state)
+            state = self.get_q_value(state)
+            state = self.get_context_value(state)
+            state = self.select_action(state)
+            state = self.compute_prediction_error(state)
+            self.update_model(state)
+            self.update_context(state)
+        else:
+            state = self.get_final_q_values(state)
+            state = self.select_action(state)
+        self.update_task_data(state, phase=phase)
 

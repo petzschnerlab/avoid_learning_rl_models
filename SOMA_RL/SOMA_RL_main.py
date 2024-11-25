@@ -4,7 +4,7 @@ import random as rnd
 import pandas as pd
 
 from helpers.tasks import AvoidanceLearningTask
-from helpers.rl_models import QLearning
+from helpers.rl_models import QLearning, Relative
 
 class RLPipeline:
         
@@ -44,7 +44,8 @@ if __name__ == "__main__":
 
     #Initialize task, model, and task design
     task = AvoidanceLearningTask()
-    model = QLearning(factual_lr=0.1, counterfactual_lr=0.05, temperature=0.1)
+    #model = QLearning(factual_lr=0.1, counterfactual_lr=0.05, temperature=0.1)
+    model = Relative(factual_lr=0.1, counterfactual_lr=0.05, contextual_lr=0.1, temperature=0.1)
     task_design = {'learning_phase': {'number_of_trials': 24, 'number_of_blocks': 4},
                     'transfer_phase': {'times_repeated': 4}}
             
