@@ -58,9 +58,9 @@ class AvoidanceLearningTask:
     
         choice_rate = {}
         for stimulus in self.rl_model.transfer_stimuli:
-            stimulus_data = self.rl_model.task_transfer_data.loc[self.rl_model.task_transfer_data['stim_id'].apply(lambda x: stimulus in x)]
-            stimulus_data.loc[:,'stim_index'] = stimulus_data['stim_id'].apply(lambda x: 0 if stimulus == x[0] else 1)
-            stimulus_data.loc[:,'stim_chosen'] = stimulus_data.apply(lambda x: int(x['action'] == x['stim_index']), axis=1)
+            stimulus_data = self.rl_model.task_transfer_data.loc[self.rl_model.task_transfer_data['stim_id'].apply(lambda x: stimulus in x)].copy()
+            stimulus_data.loc[:,'stim_index'] = stimulus_data.loc[:,'stim_id'].apply(lambda x: 0 if stimulus == x[0] else 1)
+            stimulus_data['stim_chosen'] = stimulus_data.apply(lambda x: int(x['action'] == x['stim_index']), axis=1)
             choice_rate[stimulus] = int((stimulus_data['stim_chosen'].sum()/len(stimulus_data))*100)
 
         #Average column pairs:
@@ -79,7 +79,7 @@ class AvoidanceLearningTask:
         stimuli = ['A','B','C','D','E','F','G','H']
         self.rl_model.q_values_summary = pd.concat([self.rl_model.q_values[state] for state in self.rl_model.q_values.keys()], axis=1)
         self.rl_model.q_values_summary.columns = stimuli
-        self.rl_model.final_q_values = self.rl_model.q_values_summary.iloc[-1]
+        self.rl_model.final_q_values = self.rl_model.q_values_summary.iloc[-1].copy()
         self.rl_model.final_q_values['N'] = 0
 
     def initiate_model(self, rl_model):
