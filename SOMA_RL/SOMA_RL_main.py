@@ -4,6 +4,20 @@ from helpers.tasks import AvoidanceLearningTask
 from helpers.rl_models import QLearning
 
 class RLPipeline:
+        
+        """
+        Reinforcement Learning Pipeline
+
+        Parameters
+        ----------
+        task : object
+            Task object
+        model : object
+            Reinforcement learning model object
+        trial_design : dict
+            Dictionary containing trial design parameters
+        """
+        
         def __init__(self, task, model, trial_design):
 
             #Get parameters
