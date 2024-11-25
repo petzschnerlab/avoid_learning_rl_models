@@ -3,9 +3,8 @@ import pandas as pd
 
 class AvoidanceLearningTask:
 
-    def __init__(self, rl_model):
-
-        self.rl_model = rl_model
+    def __init__(self):
+        self.task = 'Avoidance Learning Task'
 
         self.stimuli_ids = [['A', 'B'], 
                             ['C', 'D'],
@@ -20,6 +19,11 @@ class AvoidanceLearningTask:
         self.stimuli_feedback = [1, 1, -1, -1]
         
         self.stimuli_probabilities = [[.75, .25], [.25, .75]]
+    
+    def initiate_model(self, rl_model):
+
+        #Initialize model
+        self.rl_model = rl_model
 
         #Populate model with data matrices
         self.rl_model.task_learning_data_columns = ['block_number', 'trial_number', 'state_index', 
@@ -33,10 +37,10 @@ class AvoidanceLearningTask:
         self.rl_model.create_matrices(states=['State AB', 'State CD', 'State EF', 'State GH'],
                                       number_actions=2)
         
-    def run_learning_phase(self, trial_design):
+    def run_learning_phase(self, task_design):
 
-        number_of_trials = trial_design['learning_phase']['number_of_trials']
-        number_of_blocks = trial_design['learning_phase']['number_of_blocks']
+        number_of_trials = task_design['learning_phase']['number_of_trials']
+        number_of_blocks = task_design['learning_phase']['number_of_blocks']
 
         for block in range(number_of_blocks):
 
@@ -71,10 +75,10 @@ class AvoidanceLearningTask:
                 #Run model
                 self.rl_model.run_trial(state, phase='learning')
     
-    def run_transfer_phase(self, trial_design):
+    def run_transfer_phase(self, task_design):
 
         #Get arguments
-        times_repeated = trial_design['transfer_phase']['times_repeated']
+        times_repeated = task_design['transfer_phase']['times_repeated']
         
         #Setup pairs
         self.rl_model.transfer_stimuli = ['A','B','C','D','E','F','G','H','N'] #N is a novel stimulus
@@ -102,7 +106,7 @@ class AvoidanceLearningTask:
             #Run model
             self.rl_model.run_trial(state, phase='transfer')
 
-    def run_experiment(self, trial_design = {'learning_phase': {'number_of_trials': 100, 'number_of_blocks': 4},
+    def run_experiment(self, task_design = {'learning_phase': {'number_of_trials': 100, 'number_of_blocks': 4},
                                              'transfer_phase': {'times_repeated': 4}}):
-        self.run_learning_phase(trial_design)
-        self.run_transfer_phase(trial_design)
+        self.run_learning_phase(task_design)
+        self.run_transfer_phase(task_design)

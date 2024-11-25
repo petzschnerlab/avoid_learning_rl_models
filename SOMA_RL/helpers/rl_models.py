@@ -55,7 +55,7 @@ class RLToolbox:
 
         self.q_values[state['state_id']] = pd.concat([self.q_values[state['state_id']], new_q_values], ignore_index=True)
 
-    def plot_progress(self):
+    def plot_model(self):
     
         fig, ax = plt.subplots(4, 4, figsize=(20,5))
 
