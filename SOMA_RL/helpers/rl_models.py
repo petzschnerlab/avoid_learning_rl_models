@@ -7,6 +7,10 @@ import matplotlib.pyplot as plt
 
 class RLToolbox:
 
+    """
+    Reinforcement Learning Toolbox contains general RL methods that are consistent across different RL models
+    """
+
     #Setup functions
     def load_methods(self, methods):
         for key in methods:
@@ -128,7 +132,7 @@ class QLearning(RLToolbox):
                            'counterfactual_lr': self.counterfactual_lr, 
                            'temperature': self.temperature}
 
-    #Model run functions
+    #RL functions
     def determine_reward(self, state):
         random_numbers = [rnd.random() for i in range(len(state['stim_id']))]
         reward = [int(random_numbers[i] < state['probabilities'][i]) for i in range(len(state['stim_id']))]
@@ -152,6 +156,7 @@ class QLearning(RLToolbox):
         state['prediction_errors'] = [state['rewards'][i] - state['q_values'][i] for i in range(len(state['rewards']))]
         return state
 
+    #Run trial functions
     def run_trial(self, state, phase = 'learning'):
         if phase == 'learning':
             state = self.determine_reward(state)
