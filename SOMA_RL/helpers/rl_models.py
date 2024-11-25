@@ -7,10 +7,12 @@ import matplotlib.pyplot as plt
 
 class RLToolbox:
 
+    #Setup functions
     def load_methods(self, methods):
         for key in methods:
             setattr(self, key, methods[key])
 
+    #Extraction functions
     def get_q_value(self, state):
         state['q_values'] = list(self.q_values[state['state_id']].iloc[-1])
         return state
@@ -19,12 +21,7 @@ class RLToolbox:
         state['q_values'] = [float(self.final_q_values[stim]) for stim in state['stim_id']]
         return state
     
-    def update_model(self, state, phase='learning'):
-        if phase == 'learning':
-            self.update_q_values(state)
-            self.update_prediction_errors(state)
-        self.update_task_data(state, phase=phase)
-
+    #Update functions
     def update_prediction_errors(self, state):
         self.prediction_errors[state['state_id']] = pd.concat([self.prediction_errors[state['state_id']], 
                                                                pd.DataFrame([state['prediction_errors']], 
@@ -44,6 +41,11 @@ class RLToolbox:
                                                                    columns=self.q_values[state['state_id']].columns)], 
                                                     ignore_index=True)
 
+    def update_model(self, state):
+        self.update_q_values(state)
+        self.update_prediction_errors(state)
+
+    #Plotting functions
     def plot_model(self):
     
         fig, ax = plt.subplots(4, 4, figsize=(20,5))
@@ -126,6 +128,16 @@ class QLearning(RLToolbox):
                            'counterfactual_lr': self.counterfactual_lr, 
                            'temperature': self.temperature}
 
+    #Model run functions
+    def determine_reward(self, state):
+        random_numbers = [rnd.random() for i in range(len(state['stim_id']))]
+        reward = [int(random_numbers[i] < state['probabilities'][i]) for i in range(len(state['stim_id']))]
+        reward = [reward[i] * state['feedback'] for i in range(len(state['stim_id']))]
+
+        state['rewards'] = reward
+
+        return state
+    
     def select_action(self, state):
 
         transformed_q_values = np.exp(np.divide(state['q_values'], self.temperature))
@@ -133,15 +145,6 @@ class QLearning(RLToolbox):
         state['action'] = np.where(probability_q_values >= rnd.random())[0][0]
         if 'correct_action' in state.keys():
             state['accuracy'] = int(state['action'] == state['correct_action'])
-
-        return state
-    
-    def determine_reward(self, state):
-        random_numbers = [rnd.random() for i in range(len(state['stim_id']))]
-        reward = [int(random_numbers[i] < state['probabilities'][i]) for i in range(len(state['stim_id']))]
-        reward = [reward[i] * state['feedback'] for i in range(len(state['stim_id']))]
-
-        state['rewards'] = reward
 
         return state
     
@@ -155,11 +158,11 @@ class QLearning(RLToolbox):
             state = self.get_q_value(state)
             state = self.select_action(state)
             state = self.compute_prediction_error(state)
-            self.update_model(state, phase=phase)
+            self.update_model(state)
         else:
             state = self.get_final_q_values(state)
             state = self.select_action(state)
-            self.update_model(state, phase=phase)
+        self.update_task_data(state, phase=phase)
 
 
 
