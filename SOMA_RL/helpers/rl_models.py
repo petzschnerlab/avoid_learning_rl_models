@@ -7,12 +7,6 @@ import matplotlib.pyplot as plt
 
 class RLToolbox:
 
-    def create_matrices(self, states, number_actions):
-        self.q_values = {state: pd.DataFrame([[0]*number_actions], columns=[f'Q{i+1}' for i in range(number_actions)]) for state in states}
-        self.prediction_errors = {state: pd.DataFrame([[0]*number_actions], columns=[f'PE{i+1}' for i in range(number_actions)]) for state in states}
-        self.task_learning_data = pd.DataFrame(columns=self.task_learning_data_columns)
-        self.task_transfer_data = pd.DataFrame(columns=self.task_transfer_data_columns)
-
     def get_q_value(self, state):
         state['q_values'] = list(self.q_values[state['state_id']].iloc[-1])
         return state

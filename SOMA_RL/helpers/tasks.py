@@ -19,7 +19,13 @@ class AvoidanceLearningTask:
         self.stimuli_feedback = [1, 1, -1, -1]
         
         self.stimuli_probabilities = [[.75, .25], [.25, .75]]
-    
+
+    def create_model_matrices(self, states, number_actions):
+        self.rl_model.q_values = {state: pd.DataFrame([[0]*number_actions], columns=[f'Q{i+1}' for i in range(number_actions)]) for state in states}
+        self.rl_model.prediction_errors = {state: pd.DataFrame([[0]*number_actions], columns=[f'PE{i+1}' for i in range(number_actions)]) for state in states}
+        self.rl_model.task_learning_data = pd.DataFrame(columns=self.task_learning_data_columns)
+        self.rl_model.task_transfer_data = pd.DataFrame(columns=self.task_transfer_data_columns)
+
     def initiate_model(self, rl_model):
 
         #Initialize model
@@ -34,8 +40,8 @@ class AvoidanceLearningTask:
         self.rl_model.task_transfer_data_columns = ['block_number', 'trial_number', 'state_id',
                                                     'stim_id', 'q_values', 'action']
         
-        self.rl_model.create_matrices(states=['State AB', 'State CD', 'State EF', 'State GH'],
-                                      number_actions=2)
+        self.create_model_matrices(states=['State AB', 'State CD', 'State EF', 'State GH'],
+                                            number_actions=2)
         
     def run_learning_phase(self, task_design):
 
