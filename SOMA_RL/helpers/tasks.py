@@ -158,7 +158,7 @@ class AvoidanceLearningTask:
                          'correct_action': correct_action}
 
                 #Run model
-                self.rl_model.run_trial(state, phase='learning')
+                self.rl_model.forward(state, phase='learning')
     
     def run_transfer_phase(self, task_design):
 
@@ -191,7 +191,7 @@ class AvoidanceLearningTask:
                      'stim_id': stimuli_id}
         
             #Run model
-            self.rl_model.run_trial(state, phase='transfer')
+            self.rl_model.forward(state, phase='transfer')
 
     def run_experiment(self, task_design = {'learning_phase': {'number_of_trials': 100, 'number_of_blocks': 4},
                                              'transfer_phase': {'times_repeated': 4}}):

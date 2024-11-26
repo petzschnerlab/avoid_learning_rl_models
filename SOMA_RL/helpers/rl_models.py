@@ -100,16 +100,17 @@ class RLToolbox:
         fig, ax = plt.subplots(4, 4, figsize=(20,5))
 
         #Plot q-values
-        for i, key in enumerate(self.q_values.keys()):
-            for ci, col in enumerate(self.q_values[key].columns):
-                rolling_q_values = self.q_values[key][col].reset_index(drop=True).rolling(window=2).mean()
-                ax[0,i].plot(rolling_q_values, label=['Stim 1', 'Stim 2'][ci])
+        values = self.q_values if self.__class__.__name__ != 'ActorCritic' else self.w_values
+        for i, key in enumerate(values.keys()):
+            for ci, col in enumerate(values[key].columns):
+                rolling_values = values[key][col].reset_index(drop=True).rolling(window=2).mean()
+                ax[0,i].plot(rolling_values, label=['Stim 1', 'Stim 2'][ci])
             ax[0,i].set_title(key)
             ax[0,i].set_ylim(-1, 1)
             if i == 0:
-                ax[0,i].set_ylabel('Q-Value')
+                ax[0,i].set_ylabel('Q-Value' if self.__class__.__name__ != 'ActorCritic' else 'W-Value')
             ax[0,i].set_xlabel('')
-            if i == len(self.q_values.keys())-1:
+            if i == len(values.keys())-1:
                 ax[0,i].legend(loc='center left', bbox_to_anchor=(1, 0.5))
             ax[0,i].set_xticklabels([])
             if i > 0:
@@ -202,7 +203,7 @@ class QLearning(RLToolbox):
         return state
     
     #Run trial functions
-    def run_trial(self, state, phase = 'learning'):
+    def forward(self, state, phase = 'learning'):
         if phase == 'learning':
             state = self.get_reward(state)
             state = self.get_q_value(state)
@@ -242,6 +243,14 @@ class ActorCritic(RLToolbox):
         
     #RL functions
     def get_reward(self, state):
+
+        """
+        TODO:
+        "In agreement with previous studies, we also allow positive and negative rewards to be weighed differently. Positive
+        feedback at trial t was encoded as outcome(t) = 1-d, neutral feedback as outcome(t) = 0 and negative feedback as
+        outcome(t) = -d. Thus the free parameter d indicates full neglect of negative outcomes if d = 0, full neglect of positive
+        outcomes if d = 1, and equal weighing of positive and negative outcomes if d = 0.5"
+        """
         random_numbers = [rnd.random() for i in range(len(state['stim_id']))]
         reward = [int(random_numbers[i] < state['probabilities'][i]) for i in range(len(state['stim_id']))]
         reward = [reward[i] * state['feedback'] for i in range(len(state['stim_id']))]
@@ -265,7 +274,7 @@ class ActorCritic(RLToolbox):
         return state
 
     #Run trial functions
-    def run_trial(self, state, phase = 'learning'):
+    def forward(self, state, phase = 'learning'):
         if phase == 'learning':
             state = self.get_reward(state)
             state = self.get_q_value(state)
@@ -339,7 +348,7 @@ class Relative(RLToolbox):
         return state          
 
     #Run trial functions
-    def run_trial(self, state, phase = 'learning'):
+    def forward(self, state, phase = 'learning'):
         if phase == 'learning':
             state = self.get_reward(state)
             state = self.get_q_value(state)
