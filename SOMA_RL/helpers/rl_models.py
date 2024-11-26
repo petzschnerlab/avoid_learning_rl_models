@@ -20,9 +20,17 @@ class RLToolbox:
     def get_q_value(self, state):
         state['q_values'] = list(self.q_values[state['state_id']].iloc[-1])
         return state
+    
+    def get_w_value(self, state):
+        state['w_values'] = list(self.w_values[state['state_id']].iloc[-1])
+        return state
 
     def get_final_q_values(self, state):
         state['q_values'] = [float(self.final_q_values[stim]) for stim in state['stim_id']]
+        return state
+    
+    def get_final_w_values(self, state):
+        state['w_values'] = [float(self.final_w_values[stim]) for stim in state['stim_id']]
         return state
     
     #Update functions
@@ -34,7 +42,10 @@ class RLToolbox:
 
     def update_q_values(self, state):
 
-        learning_rates = [self.factual_lr, self.counterfactual_lr] if state['action'] == 0 else [self.counterfactual_lr, self.factual_lr]
+        if self.__class__.__name__ == 'QLearning' or self.__class__.__name__ == 'Relative':
+            learning_rates = [self.factual_lr, self.counterfactual_lr] if state['action'] == 0 else [self.counterfactual_lr, self.factual_lr]
+        elif self.__class__.__name__ == 'ActorCritic':
+            learning_rates = [self.critic_lr, self.critic_lr]
 
         new_q_values = []
         for i in range(len(state['rewards'])):
@@ -44,10 +55,44 @@ class RLToolbox:
                                                       pd.DataFrame([new_q_values], 
                                                                    columns=self.q_values[state['state_id']].columns)], 
                                                     ignore_index=True)
+        
+    def update_w_values(self, state):
+            
+        new_w_values = []
+        for i in range(len(state['rewards'])):
+            new_w_values.append(state['w_values'][i] + (self.actor_lr * state['prediction_errors'][i]))
+        new_w_values = [w_val/np.sum(np.abs(new_w_values)) for w_val in new_w_values]
+
+        self.w_values[state['state_id']] = pd.concat([self.w_values[state['state_id']],
+                                                    pd.DataFrame([new_w_values], 
+                                                                columns=self.w_values[state['state_id']].columns)], 
+                                                    ignore_index=True)
+
+    def update_context_values(self, state):
+
+        new_context_value = state['context_value'] + (self.contextual_lr * state['context_prediction_error'])
+
+        self.context_values[state['state_id']] = pd.concat([self.context_values[state['state_id']], 
+                                                            pd.DataFrame([new_context_value], 
+                                                                         columns=self.context_values[state['state_id']].columns)], 
+                                                            ignore_index=True)
+    
+    def update_context_prediction_errors(self, state):
+        self.context_prediction_errors[state['state_id']] = pd.concat([self.context_prediction_errors[state['state_id']], 
+                                                                      pd.DataFrame([state['context_prediction_error']], 
+                                                                                   columns=self.context_prediction_errors[state['state_id']].columns)], 
+                                                                      ignore_index=True)
 
     def update_model(self, state):
         self.update_q_values(state)
         self.update_prediction_errors(state)
+
+        if self.__class__.__name__ == 'Relative':
+            self.update_context_values(state)
+            self.update_context_prediction_errors(state)
+
+        if self.__class__.__name__ == 'ActorCritic':
+            self.update_w_values(state)
 
     #Plotting functions
     def plot_model(self):
@@ -169,7 +214,70 @@ class QLearning(RLToolbox):
             state = self.select_action(state)
         self.update_task_data(state, phase=phase)
 
-#Actor-Critic Model
+class ActorCritic(RLToolbox):
+
+    """
+    Reinforcement Learning Model: Actor-Critic
+
+    Parameters:
+    ------------
+    factual_lr: float
+        Learning rate for factual Q-value update
+    counterfactual_lr: float
+        Learning rate for counterfactual Q-value update
+    temperature: float
+        Temperature parameter for softmax action selection
+    """
+
+    def __init__(self, actor_lr, critic_lr, temperature):
+        super().__init__()
+
+        #Set parameters
+        self.actor_lr = actor_lr
+        self.critic_lr = critic_lr
+        self.temperature = temperature
+        self.parameters = {'actor_lr': self.actor_lr, 
+                           'critic_lr': self.critic_lr, 
+                           'temperature': self.temperature}
+        
+    #RL functions
+    def get_reward(self, state):
+        random_numbers = [rnd.random() for i in range(len(state['stim_id']))]
+        reward = [int(random_numbers[i] < state['probabilities'][i]) for i in range(len(state['stim_id']))]
+        reward = [reward[i] * state['feedback'] for i in range(len(state['stim_id']))]
+
+        state['rewards'] = reward
+
+        return state
+    
+    def compute_prediction_error(rewards, state):
+        state['prediction_errors'] = [state['rewards'][i] - state['q_values'][i] for i in range(len(state['rewards']))]
+        return state
+
+    def select_action(self, state):
+
+        transformed_w_values = np.exp(np.divide(state['w_values'], self.temperature))
+        probability_w_values = (transformed_w_values/np.sum(transformed_w_values)).cumsum()
+        state['action'] = np.where(probability_w_values >= rnd.random())[0][0]
+        if 'correct_action' in state.keys():
+            state['accuracy'] = int(state['action'] == state['correct_action'])
+
+        return state
+
+    #Run trial functions
+    def run_trial(self, state, phase = 'learning'):
+        if phase == 'learning':
+            state = self.get_reward(state)
+            state = self.get_q_value(state)
+            state = self.get_w_value(state)
+            state = self.select_action(state)
+            state = self.compute_prediction_error(state)
+            self.update_model(state)
+        else:
+            state = self.get_final_w_values(state)
+            state = self.select_action(state)
+        self.update_task_data(state, phase=phase)
+
 class Relative(RLToolbox):
 
     """
@@ -228,26 +336,7 @@ class Relative(RLToolbox):
         if 'correct_action' in state.keys():
             state['accuracy'] = int(state['action'] == state['correct_action'])
 
-        return state
-
-    def update_context_values(self, state):
-
-        new_context_value = state['context_value'] + (self.contextual_lr * state['context_prediction_error'])
-
-        self.context_values[state['state_id']] = pd.concat([self.context_values[state['state_id']], 
-                                                            pd.DataFrame([new_context_value], 
-                                                                         columns=self.context_values[state['state_id']].columns)], 
-                                                            ignore_index=True)
-    
-    def update_context_prediction_errors(self, state):
-        self.context_prediction_errors[state['state_id']] = pd.concat([self.context_prediction_errors[state['state_id']], 
-                                                                      pd.DataFrame([state['context_prediction_error']], 
-                                                                                   columns=self.context_prediction_errors[state['state_id']].columns)], 
-                                                                      ignore_index=True)
-
-    def update_context(self, state):
-        self.update_context_values(state)
-        self.update_context_prediction_errors(state)            
+        return state          
 
     #Run trial functions
     def run_trial(self, state, phase = 'learning'):
@@ -258,7 +347,6 @@ class Relative(RLToolbox):
             state = self.select_action(state)
             state = self.compute_prediction_error(state)
             self.update_model(state)
-            self.update_context(state)
         else:
             state = self.get_final_q_values(state)
             state = self.select_action(state)
