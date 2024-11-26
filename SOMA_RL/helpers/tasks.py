@@ -43,6 +43,14 @@ class AvoidanceLearningTask:
             self.rl_model.w_values = {state: pd.DataFrame([[0.01]*number_actions], columns=[f'Q{i+1}' for i in range(number_actions)]) for state in states}
             self.rl_model.v_values = {state: pd.DataFrame([[0]*number_actions], columns=[f'Q{i+1}' for i in range(number_actions)]) for state in states}
             delattr(self.rl_model, 'q_values')
+        
+        if self.rl_model.__class__.__name__ == 'Hybrid':
+            self.rl_model.w_values = {state: pd.DataFrame([[0.01]*number_actions], columns=[f'Q{i+1}' for i in range(number_actions)]) for state in states}
+            self.rl_model.v_values = {state: pd.DataFrame([[0]*number_actions], columns=[f'Q{i+1}' for i in range(number_actions)]) for state in states}
+            self.rl_model.h_values = {state: pd.DataFrame([[0]*number_actions], columns=[f'Q{i+1}' for i in range(number_actions)]) for state in states}
+            self.rl_model.q_prediction_errors = {state: pd.DataFrame([[0]*number_actions], columns=[f'PE{i+1}' for i in range(number_actions)]) for state in states}
+            self.rl_model.v_prediction_errors = {state: pd.DataFrame([[0]*number_actions], columns=[f'PE{i+1}' for i in range(number_actions)]) for state in states}
+            delattr(self.rl_model, 'prediction_errors')
 
     def update_task_data(self, state, phase='learning'):
         if phase == 'learning':
@@ -127,13 +135,21 @@ class AvoidanceLearningTask:
 
         if self.rl_model.__class__.__name__ == 'Relative':
             self.task_learning_data_columns += ['context_values', 'context_prediction_errors']
-
         
         if self.rl_model.__class__.__name__ == 'ActorCritic':
             self.task_learning_data_columns += ['w_values']
             self.task_learning_data_columns.remove('q_values')
             self.task_learning_data_columns += ['v_values']
+            self.task_learning_data_columns += ['h_values']
             self.task_transfer_data_columns.remove('q_values')
+            self.task_transfer_data_columns += ['w_values']
+
+        if self.rl_model.__class__.__name__ == 'Hybrid':
+            self.task_learning_data_columns += ['v_values']
+            self.task_learning_data_columns += ['w_values']
+            self.task_learning_data_columns += ['q_prediction_errors']
+            self.task_learning_data_columns += ['v_prediction_errors']
+            self.task_learning_data_columns.remove('prediction_errors')
             self.task_transfer_data_columns += ['w_values']
         
     def run_learning_phase(self, task_design):
@@ -191,6 +207,10 @@ class AvoidanceLearningTask:
         #Setup q-values & w-values
         
         if self.rl_model.__class__.__name__ == 'ActorCritic':
+            self.rl_model.combine_v_values()
+            self.rl_model.combine_w_values()
+        elif self.rl_model.__class__.__name__ == 'Hybrid':
+            self.rl_model.combine_q_values()
             self.rl_model.combine_v_values()
             self.rl_model.combine_w_values()
         else:
