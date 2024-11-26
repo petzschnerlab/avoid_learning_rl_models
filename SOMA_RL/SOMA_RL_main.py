@@ -46,7 +46,7 @@ if __name__ == "__main__":
     task = AvoidanceLearningTask()
     #model = QLearning(factual_lr=0.1, counterfactual_lr=0.05, temperature=0.1)
     #model = Relative(factual_lr=0.1, counterfactual_lr=0.05, contextual_lr=0.1, temperature=0.1)
-    model = ActorCritic(actor_lr=0.1, critic_lr=0.1, temperature=0.1)
+    model = ActorCritic(factual_actor_lr=0.1, counterfactual_actor_lr=0.05, factual_critic_lr=0.1, counterfactual_critic_lr=0.05, temperature=0.1)
     task_design = {'learning_phase': {'number_of_trials': 24, 'number_of_blocks': 4},
                     'transfer_phase': {'times_repeated': 4}}
             

@@ -41,6 +41,8 @@ class AvoidanceLearningTask:
 
         if self.rl_model.__class__.__name__ == 'ActorCritic':
             self.rl_model.w_values = {state: pd.DataFrame([[0.01]*number_actions], columns=[f'Q{i+1}' for i in range(number_actions)]) for state in states}
+            self.rl_model.v_values = {state: pd.DataFrame([[0]*number_actions], columns=[f'Q{i+1}' for i in range(number_actions)]) for state in states}
+            delattr(self.rl_model, 'q_values')
 
     def update_task_data(self, state, phase='learning'):
         if phase == 'learning':
@@ -89,6 +91,14 @@ class AvoidanceLearningTask:
         self.rl_model.final_q_values = self.rl_model.q_values_summary.iloc[-1].copy()
         self.rl_model.final_q_values['N'] = 0
 
+    def combine_v_values(self):
+
+        stimuli = ['A','B','C','D','E','F','G','H']
+        self.rl_model.v_values_summary = pd.concat([self.rl_model.v_values[state] for state in self.rl_model.v_values.keys()], axis=1)
+        self.rl_model.v_values_summary.columns = stimuli
+        self.rl_model.final_v_values = self.rl_model.v_values_summary.iloc[-1].copy()
+        self.rl_model.final_v_values['N'] = 0
+
     def combine_w_values(self):
 
         stimuli = ['A','B','C','D','E','F','G','H']
@@ -110,15 +120,19 @@ class AvoidanceLearningTask:
             'compute_choice_rate': self.compute_choice_rate,
             'run_computations': self.run_computations,
             'combine_q_values': self.combine_q_values,
+            'combine_v_values': self.combine_v_values,
             'combine_w_values': self.combine_w_values
         }
         self.rl_model.load_methods(methods)
 
         if self.rl_model.__class__.__name__ == 'Relative':
             self.task_learning_data_columns += ['context_values', 'context_prediction_errors']
+
         
         if self.rl_model.__class__.__name__ == 'ActorCritic':
             self.task_learning_data_columns += ['w_values']
+            self.task_learning_data_columns.remove('q_values')
+            self.task_learning_data_columns += ['v_values']
             self.task_transfer_data_columns.remove('q_values')
             self.task_transfer_data_columns += ['w_values']
         
@@ -175,9 +189,12 @@ class AvoidanceLearningTask:
         rnd.shuffle(self.transfer_pairs)
 
         #Setup q-values & w-values
-        self.rl_model.combine_q_values()
+        
         if self.rl_model.__class__.__name__ == 'ActorCritic':
+            self.rl_model.combine_v_values()
             self.rl_model.combine_w_values()
+        else:
+            self.rl_model.combine_q_values()
 
         #Run transfer phase
         for trial, pair in enumerate(self.transfer_pairs):

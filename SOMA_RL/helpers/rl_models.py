@@ -21,6 +21,10 @@ class RLToolbox:
         state['q_values'] = list(self.q_values[state['state_id']].iloc[-1])
         return state
     
+    def get_v_value(self, state):
+        state['v_values'] = list(self.v_values[state['state_id']].iloc[-1])
+        return state
+    
     def get_w_value(self, state):
         state['w_values'] = list(self.w_values[state['state_id']].iloc[-1])
         return state
@@ -42,11 +46,8 @@ class RLToolbox:
 
     def update_q_values(self, state):
 
-        if self.__class__.__name__ == 'QLearning' or self.__class__.__name__ == 'Relative':
-            learning_rates = [self.factual_lr, self.counterfactual_lr] if state['action'] == 0 else [self.counterfactual_lr, self.factual_lr]
-        elif self.__class__.__name__ == 'ActorCritic':
-            learning_rates = [self.critic_lr, self.critic_lr]
-
+        learning_rates = [self.factual_lr, self.counterfactual_lr] if state['action'] == 0 else [self.counterfactual_lr, self.factual_lr]
+            
         new_q_values = []
         for i in range(len(state['rewards'])):
             new_q_values.append(state['q_values'][i] + (learning_rates[i] * state['prediction_errors'][i]))
@@ -57,17 +58,32 @@ class RLToolbox:
                                                     ignore_index=True)
         
     def update_w_values(self, state):
+
+        learning_rates = [self.factual_actor_lr, self.counterfactual_actor_lr] if state['action'] == 0 else [self.counterfactual_actor_lr, self.factual_actor_lr]
             
         new_w_values = []
         for i in range(len(state['rewards'])):
-            new_w_values.append(state['w_values'][i] + (self.actor_lr * state['prediction_errors'][i]))
+            new_w_values.append(state['w_values'][i] + (learning_rates[i] * state['prediction_errors'][i]))
         new_w_values = [w_val/np.sum(np.abs(new_w_values)) for w_val in new_w_values]
 
         self.w_values[state['state_id']] = pd.concat([self.w_values[state['state_id']],
                                                     pd.DataFrame([new_w_values], 
                                                                 columns=self.w_values[state['state_id']].columns)], 
                                                     ignore_index=True)
+    
+    def update_v_values(self, state):
 
+        learning_rates = [self.factual_critic_lr, self.counterfactual_critic_lr] if state['action'] == 0 else [self.counterfactual_critic_lr, self.factual_critic_lr]
+
+        new_v_values = []
+        for i in range(len(state['rewards'])):
+            new_v_values.append(state['v_values'][i] + (learning_rates[i] * state['prediction_errors'][i]))
+
+        self.v_values[state['state_id']] = pd.concat([self.v_values[state['state_id']],
+                                                      pd.DataFrame([new_v_values], 
+                                                                   columns=self.v_values[state['state_id']].columns)], 
+                                                    ignore_index=True)
+        
     def update_context_values(self, state):
 
         new_context_value = state['context_value'] + (self.contextual_lr * state['context_prediction_error'])
@@ -84,15 +100,19 @@ class RLToolbox:
                                                                       ignore_index=True)
 
     def update_model(self, state):
-        self.update_q_values(state)
+        
         self.update_prediction_errors(state)
+
+        if self.__class__.__name__ != 'ActorCritic':
+            self.update_q_values(state)
 
         if self.__class__.__name__ == 'Relative':
             self.update_context_values(state)
             self.update_context_prediction_errors(state)
 
-        if self.__class__.__name__ == 'ActorCritic':
+        if self.__class__.__name__ == 'ActorCritic' or self.__class__.__name__ == 'Hybrid':
             self.update_w_values(state)
+            self.update_v_values(state)
 
     #Plotting functions
     def plot_model(self):
@@ -222,23 +242,31 @@ class ActorCritic(RLToolbox):
 
     Parameters:
     ------------
-    factual_lr: float
-        Learning rate for factual Q-value update
-    counterfactual_lr: float
-        Learning rate for counterfactual Q-value update
+    factual_actor_lr: float
+        Learning rate for factual actor update
+    counterfactual_actor_lr: float
+        Learning rate for counterfactual actor update
+    factual_critic_lr: float
+        Learning rate for factual critic update
+    counterfactual_critic_lr: float
+        Learning rate for counterfactual critic update
     temperature: float
         Temperature parameter for softmax action selection
     """
 
-    def __init__(self, actor_lr, critic_lr, temperature):
+    def __init__(self, factual_actor_lr, counterfactual_actor_lr, factual_critic_lr, counterfactual_critic_lr, temperature):
         super().__init__()
 
         #Set parameters
-        self.actor_lr = actor_lr
-        self.critic_lr = critic_lr
+        self.factual_actor_lr = factual_actor_lr
+        self.counterfactual_actor_lr = counterfactual_actor_lr
+        self.factual_critic_lr = factual_critic_lr
+        self.counterfactual_critic_lr = counterfactual_critic_lr
         self.temperature = temperature
-        self.parameters = {'actor_lr': self.actor_lr, 
-                           'critic_lr': self.critic_lr, 
+        self.parameters = {'factual_actor_lr': self.factual_actor_lr, 
+                           'counterfactual_actor_lr': self.counterfactual_actor_lr, 
+                           'factual_critic_lr': self.factual_critic_lr,
+                           'counterfactual_critic_lr': self.counterfactual_critic_lr,
                            'temperature': self.temperature}
         
     #RL functions
@@ -260,7 +288,7 @@ class ActorCritic(RLToolbox):
         return state
     
     def compute_prediction_error(rewards, state):
-        state['prediction_errors'] = [state['rewards'][i] - state['q_values'][i] for i in range(len(state['rewards']))]
+        state['prediction_errors'] = [state['rewards'][i] - state['v_values'][i] for i in range(len(state['rewards']))]
         return state
 
     def select_action(self, state):
@@ -277,7 +305,7 @@ class ActorCritic(RLToolbox):
     def forward(self, state, phase = 'learning'):
         if phase == 'learning':
             state = self.get_reward(state)
-            state = self.get_q_value(state)
+            state = self.get_v_value(state)
             state = self.get_w_value(state)
             state = self.select_action(state)
             state = self.compute_prediction_error(state)
@@ -360,4 +388,80 @@ class Relative(RLToolbox):
             state = self.get_final_q_values(state)
             state = self.select_action(state)
         self.update_task_data(state, phase=phase)
+
+class Hybrid(RLToolbox):
+
+    """
+    Reinforcement Learning Model: Hybrid Actor-Critic-Q-Learning Model (Gold et al., 2012)
+    
+    Parameters:
+    ------------
+    factual_lr: float
+        Learning rate for factual Q-value update
+    counterfactual_lr: float
+        Learning rate for counterfactual Q-value update
+    temperature: float
+        Temperature parameter for softmax action selection
+    """
+
+    def __init__(self, factual_lr, counterfactual_lr, temperature, mixing_parameter):
+        super().__init__()
+
+        #Set parameters
+        self.factual_lr = factual_lr
+        self.counterfactual_lr = counterfactual_lr
+        self.temperature = temperature
+        self.mixing_parameter = mixing_parameter
+        self.parameters = {'factual_lr': self.factual_lr, 
+                           'counterfactual_lr': self.counterfactual_lr, 
+                           'temperature': self.temperature,
+                           'mixing_parameter': self.mixing_parameter}
+
+    #RL functions    
+    def get_reward(self, state):
+
+        """
+        TODO:
+        "In agreement with previous studies, we also allow positive and negative rewards to be weighed differently. Positive
+        feedback at trial t was encoded as outcome(t) = 1-d, neutral feedback as outcome(t) = 0 and negative feedback as
+        outcome(t) = -d. Thus the free parameter d indicates full neglect of negative outcomes if d = 0, full neglect of positive
+        outcomes if d = 1, and equal weighing of positive and negative outcomes if d = 0.5"
+        """
+        random_numbers = [rnd.random() for i in range(len(state['stim_id']))]
+        reward = [int(random_numbers[i] < state['probabilities'][i]) for i in range(len(state['stim_id']))]
+        reward = [reward[i] * state['feedback'] for i in range(len(state['stim_id']))]
+
+        state['rewards'] = reward
+
+        return state
+    
+    def compute_prediction_error(rewards, state):
+        state['q_prediction_errors'] = [state['rewards'][i] - state['v_values'][i] for i in range(len(state['rewards']))]
+        state['ac_prediction_errors'] = [state['rewards'][i] - state['q_values'][i] for i in range(len(state['rewards']))]
+        return state
+
+    def select_action(self, state):
+
+        transformed_w_values = np.exp(np.divide(state['w_values'], self.temperature))
+        probability_w_values = (transformed_w_values/np.sum(transformed_w_values)).cumsum()
+        state['action'] = np.where(probability_w_values >= rnd.random())[0][0]
+        if 'correct_action' in state.keys():
+            state['accuracy'] = int(state['action'] == state['correct_action'])
+
+        return state
+
+    #Run trial functions
+    def forward(self, state, phase = 'learning'):
+        if phase == 'learning':
+            state = self.get_reward(state)
+            state = self.get_q_value(state)
+            state = self.get_w_value(state)
+            state = self.select_action(state)
+            state = self.compute_prediction_error(state)
+            self.update_model(state)
+        else:
+            state = self.get_final_w_values(state)
+            state = self.select_action(state)
+        self.update_task_data(state, phase=phase)
+
 
