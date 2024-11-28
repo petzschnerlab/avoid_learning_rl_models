@@ -86,12 +86,9 @@ class RLToolbox:
     
     def update_v_values(self, state):
 
-        learning_rates = [self.factual_critic_lr, self.counterfactual_critic_lr] if state['action'] == 0 else [self.counterfactual_critic_lr, self.factual_critic_lr]
         prediction_errors = state['v_prediction_errors'] if self.__class__.__name__ == 'Hybrid' else state['prediction_errors']
 
-        new_v_values = []
-        for i in range(len(state['rewards'])):
-            new_v_values.append(state['v_values'][i] + (learning_rates[i] * prediction_errors[i]))
+        new_v_values = state['v_values'][0] + (self.critic_lr * prediction_errors[state['action']])
 
         self.v_values[state['state_id']] = pd.concat([self.v_values[state['state_id']],
                                                       pd.DataFrame([new_v_values], 
@@ -107,7 +104,7 @@ class RLToolbox:
         
     def update_context_values(self, state):
 
-        new_context_value = state['context_value'] + (self.contextual_lr * state['context_prediction_error'])
+        new_context_value = state['context_value'] + (self.contextual_lr * state['context_prediction_errors'])
 
         self.context_values[state['state_id']] = pd.concat([self.context_values[state['state_id']], 
                                                             pd.DataFrame([new_context_value], 
@@ -116,7 +113,7 @@ class RLToolbox:
     
     def update_context_prediction_errors(self, state):
         self.context_prediction_errors[state['state_id']] = pd.concat([self.context_prediction_errors[state['state_id']], 
-                                                                      pd.DataFrame([state['context_prediction_error']], 
+                                                                      pd.DataFrame([state['context_prediction_errors']], 
                                                                                    columns=self.context_prediction_errors[state['state_id']].columns)], 
                                                                       ignore_index=True)
 
@@ -197,6 +194,7 @@ class RLToolbox:
             if i > 0:
                 ax[2,i].set_yticklabels([])
 
+        #Plot choice rate
         x_tick_labels = ['75R', '25R', '25P', '75P', 'N']
         ax[3,0].bar(self.choice_rate.keys(), self.choice_rate.values())
         ax[3,0].set_ylabel('Choice Rate (%)')
@@ -205,6 +203,9 @@ class RLToolbox:
         ax[3,0].set_xticklabels(x_tick_labels)
 
         plt.show()
+    
+    def get_choice_rates(self):
+        return self.choice_rate
 
 #Q-Learning Model
 class QLearning(RLToolbox):
@@ -289,20 +290,18 @@ class ActorCritic(RLToolbox):
         Temperature parameter for softmax action selection
     """
 
-    def __init__(self, factual_actor_lr, counterfactual_actor_lr, factual_critic_lr, counterfactual_critic_lr, temperature, valence_factor):
+    def __init__(self, factual_actor_lr, counterfactual_actor_lr, critic_lr, temperature, valence_factor):
         super().__init__()
 
         #Set parameters
         self.factual_actor_lr = factual_actor_lr
         self.counterfactual_actor_lr = counterfactual_actor_lr
-        self.factual_critic_lr = factual_critic_lr
-        self.counterfactual_critic_lr = counterfactual_critic_lr
+        self.critic_lr = critic_lr
         self.temperature = temperature
         self.valence_factor = valence_factor
         self.parameters = {'factual_actor_lr': self.factual_actor_lr, 
                            'counterfactual_actor_lr': self.counterfactual_actor_lr, 
-                           'factual_critic_lr': self.factual_critic_lr,
-                           'counterfactual_critic_lr': self.counterfactual_critic_lr,
+                           'critic_lr': self.critic_lr,
                            'temperature': self.temperature,
                            'valence_factor': self.valence_factor}
         
@@ -332,7 +331,7 @@ class ActorCritic(RLToolbox):
         return state
     
     def compute_prediction_error(rewards, state):
-        state['prediction_errors'] = [state['rewards'][i] - state['v_values'][i] for i in range(len(state['rewards']))]
+        state['prediction_errors'] = [state['rewards'][i] - state['v_values'][0] for i in range(len(state['rewards']))]
         return state
 
     def select_action(self, state):
@@ -406,7 +405,7 @@ class Relative(RLToolbox):
     
     def compute_prediction_error(rewards, state):
         state['prediction_errors'] = [state['rewards'][i] - state['context_value'][0] - state['q_values'][i] for i in range(len(state['rewards']))]
-        state['context_prediction_error'] = state['context_reward'] - state['context_value']
+        state['context_prediction_errors'] = state['context_reward'] - state['context_value']
         return state
     
     def select_action(self, state):
@@ -449,7 +448,7 @@ class Hybrid(RLToolbox):
     """
 
     def __init__(self, factual_lr, counterfactual_lr, factual_actor_lr, counterfactual_actor_lr, 
-                 factual_critic_lr, counterfactual_critic_lr, temperature, mixing_factor):
+                 critic_lr, temperature, mixing_factor, valence_factor):
         super().__init__()
 
         #Set parameters
@@ -457,18 +456,18 @@ class Hybrid(RLToolbox):
         self.counterfactual_lr = counterfactual_lr
         self.factual_actor_lr = factual_actor_lr
         self.counterfactual_actor_lr = counterfactual_actor_lr
-        self.factual_critic_lr = factual_critic_lr
-        self.counterfactual_critic_lr = counterfactual_critic_lr
+        self.critic_lr = critic_lr
         self.temperature = temperature
         self.mixing_factor = mixing_factor
+        self.valence_factor = valence_factor
         self.parameters = {'factual_lr': self.factual_lr, 
                            'counterfactual_lr': self.counterfactual_lr, 
                             'factual_actor_lr': self.factual_actor_lr,
                             'counterfactual_actor_lr': self.counterfactual_actor_lr,
-                            'factual_critic_lr': self.factual_critic_lr,
-                            'counterfactual_critic_lr': self.counterfactual_critic_lr,
+                            'critic_lr': self.critic_lr,
                            'temperature': self.temperature,
-                           'mixing_factor': self.mixing_factor}
+                           'mixing_factor': self.mixing_factor,
+                           'valence_factor': self.valence_factor}
 
     #RL functions    
     def get_reward(self, state):
@@ -483,6 +482,13 @@ class Hybrid(RLToolbox):
         random_numbers = [rnd.random() for i in range(len(state['stim_id']))]
         reward = [int(random_numbers[i] < state['probabilities'][i]) for i in range(len(state['stim_id']))]
         reward = [reward[i] * state['feedback'] for i in range(len(state['stim_id']))]
+        for ri, r in enumerate(reward):
+            if r > 0:
+                reward[ri] = 1-self.valence_factor
+            elif r < 0:
+                reward[ri] = -self.valence_factor
+            else:
+                reward[ri] = 0
 
         state['rewards'] = reward
 
@@ -490,15 +496,16 @@ class Hybrid(RLToolbox):
     
     def compute_prediction_error(rewards, state):
         state['q_prediction_errors'] = [state['rewards'][i] - state['q_values'][i] for i in range(len(state['rewards']))]
-        state['v_prediction_errors'] = [state['rewards'][i] - state['v_values'][i] for i in range(len(state['rewards']))]
+        state['v_prediction_errors'] = [state['rewards'][i] - state['v_values'][0] for i in range(len(state['rewards']))]
+
         return state
 
     def select_action(self, state):
 
         state['h_values'] = [(state['w_values'][i] * (1-self.mixing_factor)) + (state['q_values'][i] * self.mixing_factor) for i in range(len(state['w_values']))]
         transformed_h_values = np.exp(np.divide(state['h_values'], self.temperature))
-        probability_v_values = (transformed_h_values/np.sum(transformed_h_values)).cumsum()
-        state['action'] = np.where(probability_v_values >= rnd.random())[0][0]
+        probability_h_values = (transformed_h_values/np.sum(transformed_h_values)).cumsum()
+        state['action'] = np.where(probability_h_values >= rnd.random())[0][0]
         if 'correct_action' in state.keys():
             state['accuracy'] = int(state['action'] == state['correct_action'])
 

@@ -41,12 +41,12 @@ class AvoidanceLearningTask:
 
         if self.rl_model.__class__.__name__ == 'ActorCritic':
             self.rl_model.w_values = {state: pd.DataFrame([[0.01]*number_actions], columns=[f'Q{i+1}' for i in range(number_actions)]) for state in states}
-            self.rl_model.v_values = {state: pd.DataFrame([[0]*number_actions], columns=[f'Q{i+1}' for i in range(number_actions)]) for state in states}
+            self.rl_model.v_values = {state: pd.DataFrame([[0]], columns=['V']) for state in states}
             delattr(self.rl_model, 'q_values')
         
         if self.rl_model.__class__.__name__ == 'Hybrid':
             self.rl_model.w_values = {state: pd.DataFrame([[0.01]*number_actions], columns=[f'Q{i+1}' for i in range(number_actions)]) for state in states}
-            self.rl_model.v_values = {state: pd.DataFrame([[0]*number_actions], columns=[f'Q{i+1}' for i in range(number_actions)]) for state in states}
+            self.rl_model.v_values = {state: pd.DataFrame([[0]], columns=['V']) for state in states}
             self.rl_model.h_values = {state: pd.DataFrame([[0]*number_actions], columns=[f'Q{i+1}' for i in range(number_actions)]) for state in states}
             self.rl_model.q_prediction_errors = {state: pd.DataFrame([[0]*number_actions], columns=[f'PE{i+1}' for i in range(number_actions)]) for state in states}
             self.rl_model.v_prediction_errors = {state: pd.DataFrame([[0]*number_actions], columns=[f'PE{i+1}' for i in range(number_actions)]) for state in states}
@@ -102,7 +102,10 @@ class AvoidanceLearningTask:
     def combine_v_values(self):
 
         stimuli = ['A','B','C','D','E','F','G','H']
-        self.rl_model.v_values_summary = pd.concat([self.rl_model.v_values[state] for state in self.rl_model.v_values.keys()], axis=1)
+        v_columns = [[self.rl_model.v_values[state], self.rl_model.v_values[state]] for state in self.rl_model.v_values.keys()] #Duplicate for compatibility
+        v_columns = [item for sublist in v_columns for item in sublist]
+        self.rl_model.v_values_summary = pd.concat(v_columns, axis=1)
+
         self.rl_model.v_values_summary.columns = stimuli
         self.rl_model.final_v_values = self.rl_model.v_values_summary.iloc[-1].copy()
         self.rl_model.final_v_values['N'] = 0
@@ -134,13 +137,13 @@ class AvoidanceLearningTask:
         self.rl_model.load_methods(methods)
 
         if self.rl_model.__class__.__name__ == 'Relative':
-            self.task_learning_data_columns += ['context_values', 'context_prediction_errors']
+            self.task_learning_data_columns += ['context_value']
+            self.task_learning_data_columns += ['context_prediction_errors']
         
         if self.rl_model.__class__.__name__ == 'ActorCritic':
             self.task_learning_data_columns += ['w_values']
             self.task_learning_data_columns.remove('q_values')
             self.task_learning_data_columns += ['v_values']
-            self.task_learning_data_columns += ['h_values']
             self.task_transfer_data_columns.remove('q_values')
             self.task_transfer_data_columns += ['w_values']
 
