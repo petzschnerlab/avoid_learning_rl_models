@@ -2,6 +2,7 @@ import sys
 sys.dont_write_bytecode = True
 import random as rnd
 import pandas as pd
+import matplotlib.pyplot as plt
 
 from helpers.tasks import AvoidanceLearningTask
 from helpers.rl_models import QLearning, ActorCritic, Relative, Hybrid
@@ -41,22 +42,51 @@ if __name__ == "__main__":
     # =========================================== #
     # === EXAMPLE RUNNING A SINGLE SIMULATION === #
     # =========================================== #
+    number_of_runs = 100
+    models = ['QLearning', 'Relative', 'ActorCritic', 'Hybrid']
 
-    #Initialize task, model, and task design
-    task = AvoidanceLearningTask()
-    #model = QLearning(factual_lr=0.1, counterfactual_lr=0.05, temperature=0.1)
-    #model = Relative(factual_lr=0.1, counterfactual_lr=0.05, contextual_lr=0.1, temperature=0.1)
-    #model = ActorCritic(factual_actor_lr=0.1, counterfactual_actor_lr=0.05, factual_critic_lr=0.1, counterfactual_critic_lr=0.05, temperature=0.1)
-    model = Hybrid(factual_lr=0.1, counterfactual_lr=0.05, factual_actor_lr=0.1, counterfactual_actor_lr=0.05, 
-                 factual_critic_lr=0.1, counterfactual_critic_lr=0.05, temperature=0.1, mixing_factor=0.5)
-    task_design = {'learning_phase': {'number_of_trials': 24, 'number_of_blocks': 4},
-                    'transfer_phase': {'times_repeated': 4}}
-            
-    #Initialize pipeline
-    q_learning = RLPipeline(task, model, task_design).simulate()
+    stims = ['A', 'B', 'E', 'F', 'N']
+    choice_rates = {m: pd.DataFrame(columns=stims) for m in models}
+    for n in range(number_of_runs):
+        for m in models:
 
-    #Finalize and view model
-    q_learning.plot_model()
+            print(f'\nRun {n}, {m}')
+
+            #Initialize task, model, and task design
+            task = AvoidanceLearningTask()
+            task_design = {'learning_phase': {'number_of_trials': 24, 'number_of_blocks': 4},
+                                    'transfer_phase': {'times_repeated': 4}}
+
+            if m == 'QLearning':
+                model = QLearning(factual_lr=0.1, counterfactual_lr=0.05, temperature=0.1)
+            elif m == 'Relative':
+                model = Relative(factual_lr=0.1, counterfactual_lr=0.05, contextual_lr=0.1, temperature=0.1)
+            elif m == 'ActorCritic':
+                model = ActorCritic(factual_actor_lr=0.1, counterfactual_actor_lr=0.05, critic_lr=0.1, temperature=0.1, valence_factor=0.5)
+            elif m == 'Hybrid':
+                model = Hybrid(factual_lr=0.1, counterfactual_lr=0.05, factual_actor_lr=0.1, counterfactual_actor_lr=0.05, critic_lr=0.1, temperature=0.1, mixing_factor=0.5, valence_factor=0.5)
+                    
+            #Initialize pipeline
+            model = RLPipeline(task, model, task_design).simulate()
+
+            #Finalize and view model
+            #model.plot_model()
+
+            #Extract model data
+            choice_rates[m] = pd.concat([choice_rates[m], pd.DataFrame([model.choice_rate])], ignore_index=True)
+    
+    fig, ax = plt.subplots(1, len(models), figsize=(5*len(models), 5))
+    for i, m in enumerate(models):
+        ax[i].bar(['75R', '25R', '25P', '75P', 'N'], choice_rates[m].mean(axis=0))
+        ax[i].set_title(m)
+        if i == 0:
+            ax[i].set_ylabel('Choice rate (%)')
+    plt.show()
+
+    print('debug')
+
+
+
 
     '''
     # ============================================== #
