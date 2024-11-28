@@ -3,6 +3,7 @@ sys.dont_write_bytecode = True
 import random as rnd
 import pandas as pd
 import matplotlib.pyplot as plt
+import tqdm
 
 from helpers.tasks import AvoidanceLearningTask
 from helpers.rl_models import QLearning, ActorCritic, Relative, Hybrid
@@ -43,14 +44,15 @@ if __name__ == "__main__":
     # === EXAMPLE RUNNING A SINGLE SIMULATION === #
     # =========================================== #
     number_of_runs = 100
-    models = ['QLearning', 'Relative', 'ActorCritic', 'Hybrid']
+    models = ['QLearning', 'ActorCritic', 'Relative', 'Hybrid']
 
     stims = ['A', 'B', 'E', 'F', 'N']
-    choice_rates = {m: pd.DataFrame(columns=stims) for m in models}
+    choice_rates = {m: [] for m in models}
+    loop = tqdm.tqdm(range(number_of_runs*len(models)))
     for n in range(number_of_runs):
         for m in models:
-
-            print(f'\nRun {n}, {m}')
+            loop.update(1)
+            loop.set_description(f'Run {n+1}/{number_of_runs}')
 
             #Initialize task, model, and task design
             task = AvoidanceLearningTask()
@@ -59,10 +61,10 @@ if __name__ == "__main__":
 
             if m == 'QLearning':
                 model = QLearning(factual_lr=0.1, counterfactual_lr=0.05, temperature=0.1)
-            elif m == 'Relative':
-                model = Relative(factual_lr=0.1, counterfactual_lr=0.05, contextual_lr=0.1, temperature=0.1)
             elif m == 'ActorCritic':
                 model = ActorCritic(factual_actor_lr=0.1, counterfactual_actor_lr=0.05, critic_lr=0.1, temperature=0.1, valence_factor=0.5)
+            elif m == 'Relative':
+                model = Relative(factual_lr=0.1, counterfactual_lr=0.05, contextual_lr=0.1, temperature=0.1)
             elif m == 'Hybrid':
                 model = Hybrid(factual_lr=0.1, counterfactual_lr=0.05, factual_actor_lr=0.1, counterfactual_actor_lr=0.05, critic_lr=0.1, temperature=0.1, mixing_factor=0.5, valence_factor=0.5)
                     
@@ -73,20 +75,24 @@ if __name__ == "__main__":
             #model.plot_model()
 
             #Extract model data
-            choice_rates[m] = pd.concat([choice_rates[m], pd.DataFrame([model.choice_rate])], ignore_index=True)
-    
+            if not type(choice_rates[m]) == pd.DataFrame:
+                choice_rates[m] = pd.DataFrame([model.choice_rate], columns=stims)
+            else:
+                choice_rates[m] = pd.concat([choice_rates[m], pd.DataFrame([model.choice_rate])], ignore_index=True)
+
+    #Compute SEM    
+    colors = ['#33A02C', '#B2DF8A', '#FB9A99', '#E31A1C', '#D3D3D3']
     fig, ax = plt.subplots(1, len(models), figsize=(5*len(models), 5))
     for i, m in enumerate(models):
-        ax[i].bar(['75R', '25R', '25P', '75P', 'N'], choice_rates[m].mean(axis=0))
+        ax[i].bar(['High\nReward', 'Low\nReward', 'Low\nPunish', 'High\nPunish', 'Novel'], choice_rates[m].mean(axis=0), color=colors, alpha = .5)
+        ax[i].errorbar(['High\nReward', 'Low\nReward', 'Low\nPunish', 'High\nPunish', 'Novel'], choice_rates[m].mean(axis=0), yerr=choice_rates[m].sem(), fmt='.', color='grey')
         ax[i].set_title(m)
+        ax[i].set_ylim([0, 100])
         if i == 0:
             ax[i].set_ylabel('Choice rate (%)')
     plt.show()
 
     print('debug')
-
-
-
 
     '''
     # ============================================== #
