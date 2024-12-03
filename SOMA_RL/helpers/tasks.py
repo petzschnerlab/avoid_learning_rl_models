@@ -44,7 +44,7 @@ class AvoidanceLearningTask:
             self.rl_model.v_values = {state: pd.DataFrame([[0]], columns=['V']) for state in states}
             delattr(self.rl_model, 'q_values')
         
-        if self.rl_model.__class__.__name__ == 'Hybrid':
+        if self.rl_model.__class__.__name__ == 'Hybrid' or self.rl_model.__class__.__name__ == 'Hybrid2':
             self.rl_model.w_values = {state: pd.DataFrame([[0.01]*number_actions], columns=[f'Q{i+1}' for i in range(number_actions)]) for state in states}
             self.rl_model.v_values = {state: pd.DataFrame([[0]], columns=['V']) for state in states}
             self.rl_model.h_values = {state: pd.DataFrame([[0]*number_actions], columns=[f'Q{i+1}' for i in range(number_actions)]) for state in states}
@@ -99,6 +99,9 @@ class AvoidanceLearningTask:
         self.rl_model.final_q_values = self.rl_model.q_values_summary.iloc[-1].copy()
         self.rl_model.final_q_values['N'] = 0
 
+        self.rl_model.initial_q_values = self.rl_model.q_values_summary.iloc[0].copy()
+        self.rl_model.initial_q_values['N'] = 0
+
     def combine_v_values(self):
 
         stimuli = ['A','B','C','D','E','F','G','H']
@@ -117,6 +120,9 @@ class AvoidanceLearningTask:
         self.rl_model.w_values_summary.columns = stimuli
         self.rl_model.final_w_values = self.rl_model.w_values_summary.iloc[-1].copy()
         self.rl_model.final_w_values['N'] = 0
+
+        self.rl_model.initial_w_values = self.rl_model.w_values_summary.iloc[0].copy()
+        self.rl_model.initial_w_values['N'] = 0
 
     def initiate_model(self, rl_model):
 
@@ -147,7 +153,7 @@ class AvoidanceLearningTask:
             self.task_transfer_data_columns.remove('q_values')
             self.task_transfer_data_columns += ['w_values']
 
-        if self.rl_model.__class__.__name__ == 'Hybrid':
+        if self.rl_model.__class__.__name__ == 'Hybrid' or self.rl_model.__class__.__name__ == 'Hybrid2':
             self.task_learning_data_columns += ['v_values']
             self.task_learning_data_columns += ['w_values']
             self.task_learning_data_columns += ['q_prediction_errors']
@@ -212,7 +218,7 @@ class AvoidanceLearningTask:
         if self.rl_model.__class__.__name__ == 'ActorCritic':
             self.rl_model.combine_v_values()
             self.rl_model.combine_w_values()
-        elif self.rl_model.__class__.__name__ == 'Hybrid':
+        elif self.rl_model.__class__.__name__ == 'Hybrid' or self.rl_model.__class__.__name__ == 'Hybrid2':
             self.rl_model.combine_q_values()
             self.rl_model.combine_v_values()
             self.rl_model.combine_w_values()
