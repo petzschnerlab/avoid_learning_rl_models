@@ -104,7 +104,7 @@ class RLToolbox:
 
         prediction_errors = state['v_prediction_errors'] if 'Hybrid' in self.__class__.__name__ else state['prediction_errors']
 
-        new_v_values = state['v_values'][0] + (self.critic_lr * prediction_errors[state['action']])
+        new_v_values = state['v_values'][0] + (self.critic_lr * prediction_errors[state['action']]) #TODO: Should we use the averaged prediction error or the selected action's prediction error?
 
         self.v_values[state['state_id']] = pd.concat([self.v_values[state['state_id']],
                                                       pd.DataFrame([new_v_values], 
