@@ -44,7 +44,7 @@ class AvoidanceLearningTask:
             self.rl_model.v_values = {state: pd.DataFrame([[0]], columns=['V']) for state in states}
             delattr(self.rl_model, 'q_values')
         
-        if self.rl_model.__class__.__name__ == 'Hybrid' or self.rl_model.__class__.__name__ == 'Hybrid2':
+        if 'Hybrid' in self.rl_model.__class__.__name__:
             self.rl_model.w_values = {state: pd.DataFrame([[0.01]*number_actions], columns=[f'Q{i+1}' for i in range(number_actions)]) for state in states}
             self.rl_model.v_values = {state: pd.DataFrame([[0]], columns=['V']) for state in states}
             self.rl_model.h_values = {state: pd.DataFrame([[0]*number_actions], columns=[f'Q{i+1}' for i in range(number_actions)]) for state in states}
@@ -153,7 +153,7 @@ class AvoidanceLearningTask:
             self.task_transfer_data_columns.remove('q_values')
             self.task_transfer_data_columns += ['w_values']
 
-        if self.rl_model.__class__.__name__ == 'Hybrid' or self.rl_model.__class__.__name__ == 'Hybrid2':
+        if 'Hybrid' in self.rl_model.__class__.__name__:
             self.task_learning_data_columns += ['v_values']
             self.task_learning_data_columns += ['w_values']
             self.task_learning_data_columns += ['q_prediction_errors']
@@ -218,7 +218,7 @@ class AvoidanceLearningTask:
         if self.rl_model.__class__.__name__ == 'ActorCritic':
             self.rl_model.combine_v_values()
             self.rl_model.combine_w_values()
-        elif self.rl_model.__class__.__name__ == 'Hybrid' or self.rl_model.__class__.__name__ == 'Hybrid2':
+        elif 'Hybrid' in self.rl_model.__class__.__name__:
             self.rl_model.combine_q_values()
             self.rl_model.combine_v_values()
             self.rl_model.combine_w_values()

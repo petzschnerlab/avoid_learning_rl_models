@@ -89,21 +89,20 @@ if __name__ == "__main__":
 
             elif m == 'Hybrid2021':
                 model = Hybrid2(factual_lr=0.1, 
-                                counterfactual_lr=0.05, 
-                                factual_actor_lr=0.1, 
-                                counterfactual_actor_lr=0.05, 
-                                critic_lr=0.1, 
-                                temperature=0.1, 
-                                mixing_factor=0.5, 
-                                valence_factor=0.5, 
-                                noise_factor=0.1, 
-                                decay_factor=0.1)
+                               counterfactual_lr=0.05, 
+                               factual_actor_lr=0.1, 
+                               counterfactual_actor_lr=0.05, 
+                               critic_lr=0.1, 
+                               temperature=0.1, 
+                               mixing_factor=0.5, 
+                               valence_factor=0.5,
+                               noise_factor=0.1,
+                               decay_factor=0.1)
+            else:
+                raise ValueError('Model not recognized.')
 
             #Initialize pipeline
             model = RLPipeline(task, model, task_design).simulate()
-
-            #Finalize and view model
-            #model.plot_model()
 
             #Extract model data
             if not type(choice_rates[m]) == pd.DataFrame:

@@ -56,7 +56,7 @@ class RLToolbox:
     #Update functions
     def update_prediction_errors(self, state):
 
-        if self.__class__.__name__ == 'Hybrid' or self.__class__.__name__ == 'Hybrid2':
+        if 'Hybrid' in self.__class__.__name__:
             self.q_prediction_errors[state['state_id']] = pd.concat([self.q_prediction_errors[state['state_id']], 
                                                                pd.DataFrame([state['q_prediction_errors']], 
                                                                             columns=self.q_prediction_errors[state['state_id']].columns)], 
@@ -74,7 +74,7 @@ class RLToolbox:
     def update_q_values(self, state):
 
         learning_rates = [self.factual_lr, self.counterfactual_lr] if state['action'] == 0 else [self.counterfactual_lr, self.factual_lr]
-        prediction_errors = state['q_prediction_errors'] if self.__class__.__name__ == 'Hybrid' or self.__class__.__name__ == 'Hybrid2' else state['prediction_errors']
+        prediction_errors = state['q_prediction_errors'] if 'Hybrid' in self.__class__.__name__ else state['prediction_errors']
             
         new_q_values = []
         for i in range(len(state['rewards'])):
@@ -88,7 +88,7 @@ class RLToolbox:
     def update_w_values(self, state):
 
         learning_rates = [self.factual_actor_lr, self.counterfactual_actor_lr] if state['action'] == 0 else [self.counterfactual_actor_lr, self.factual_actor_lr]
-        prediction_errors = state['v_prediction_errors'] if self.__class__.__name__ == 'Hybrid' else state['prediction_errors']
+        prediction_errors = state['v_prediction_errors'] if 'Hybrid' in self.__class__.__name__ else state['prediction_errors']
             
         new_w_values = []
         for i in range(len(state['rewards'])):
@@ -102,7 +102,7 @@ class RLToolbox:
     
     def update_v_values(self, state):
 
-        prediction_errors = state['v_prediction_errors'] if self.__class__.__name__ == 'Hybrid' else state['prediction_errors']
+        prediction_errors = state['v_prediction_errors'] if 'Hybrid' in self.__class__.__name__ else state['prediction_errors']
 
         new_v_values = state['v_values'][0] + (self.critic_lr * prediction_errors[state['action']])
 
@@ -144,7 +144,7 @@ class RLToolbox:
             self.update_context_values(state)
             self.update_context_prediction_errors(state)
 
-        if self.__class__.__name__ == 'ActorCritic' or self.__class__.__name__ == 'Hybrid':
+        if self.__class__.__name__ == 'ActorCritic' or 'Hybrid' in self.__class__.__name__:
             self.update_w_values(state)
             self.update_v_values(state)
 
@@ -154,7 +154,7 @@ class RLToolbox:
         fig, ax = plt.subplots(4, 4, figsize=(20,5))
 
         #Plot q-values
-        if self.__class__.__name__ == 'Hybrid':
+        if 'Hybrid' in self.__class__.__name__:
             values = self.h_values
             value_label = 'H-Value'
         elif self.__class__.__name__ == 'ActorCritic':
@@ -181,12 +181,12 @@ class RLToolbox:
                 ax[0,i].set_yticklabels([])
         
         #Plot prediction errors
-        prediction_errors = self.prediction_errors if self.__class__.__name__ != 'Hybrid' else self.q_prediction_errors
+        prediction_errors = self.prediction_errors if 'Hybrid' in self.__class__.__name__ else self.q_prediction_errors
         for i, key in enumerate(prediction_errors.keys()):
             for ci, col in enumerate(prediction_errors[key].columns):
                 rolling_prediction_errors = prediction_errors[key][col].reset_index(drop=True).rolling(window=2).mean()
                 ax[1,i].plot(rolling_prediction_errors, label=['Stim 1', 'Stim 2'][ci], color=['C0', 'C1'][ci])
-                if self.__class__.__name__ == 'Hybrid':
+                if'Hybrid' in self.__class__.__name__:
                     rolling_v_prediction_errors = self.v_prediction_errors[key][col].reset_index(drop=True).rolling(window=2).mean()
                     ax[1,i].plot(rolling_v_prediction_errors, label=['Stim 1', 'Stim 2'][ci], color=['C0', 'C1'][ci], linestyle='dashed')
             ax[1,i].set_title('')
@@ -223,7 +223,7 @@ class RLToolbox:
     def get_choice_rates(self):
         return self.choice_rate
 
-#Q-Learning Model
+
 class QLearning(RLToolbox):
 
     """
@@ -286,6 +286,7 @@ class QLearning(RLToolbox):
             state = self.get_final_q_values(state)
             state = self.select_action(state)
         self.update_task_data(state, phase=phase)
+
 
 class ActorCritic(RLToolbox):
 
@@ -374,6 +375,7 @@ class ActorCritic(RLToolbox):
             state = self.select_action(state)
         self.update_task_data(state, phase=phase)
 
+
 class Relative(RLToolbox):
 
     """
@@ -447,6 +449,7 @@ class Relative(RLToolbox):
             state = self.get_final_q_values(state)
             state = self.select_action(state)
         self.update_task_data(state, phase=phase)
+
 
 class Hybrid(RLToolbox):
 
@@ -542,8 +545,6 @@ class Hybrid(RLToolbox):
             state = self.get_final_w_values(state)
             state = self.select_action(state)
         self.update_task_data(state, phase=phase)
-
-
 
 class Hybrid2(RLToolbox):
 
@@ -646,5 +647,3 @@ class Hybrid2(RLToolbox):
             state = self.get_decayed_w_values(state)
             state = self.select_action(state)
         self.update_task_data(state, phase=phase)
-
-
