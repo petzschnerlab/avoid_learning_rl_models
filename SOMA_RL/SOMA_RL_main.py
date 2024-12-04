@@ -42,18 +42,24 @@ class RLPipeline:
 if __name__ == "__main__":
 
     # =========================================== #
-    # === EXAMPLE RUNNING A SINGLE SIMULATION === #
+    # ======= EXAMPLE RUNNING SIMULATIONS ======= #
     # =========================================== #
+    rnd.seed(1251)
     number_of_runs = 100
     models = ['QLearning', 'ActorCritic', 'Relative', 'Hybrid2012', 'Hybrid2021']
 
+    #Set up data columns
     transfer_columns = ['A', 'B', 'E', 'F', 'N']
     accuracy_columns = ['context', 'trial_total', 'accuracy']
     pe_columns = ['context', 'trial_total', 'averaged_pe']
+
+    #Setup data tracking
     note = []
     accuracy = {m: [] for m in models}
     prediction_errors = {m: [] for m in models}
     choice_rates = {m: [] for m in models}
+
+    #Run simulations
     loop = tqdm.tqdm(range(number_of_runs*len(models)))
     for n in range(number_of_runs):
         for m in models:
@@ -120,6 +126,8 @@ if __name__ == "__main__":
             task_learning_data['averaged_pe'] = task_learning_data['prediction_errors'].apply(lambda x: sum(x)/len(x))
             learning_accuracy = task_learning_data.groupby(['context', 'trial_total'])['accuracy'].mean().reset_index()
             learning_prediction_errors = task_learning_data.groupby(['context', 'trial_total'])['averaged_pe'].mean().reset_index()
+
+            #Store data
             if not type(choice_rates[m]) == pd.DataFrame:
                 accuracy[m] = pd.DataFrame(learning_accuracy, columns=accuracy_columns)
                 prediction_errors[m] = pd.DataFrame(learning_prediction_errors, columns=pe_columns)
@@ -165,6 +173,7 @@ if __name__ == "__main__":
             ax[1, i].legend(loc='lower right', frameon=False)
         ax[1, i].spines['top'].set_visible(False)
         ax[1, i].spines['right'].set_visible(False)
+        ax[1, i].axhline(0, linestyle='--', color='grey')
 
         #Plot choice rates
         ax[2, i].bar(['High\nReward', 'Low\nReward', 'Low\nPunish', 'High\nPunish', 'Novel'], choice_rates[m].mean(axis=0), color=colors, alpha = .5)
