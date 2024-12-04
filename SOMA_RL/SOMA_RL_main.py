@@ -1,5 +1,6 @@
 import sys
 sys.dont_write_bytecode = True
+import os
 import random as rnd
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -121,6 +122,7 @@ if __name__ == "__main__":
         if i == 0:
             ax[i].set_ylabel('Choice rate (%)')
     fig.tight_layout()
+    fig.savefig(os.path.join('SOMA_RL','plots','model_simulations.png'))
     plt.show()
 
     print('debug')
