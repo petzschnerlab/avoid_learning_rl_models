@@ -47,7 +47,9 @@ if __name__ == "__main__":
     number_of_runs = 100
     models = ['QLearning', 'ActorCritic', 'Relative', 'Hybrid2012', 'Hybrid2021']
 
-    stims = ['A', 'B', 'E', 'F', 'N']
+    transfer_columns = ['A', 'B', 'E', 'F', 'N']
+    learning_columns = ['context', 'trial_total', 'accuracy']
+    accuracy = {m: [] for m in models}
     choice_rates = {m: [] for m in models}
     loop = tqdm.tqdm(range(number_of_runs*len(models)))
     for n in range(number_of_runs):
@@ -106,62 +108,44 @@ if __name__ == "__main__":
             model = RLPipeline(task, model, task_design).simulate()
 
             #Extract model data
+            task_learning_data = model.task_learning_data
+            task_learning_data['trial_total'] = task_learning_data.groupby('state_id').cumcount()+1
+            learning_accuracy = task_learning_data.groupby(['context', 'trial_total'])['accuracy'].mean().reset_index()
             if not type(choice_rates[m]) == pd.DataFrame:
-                choice_rates[m] = pd.DataFrame([model.choice_rate], columns=stims)
+                accuracy[m] = pd.DataFrame(learning_accuracy, columns=learning_columns)
+                choice_rates[m] = pd.DataFrame([model.choice_rate], columns=transfer_columns)
             else:
+                accuracy[m] = pd.concat([accuracy[m], pd.DataFrame(learning_accuracy)], ignore_index=True)
                 choice_rates[m] = pd.concat([choice_rates[m], pd.DataFrame([model.choice_rate])], ignore_index=True)
 
-    #Compute SEM    
+    #Plot simulations    
     colors = ['#33A02C', '#B2DF8A', '#FB9A99', '#E31A1C', '#D3D3D3']
-    fig, ax = plt.subplots(1, len(models), figsize=(4*len(models), 5))
+    fig, ax = plt.subplots(2, len(models), figsize=(4*len(models), 10))
     for i, m in enumerate(models):
-        ax[i].bar(['High\nReward', 'Low\nReward', 'Low\nPunish', 'High\nPunish', 'Novel'], choice_rates[m].mean(axis=0), color=colors, alpha = .5)
-        ax[i].errorbar(['High\nReward', 'Low\nReward', 'Low\nPunish', 'High\nPunish', 'Novel'], choice_rates[m].mean(axis=0), yerr=choice_rates[m].sem(), fmt='.', color='grey')
-        ax[i].set_title(m)
-        ax[i].set_ylim([0, 100])
+        model_accuracy = accuracy[m].groupby(['context','trial_total']).mean().reset_index()
+        for ci, context in enumerate(model_accuracy['context'].unique()):
+            context_accuracy = model_accuracy[model_accuracy['context'] == context]['accuracy'].reset_index(drop=True)
+            ax[0, i].plot(context_accuracy*100, color=['#33A02C','#E31A1C'][ci], alpha = .5, label=context)
+        ax[0, i].set_title(m)
+        ax[0, i].set_ylim([0, 105])
         if i == 0:
-            ax[i].set_ylabel('Choice rate (%)')
+            ax[0, i].set_ylabel('Accuracy (%)')
+        ax[0, i].set_xlabel('Trial')
+        if i == len(models)-1:
+            ax[0, i].legend(loc='lower right')
+        ax[0, i].spines['top'].set_visible(False)
+        ax[0, i].spines['right'].set_visible(False)
+
+        ax[1, i].bar(['High\nReward', 'Low\nReward', 'Low\nPunish', 'High\nPunish', 'Novel'], choice_rates[m].mean(axis=0), color=colors, alpha = .5)
+        ax[1, i].errorbar(['High\nReward', 'Low\nReward', 'Low\nPunish', 'High\nPunish', 'Novel'], choice_rates[m].mean(axis=0), yerr=choice_rates[m].sem(), fmt='.', color='grey')
+        ax[1, i].set_ylim([0, 100])
+        if i == 0:
+            ax[1, i].set_ylabel('Choice rate (%)')
+        ax[1, i].spines['top'].set_visible(False)
+        ax[1, i].spines['right'].set_visible(False)
     fig.tight_layout()
     fig.savefig(os.path.join('SOMA_RL','plots','model_simulations.png'))
     plt.show()
-
-    print('debug')
-
-    '''
-    # ============================================== #
-    # === EXAMPLE RUNNING SEQUENTIAL SIMULATIONS === #
-    # ============================================== #
-
-    parameters = []
-    for i in range(100):
-        print(f'\nRunning simulation {i}')
-
-        task = AvoidanceLearningTask()
-        model = QLearning(factual_lr=rnd.random(), #Randomize parameters
-                          counterfactual_lr=rnd.random(), 
-                          temperature=rnd.random())
-
-        task_design = {'learning_phase': {'number_of_trials': 24, 'number_of_blocks': 4},
-                       'transfer_phase': {'times_repeated': 4}}
-
-        q_learning = RLPipeline(task, model, task_design).simulate()
-
-        model_data = {'index': i, 
-                      'factual_lr': model.factual_lr, 
-                      'counterfactual_lr': model.counterfactual_lr, 
-                      'temperature': model.temperature, 
-                      '75R': model.choice_rate['A'],
-                      '25R': model.choice_rate['B'],
-                      '25P': model.choice_rate['E'],
-                      '75P': model.choice_rate['F'],
-                      'N': model.choice_rate['N']}
-        
-        if not type(parameters) == pd.DataFrame:
-            parameters = pd.DataFrame([model_data])
-        else:
-            parameters = pd.concat([parameters, pd.DataFrame([model_data])], ignore_index=True)
-    
-    '''
     
     #Debug stop
     print()
