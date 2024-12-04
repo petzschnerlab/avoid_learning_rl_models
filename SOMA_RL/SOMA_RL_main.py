@@ -44,7 +44,7 @@ if __name__ == "__main__":
     # === EXAMPLE RUNNING A SINGLE SIMULATION === #
     # =========================================== #
     number_of_runs = 100
-    models = ['QLearning', 'ActorCritic', 'Relative', 'Hybrid', 'Hybrid2']
+    models = ['QLearning', 'ActorCritic', 'Relative', 'Hybrid2012', 'Hybrid2021']
 
     stims = ['A', 'B', 'E', 'F', 'N']
     choice_rates = {m: [] for m in models}
@@ -57,24 +57,27 @@ if __name__ == "__main__":
             #Initialize task, model, and task design
             task = AvoidanceLearningTask()
             task_design = {'learning_phase': {'number_of_trials': 24, 'number_of_blocks': 4},
-                                    'transfer_phase': {'times_repeated': 4}}
+                           'transfer_phase': {'times_repeated': 4}}
 
             if m == 'QLearning':
                 model = QLearning(factual_lr=0.1, 
                                   counterfactual_lr=0.05, 
                                   temperature=0.1)
+
             elif m == 'ActorCritic':
                 model = ActorCritic(factual_actor_lr=0.1, 
                                     counterfactual_actor_lr=0.05, 
                                     critic_lr=0.1, 
                                     temperature=0.1, 
                                     valence_factor=0.5)
+
             elif m == 'Relative':
                 model = Relative(factual_lr=0.1, 
                                  counterfactual_lr=0.05, 
                                  contextual_lr=0.1, 
                                  temperature=0.1)
-            elif m == 'Hybrid':
+
+            elif m == 'Hybrid2012':
                 model = Hybrid(factual_lr=0.1, 
                                counterfactual_lr=0.05, 
                                factual_actor_lr=0.1, 
@@ -83,7 +86,8 @@ if __name__ == "__main__":
                                temperature=0.1, 
                                mixing_factor=0.5, 
                                valence_factor=0.5)
-            elif m == 'Hybrid2':
+
+            elif m == 'Hybrid2021':
                 model = Hybrid2(factual_lr=0.1, 
                                 counterfactual_lr=0.05, 
                                 factual_actor_lr=0.1, 
@@ -109,7 +113,7 @@ if __name__ == "__main__":
 
     #Compute SEM    
     colors = ['#33A02C', '#B2DF8A', '#FB9A99', '#E31A1C', '#D3D3D3']
-    fig, ax = plt.subplots(1, len(models), figsize=(6*len(models), 5))
+    fig, ax = plt.subplots(1, len(models), figsize=(4*len(models), 5))
     for i, m in enumerate(models):
         ax[i].bar(['High\nReward', 'Low\nReward', 'Low\nPunish', 'High\nPunish', 'Novel'], choice_rates[m].mean(axis=0), color=colors, alpha = .5)
         ax[i].errorbar(['High\nReward', 'Low\nReward', 'Low\nPunish', 'High\nPunish', 'Novel'], choice_rates[m].mean(axis=0), yerr=choice_rates[m].sem(), fmt='.', color='grey')
@@ -117,6 +121,7 @@ if __name__ == "__main__":
         ax[i].set_ylim([0, 100])
         if i == 0:
             ax[i].set_ylabel('Choice rate (%)')
+    fig.tight_layout()
     plt.show()
 
     print('debug')
