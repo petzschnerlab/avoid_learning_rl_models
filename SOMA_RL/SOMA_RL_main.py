@@ -50,6 +50,7 @@ if __name__ == "__main__":
     transfer_columns = ['A', 'B', 'E', 'F', 'N']
     accuracy_columns = ['context', 'trial_total', 'accuracy']
     pe_columns = ['context', 'trial_total', 'averaged_pe']
+    note = []
     accuracy = {m: [] for m in models}
     prediction_errors = {m: [] for m in models}
     choice_rates = {m: [] for m in models}
@@ -110,6 +111,8 @@ if __name__ == "__main__":
             model = RLPipeline(task, model, task_design).simulate()
 
             #Extract model data
+            params = ', '.join([f'{key}: {model.parameters[key]}'for key in model.parameters])
+            note.append(f'{m} | {params}')
             task_learning_data = model.task_learning_data
             task_learning_data['trial_total'] = task_learning_data.groupby('state_id').cumcount()+1
             if 'v_prediction_errors' in task_learning_data.columns:
@@ -139,12 +142,12 @@ if __name__ == "__main__":
             context_accuracy = model_accuracy[model_accuracy['context'] == context]['accuracy'].reset_index(drop=True)
             ax[0, i].plot(context_accuracy*100, color=bi_colors[ci], alpha = .8, label=context)
         ax[0, i].set_title(m)
-        ax[0, i].set_ylim([40, 105])
+        ax[0, i].set_ylim([30, 105])
         if i == 0:
             ax[0, i].set_ylabel('Accuracy (%)')
         ax[0, i].set_xlabel('Trial')
         if i == len(models)-1:
-            ax[0, i].legend(loc='lower right')
+            ax[0, i].legend(loc='lower right', frameon=False)
         ax[0, i].spines['top'].set_visible(False)
         ax[0, i].spines['right'].set_visible(False)
 
@@ -154,12 +157,12 @@ if __name__ == "__main__":
         for ci, context in enumerate(model_pe['context'].unique()):
             context_pe = model_pe[model_pe['context'] == context]['averaged_pe'].reset_index(drop=True)
             ax[1, i].plot(context_pe, color=bi_colors[ci], alpha = .8, label=context)
-        ax[1, i].set_ylim([-1, 1])
+        ax[1, i].set_ylim([-.75, .75])
         if i == 0:
             ax[1, i].set_ylabel('Prediction Error')
         ax[1, i].set_xlabel('Trial')
         if i == len(models)-1:
-            ax[1, i].legend(loc='lower right')
+            ax[1, i].legend(loc='lower right', frameon=False)
         ax[1, i].spines['top'].set_visible(False)
         ax[1, i].spines['right'].set_visible(False)
 
@@ -171,6 +174,8 @@ if __name__ == "__main__":
             ax[2, i].set_ylabel('Choice rate (%)')
         ax[2, i].spines['top'].set_visible(False)
         ax[2, i].spines['right'].set_visible(False)
+
+    #Metaplot settings
     fig.tight_layout()
     fig.savefig(os.path.join('SOMA_RL','plots','model_simulations.png'))
     plt.show()
