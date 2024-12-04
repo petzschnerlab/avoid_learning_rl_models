@@ -324,14 +324,6 @@ class ActorCritic(RLToolbox):
         
     #RL functions
     def get_reward(self, state):
-
-        """
-        TODO:
-        "In agreement with previous studies, we also allow positive and negative rewards to be weighed differently. Positive
-        feedback at trial t was encoded as outcome(t) = 1-d, neutral feedback as outcome(t) = 0 and negative feedback as
-        outcome(t) = -d. Thus the free parameter d indicates full neglect of negative outcomes if d = 0, full neglect of positive
-        outcomes if d = 1, and equal weighing of positive and negative outcomes if d = 0.5"
-        """
         random_numbers = [rnd.random() for i in range(len(state['stim_id']))]
         reward = [int(random_numbers[i] < state['probabilities'][i]) for i in range(len(state['stim_id']))]
         reward = [reward[i] * state['feedback'] for i in range(len(state['stim_id']))]
@@ -490,14 +482,6 @@ class Hybrid(RLToolbox):
 
     #RL functions    
     def get_reward(self, state):
-
-        """
-        TODO:
-        "In agreement with previous studies, we also allow positive and negative rewards to be weighed differently. Positive
-        feedback at trial t was encoded as outcome(t) = 1-d, neutral feedback as outcome(t) = 0 and negative feedback as
-        outcome(t) = -d. Thus the free parameter d indicates full neglect of negative outcomes if d = 0, full neglect of positive
-        outcomes if d = 1, and equal weighing of positive and negative outcomes if d = 0.5"
-        """
         random_numbers = [rnd.random() for i in range(len(state['stim_id']))]
         reward = [int(random_numbers[i] < state['probabilities'][i]) for i in range(len(state['stim_id']))]
         reward = [reward[i] * state['feedback'] for i in range(len(state['stim_id']))]
@@ -590,14 +574,6 @@ class Hybrid2(RLToolbox):
 
     #RL functions    
     def get_reward(self, state):
-
-        """
-        TODO:
-        "In agreement with previous studies, we also allow positive and negative rewards to be weighed differently. Positive
-        feedback at trial t was encoded as outcome(t) = 1-d, neutral feedback as outcome(t) = 0 and negative feedback as
-        outcome(t) = -d. Thus the free parameter d indicates full neglect of negative outcomes if d = 0, full neglect of positive
-        outcomes if d = 1, and equal weighing of positive and negative outcomes if d = 0.5"
-        """
         random_numbers = [rnd.random() for i in range(len(state['stim_id']))]
         reward = [int(random_numbers[i] < state['probabilities'][i]) for i in range(len(state['stim_id']))]
         reward = [reward[i] * state['feedback'] for i in range(len(state['stim_id']))]
