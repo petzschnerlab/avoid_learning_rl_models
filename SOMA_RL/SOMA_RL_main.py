@@ -213,7 +213,7 @@ if __name__ == "__main__":
             ax[1, i].legend(loc='lower right', frameon=False)
         ax[1, i].spines['top'].set_visible(False)
         ax[1, i].spines['right'].set_visible(False)
-        ax[1, i].axhline(0, linestyle='--', color='grey')
+        ax[1, i].axhline(0, linestyle='--', color='grey', alpha=.5)
 
         #Plot values
         model_values = values[m].groupby(['context','trial_total', 'run']).mean().reset_index()
@@ -232,9 +232,9 @@ if __name__ == "__main__":
         ax[2, i].set_xlabel('Trial')
         if i == len(models)-1:
             ax[2, i].legend(loc='lower left', frameon=False, ncol=2)
-            
         ax[2, i].spines['top'].set_visible(False)
         ax[2, i].spines['right'].set_visible(False)
+        ax[2, i].axhline(0, linestyle='--', color='grey', alpha=.5)
 
         #Plot choice rates
         ax[3, i].bar(['High\nReward', 'Low\nReward', 'Low\nPunish', 'High\nPunish', 'Novel'], choice_rates[m].mean(axis=0), color=colors, alpha = .5)
