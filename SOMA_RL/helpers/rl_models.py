@@ -147,6 +147,9 @@ class RLToolbox:
         if self.__class__.__name__ == 'ActorCritic' or 'Hybrid' in self.__class__.__name__:
             self.update_w_values(state)
             self.update_v_values(state)
+        
+        if 'Hybrid' in self.__class__.__name__:
+            self.update_h_values(state)
 
     #Plotting functions
     def plot_model(self):

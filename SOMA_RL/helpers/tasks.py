@@ -156,6 +156,7 @@ class AvoidanceLearningTask:
         if 'Hybrid' in self.rl_model.__class__.__name__:
             self.task_learning_data_columns += ['v_values']
             self.task_learning_data_columns += ['w_values']
+            self.task_learning_data_columns += ['h_values']
             self.task_learning_data_columns += ['q_prediction_errors']
             self.task_learning_data_columns += ['v_prediction_errors']
             self.task_learning_data_columns.remove('prediction_errors')
