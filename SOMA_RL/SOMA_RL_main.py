@@ -5,6 +5,8 @@ import random as rnd
 import pandas as pd
 import matplotlib.pyplot as plt
 import tqdm
+from scipy import stats
+
 
 from helpers.tasks import AvoidanceLearningTask
 from helpers.rl_models import QLearning, ActorCritic, Relative, Hybrid, Hybrid2
@@ -50,8 +52,8 @@ if __name__ == "__main__":
 
     #Set up data columns
     transfer_columns = ['A', 'B', 'E', 'F', 'N']
-    accuracy_columns = ['context', 'trial_total', 'accuracy']
-    pe_columns = ['context', 'trial_total', 'averaged_pe']
+    accuracy_columns = ['context', 'trial_total', 'accuracy', 'run']
+    pe_columns = ['context', 'trial_total', 'averaged_pe', 'run']
 
     #Setup data tracking
     note = []
@@ -127,6 +129,9 @@ if __name__ == "__main__":
             learning_accuracy = task_learning_data.groupby(['context', 'trial_total'])['accuracy'].mean().reset_index()
             learning_prediction_errors = task_learning_data.groupby(['context', 'trial_total'])['averaged_pe'].mean().reset_index()
 
+            learning_accuracy['run'] = n
+            learning_prediction_errors['run'] = n
+
             #Store data
             if not type(choice_rates[m]) == pd.DataFrame:
                 accuracy[m] = pd.DataFrame(learning_accuracy, columns=accuracy_columns)
@@ -144,13 +149,17 @@ if __name__ == "__main__":
     for i, m in enumerate(models):
 
         #Plot accuracy
-        model_accuracy = accuracy[m].groupby(['context','trial_total']).mean().reset_index()
+        model_accuracy = accuracy[m].groupby(['context','trial_total','run']).mean().reset_index()
         model_accuracy['context'] = pd.Categorical(model_accuracy['context'], categories=['Reward', 'Loss Avoid'], ordered=True)
         for ci, context in enumerate(model_accuracy['context'].unique()):
-            context_accuracy = model_accuracy[model_accuracy['context'] == context]['accuracy'].reset_index(drop=True)
-            ax[0, i].plot(context_accuracy*100, color=bi_colors[ci], alpha = .8, label=context)
+            CIs = model_accuracy.groupby(['context','trial_total'])['accuracy'].sem()*stats.t.ppf(0.975, number_of_runs-1)
+            averaged_accuracy = model_accuracy.groupby(['context','trial_total']).mean().reset_index()
+            context_accuracy = averaged_accuracy[averaged_accuracy['context'] == context]['accuracy'].reset_index(drop=True).astype(float)*100
+            context_CIs = CIs[CIs.index.get_level_values('context') == context].reset_index(drop=True)*100
+            ax[0, i].fill_between(context_accuracy.index, context_accuracy - context_CIs, context_accuracy + context_CIs, alpha=0.2, color=bi_colors[ci], edgecolor='none')
+            ax[0, i].plot(context_accuracy, color=bi_colors[ci], alpha = .8, label=context)
         ax[0, i].set_title(m)
-        ax[0, i].set_ylim([30, 105])
+        ax[0, i].set_ylim([25, 110])
         if i == 0:
             ax[0, i].set_ylabel('Accuracy (%)')
         ax[0, i].set_xlabel('Trial')
@@ -160,10 +169,14 @@ if __name__ == "__main__":
         ax[0, i].spines['right'].set_visible(False)
 
         #Plot prediction errors
-        model_pe = prediction_errors[m].groupby(['context','trial_total']).mean().reset_index()
+        model_pe = prediction_errors[m].groupby(['context','trial_total', 'run']).mean().reset_index()
         model_pe['context'] = pd.Categorical(model_pe['context'], categories=['Reward', 'Loss Avoid'], ordered=True)
         for ci, context in enumerate(model_pe['context'].unique()):
-            context_pe = model_pe[model_pe['context'] == context]['averaged_pe'].reset_index(drop=True)
+            CIs = model_pe.groupby(['context','trial_total'])['averaged_pe'].sem()*stats.t.ppf(0.975, number_of_runs-1)
+            averaged_pe = model_pe.groupby(['context','trial_total']).mean().reset_index()
+            context_pe = averaged_pe[averaged_pe['context'] == context]['averaged_pe'].reset_index(drop=True)
+            context_CIs = CIs[CIs.index.get_level_values('context') == context].reset_index(drop=True)
+            ax[1, i].fill_between(context_pe.index, context_pe - context_CIs, context_pe + context_CIs, alpha=0.2, color=bi_colors[ci], edgecolor='none')
             ax[1, i].plot(context_pe, color=bi_colors[ci], alpha = .8, label=context)
         ax[1, i].set_ylim([-.75, .75])
         if i == 0:
