@@ -133,43 +133,6 @@ class RLToolbox:
                                                                       pd.DataFrame([state['context_prediction_errors']], 
                                                                                    columns=self.context_prediction_errors[state['state_id']].columns)], 
                                                                       ignore_index=True)
-        
-    def fit_log_likelihood(self, values, temperature):
-
-        '''
-        Action selection function for the fitting procedure
-
-        parameters
-        ----------
-        values: list[float]
-            List of Q-values
-        temperature: float
-            Temperature parameter for softmax action selection
-        '''
-        
-        transformed_values = np.divide(values, temperature)
-        return transformed_values - scipy.special.logsumexp(transformed_values)
-    
-    def fit_update_values(self, values, action, reward, factual_lr, counterfactual_lr):
-
-        '''
-        Update the Q-values for the fitting procedure
-
-        parameters
-        ----------
-        values: list[float]
-            List of Q-values
-        action: int
-            Action taken
-        reward: int
-            Reward received
-        factual_lr: float
-            Learning rate for factual Q-value update
-        counterfactual_lr: float
-            Learning rate for counterfactual Q-value update
-        '''
-        lr = [factual_lr, counterfactual_lr] if action == 0 else [counterfactual_lr, factual_lr]
-        return [values[i] + lr[i]*(reward[i] - values[i]) for i in range(len(values))]
 
     def update_model(self, state):
         
@@ -188,6 +151,43 @@ class RLToolbox:
         
         if 'Hybrid' in self.__class__.__name__:
             self.update_h_values(state)
+
+    def fit_log_likelihood(self, values, temperature):
+
+        '''
+        Action selection function for the fitting procedure
+
+        parameters
+        ----------
+        values: list[float]
+            List of Q-values
+        temperature: float
+            Temperature parameter for softmax action selection
+        '''
+        
+        transformed_values = np.divide(values, temperature)
+        return transformed_values - scipy.special.logsumexp(transformed_values)
+    
+    def fit(self, data, bounds):
+
+        '''
+        Fit the model to the data
+        '''
+
+        #Fit the model
+        free_params = [self.parameters[key] for key in self.parameters]
+        fit_results = scipy.optimize.minimize(self.fit_func, 
+                                              free_params, 
+                                              args=data,
+                                              bounds=bounds, 
+                                              method='L-BFGS-B')
+        
+        #Unpack the fitted params
+        fitted_params = {}
+        for fi, key in enumerate(self.parameters):
+            fitted_params[key] = fit_results.x[fi]
+
+        return fit_results, fitted_params
 
     #Plotting functions
     def plot_model(self):
@@ -357,27 +357,6 @@ class QLearning(RLToolbox):
 
         #Return the negative log likelihood of all observed actions
         return -np.sum(logp_actions[1:])
-    
-    def fit(self, data, bounds):
-
-        '''
-        Fit the model to the data
-        '''
-
-        #Fit the model
-        free_params = [self.parameters[key] for key in self.parameters]
-        fit_results = scipy.optimize.minimize(self.fit_func, 
-                                              free_params, 
-                                              args=data,
-                                              bounds=bounds, 
-                                              method='L-BFGS-B')
-        
-        #Unpack the fitted params
-        fitted_params = {'factual_lr': fit_results.x[0],
-                         'counterfactual_lr': fit_results.x[1],
-                         'temperature': fit_results.x[2]}
-
-        return fit_results, fitted_params
 
 class ActorCritic(RLToolbox):
 
@@ -498,29 +477,6 @@ class ActorCritic(RLToolbox):
         #Return the negative log likelihood of all observed actions
         return -np.sum(logp_actions[1:])
 
-    def fit(self, data, bounds):
-
-        '''
-        Fit the model to the data
-        '''
-
-        #Fit the model
-        free_params = [self.parameters[key] for key in self.parameters]
-        fit_results = scipy.optimize.minimize(self.fit_func, 
-                                              free_params, 
-                                              args=data,
-                                              bounds=bounds, 
-                                              method='L-BFGS-B')
-        
-        #Unpack the fitted params
-        fitted_params = {'factual_lr': fit_results.x[0],
-                         'counterfactual_lr': fit_results.x[1],
-                         'critic_lr': fit_results.x[2],
-                         'temperature': fit_results.x[3],
-                         'valence_factor': fit_results.x[4]}
-
-        return fit_results, fitted_params
-
 class Relative(RLToolbox):
 
     """
@@ -548,9 +504,7 @@ class Relative(RLToolbox):
                            'counterfactual_lr': self.counterfactual_lr, 
                            'contextual_lr': self.contextual_lr,
                            'temperature': self.temperature}
-        
-        #Create context value dataframe
-        
+                
     #RL functions
     def get_context_value(self, state):
         state['context_value'] = list(self.context_values[state['state_id']].iloc[-1])
@@ -595,7 +549,39 @@ class Relative(RLToolbox):
             state = self.select_action(state)
         self.update_task_data(state, phase=phase)
 
+    def fit_func(self, x, *args):
 
+        '''
+        Fit the model to the data
+
+        data: tuple
+            Tuple of data to be fitted: actions, rewards
+        '''
+
+        #Unpack free parameters
+        factual_lr, counterfactual_lr, contextual_lr, temperature = x
+        states, actions, rewards = args
+
+        #Initialize values
+        logp_actions = np.zeros((len(actions),1))
+        q_values = {state: np.array([0,0]) for state in states}
+        context_values = {state: np.array([0]) for state in states}
+
+        for trial, (state_id, action, reward) in enumerate(zip(states, actions, rewards)):
+            
+            #Compute and store the log probability of the observed action
+            logp_actions[trial] = self.fit_log_likelihood(q_values[state_id], temperature)[action]
+
+            #Forward: TODO: When using functions (e.g., self.compute_PE -> self.update model -> self.get_q_value), it's much slower
+            con_pe = np.average(reward) - context_values[state_id]
+            pe = [reward[i] - context_values[state_id][0] - q_values[state_id][i] for i in range(len(reward))]
+            lr = [factual_lr, counterfactual_lr] if action == 0 else [counterfactual_lr, factual_lr]
+            context_values[state_id] = context_values[state_id] + (contextual_lr*con_pe)
+            q_values[state_id] = [q_values[state_id][i] + (lr[i]*pe[i]) for i in range(len(q_values[state_id]))]
+
+        #Return the negative log likelihood of all observed actions
+        return -np.sum(logp_actions[1:])
+    
 class Hybrid(RLToolbox):
 
     """

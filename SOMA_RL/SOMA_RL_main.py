@@ -76,10 +76,11 @@ if __name__ == "__main__":
     data = data[data['participant'].isin(data['participant'].unique()[:5])]
     
     #Setup fit dataframe
-    models = ['QLearning', 'ActorCritic']
+    models = ['QLearning', 'ActorCritic', 'Relative']
     columns = {}
     columns['QLearning'] = ['participant', 'pain_group', 'fit', 'factual_lr', 'counterfactual_lr', 'temperature']
-    columns['ActorCritic'] = ['participant', 'pain_group', 'fit', 'factual_lr', 'counterfactual_lr', 'critic_lr', 'temperature', 'valence_factor']
+    columns['ActorCritic'] = ['participant', 'pain_group', 'fit', 'factual_actor_lr', 'counterfactual_actor_lr', 'critic_lr', 'temperature', 'valence_factor']
+    columns['Relative'] = ['participant', 'pain_group', 'fit', 'factual_lr', 'counterfactual_lr', 'contextual_lr', 'temperature']
 
     fit_data = {model: pd.DataFrame(columns=columns[model]) for model in models}
 
@@ -105,6 +106,9 @@ if __name__ == "__main__":
             elif m == 'ActorCritic':
                 model = ActorCritic(factual_actor_lr=0.1, counterfactual_actor_lr=0.05, critic_lr=0.1, temperature=0.1, valence_factor=0.5)            
                 bounds = [(0, 1), (0, 1), (0,1), (0.01, 10), (-1, 1)]
+            elif m == 'Relative':
+                model = Relative(factual_lr=0.1, counterfactual_lr=0.05, contextual_lr=0.1, temperature=0.1)
+                bounds = [(0, 1), (0, 1), (0,1), (0.01, 10)]
             pipeline = RLPipeline(model, task, task_design)
             fit_results, fitted_params = pipeline.fit((states, actions, rewards), bounds=bounds)
             
@@ -132,7 +136,6 @@ if __name__ == "__main__":
 
     #Metaparameters
     number_of_runs = len(fit_data[models[0]])
-    models = ['QLearning', 'ActorCritic']
     run_type = 'fit' #fit or simulate
 
     #Set up data columns
@@ -170,23 +173,28 @@ if __name__ == "__main__":
                                   temperature=temperature)
 
             elif m == 'ActorCritic':
-                factual_lr = 0.1 if run_type == 'simulation' else fit_data[m].iloc[n]['factual_lr']
-                counterfactual_lr = 0.5 if run_type == 'simulation' else fit_data[m].iloc[n]['counterfactual_lr']
+                factual_actor_lr = 0.1 if run_type == 'simulation' else fit_data[m].iloc[n]['factual_actor_lr']
+                counterfactual_actor_lr = 0.5 if run_type == 'simulation' else fit_data[m].iloc[n]['counterfactual_actor_lr']
                 critic_lr = 0.1 if run_type == 'simulation' else fit_data[m].iloc[n]['critic_lr']
                 temperature = 0.1 if run_type == 'simulation' else fit_data[m].iloc[n]['temperature']
                 valence_factor = 0.5 if run_type == 'simulation' else fit_data[m].iloc[n]['valence_factor']
                 
-                model = ActorCritic(factual_actor_lr=0.1, 
-                                    counterfactual_actor_lr=0.05, 
-                                    critic_lr=0.1, 
-                                    temperature=0.1, 
-                                    valence_factor=0.5)
+                model = ActorCritic(factual_actor_lr=factual_actor_lr,
+                                    counterfactual_actor_lr=counterfactual_actor_lr,
+                                    critic_lr=critic_lr,
+                                    temperature=temperature,
+                                    valence_factor=valence_factor)
 
             elif m == 'Relative':
-                model = Relative(factual_lr=0.1, 
-                                 counterfactual_lr=0.05, 
-                                 contextual_lr=0.1, 
-                                 temperature=0.1)
+                factual_lr = 0.1 if run_type == 'simulation' else fit_data[m].iloc[n]['factual_lr']
+                counterfactual_lr = 0.05 if run_type == 'simulation' else fit_data[m].iloc[n]['counterfactual_lr']
+                contextual_lr = 0.1 if run_type == 'simulation' else fit_data[m].iloc[n]['contextual_lr']
+                temperature = 0.1 if run_type == 'simulation' else fit_data[m].iloc[n]['temperature']
+
+                model = Relative(factual_lr=factual_lr,
+                                 counterfactual_lr=counterfactual_lr,
+                                 contextual_lr=contextual_lr,
+                                 temperature=temperature)
 
             elif m == 'Hybrid2012':
                 model = Hybrid(factual_lr=0.1, 
