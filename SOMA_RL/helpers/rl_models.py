@@ -328,11 +328,6 @@ class QLearning(RLToolbox):
             state = self.select_action(state)
         self.update_task_data(state, phase=phase)
 
-    def fit_forward(self, state):
-        state = self.compute_prediction_error(state)
-        self.update_model(state)
-        return self.get_q_value(state)['q_values']
-
     def fit_func(self, x, *args):
 
         '''
@@ -473,24 +468,36 @@ class ActorCritic(RLToolbox):
         '''
 
         #Unpack free parameters
-        factual_lr, counterfactual_lr, critic_lr, temperature, valence_factor = x
+        factual_actor_lr, counterfactual_actor_lr, critic_lr, temperature, valence_factor = x    
         states, actions, rewards = args
 
         #Initialize values
-        values = {state: np.array([0, 0]) for state in states}
         logp_actions = np.zeros((len(actions),1))
+        v_values = {state: np.array([0]) for state in states}
+        w_values = {state: np.array([0.01, 0.01]) for state in states}
 
-        for trial, (state, action, reward) in enumerate(zip(states, actions, rewards)):
-
+        for trial, (state_id, action, reward) in enumerate(zip(states, actions, rewards)):
+            
             #Compute and store the log probability of the observed action
-            logp_actions[trial] = self.fit_log_likelihood(values[state], temperature)[action]
+            logp_actions[trial] = self.fit_log_likelihood(w_values[state_id], temperature)[action]
 
-            #Update the Q values for the next trial [FUNC]
-            values[state] = self.fit_update_values(values[state], action, reward, factual_lr, counterfactual_lr)
-        
+            #Forward: TODO: When using functions (e.g., self.compute_PE -> self.update model -> self.get_q_value), it's much slower 
+            for ri, r in enumerate(reward):
+                if r > 0:
+                    reward[ri] = 1-self.valence_factor
+                elif r < 0:
+                    reward[ri] = -self.valence_factor
+                else:
+                    reward[ri] = 0
+            pe = [reward[i] - v_values[state_id][0] for i in range(len(reward))]
+            lr = [factual_actor_lr, counterfactual_actor_lr] if action == 0 else [counterfactual_actor_lr, factual_actor_lr]
+            v_values[state_id] = [v_values[state_id][i] + (critic_lr*pe[i]) for i in range(len(v_values[state_id]))]
+            new_w_values = [w_values[state_id][i] + (lr[i]*pe[i]) for i in range(len(w_values[state_id]))]
+            w_values[state_id] = [w_val/np.sum(np.abs(new_w_values)) for w_val in new_w_values]
+
         #Return the negative log likelihood of all observed actions
         return -np.sum(logp_actions[1:])
-    
+
     def fit(self, data, bounds):
 
         '''

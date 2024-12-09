@@ -73,13 +73,17 @@ if __name__ == "__main__":
 
     #DEBUGGING CLEANUP
     #Cut the dataframe to 50 participants: #TODO:This is for debugging, remove it later
-    data = data[data['participant'].isin(data['participant'].unique()[:30])]
+    data = data[data['participant'].isin(data['participant'].unique()[:5])]
     
     #Setup fit dataframe
-    fit_data = pd.DataFrame(columns=['participant', 'pain_group', 'factual_lr', 'counterfactual_lr', 'temperature', 'log_likelihood'])
+    models = ['QLearning', 'ActorCritic']
+    columns = {}
+    columns['QLearning'] = ['participant', 'pain_group', 'fit', 'factual_lr', 'counterfactual_lr', 'temperature']
+    columns['ActorCritic'] = ['participant', 'pain_group', 'fit', 'factual_lr', 'counterfactual_lr', 'critic_lr', 'temperature', 'valence_factor']
+
+    fit_data = {model: pd.DataFrame(columns=columns[model]) for model in models}
 
     #Task setup
-    task = AvoidanceLearningTask()
     task_design = {'learning_phase': {'number_of_trials': 24, 'number_of_blocks': 4},
                            'transfer_phase': {'times_repeated': 4}}
     
@@ -92,40 +96,43 @@ if __name__ == "__main__":
         actions = participant_data['action'].values
         rewards = participant_data[['reward_L', 'reward_R']].values
 
-        #Fit models
-        model = QLearning(factual_lr=0.1, counterfactual_lr=0.05, temperature=0.1)
-        bounds = [(0, 1), (0, 1), (0.01, 10)]
-        pipeline = RLPipeline(model, task, task_design)
-        fit_results, fitted_params = pipeline.fit((states, actions, rewards), bounds=bounds)
-        
-        #Store fit results
-        participant_fitted = [participant, 
-                              participant_data['pain_group'].values[0], 
-                              fitted_params['factual_lr'], 
-                              fitted_params['counterfactual_lr'], 
-                              fitted_params['temperature'], 
-                              fit_results.fun]
-        
-        if len(fit_data) == 0:
-            fit_data = pd.DataFrame([participant_fitted], columns=fit_data.columns)
-        else:
-            fit_data = pd.concat((fit_data, 
-                                  pd.DataFrame([participant_fitted], columns=fit_data.columns)),
-                                  ignore_index=True)
+        for m in models:
+            #Fit models
+            task = AvoidanceLearningTask()
+            if m == 'QLearning':
+                model = QLearning(factual_lr=0.1, counterfactual_lr=0.05, temperature=0.1)
+                bounds = [(0, 1), (0, 1), (0.01, 10)]
+            elif m == 'ActorCritic':
+                model = ActorCritic(factual_actor_lr=0.1, counterfactual_actor_lr=0.05, critic_lr=0.1, temperature=0.1, valence_factor=0.5)            
+                bounds = [(0, 1), (0, 1), (0,1), (0.01, 10), (-1, 1)]
+            pipeline = RLPipeline(model, task, task_design)
+            fit_results, fitted_params = pipeline.fit((states, actions, rewards), bounds=bounds)
+            
+            #Store fit results
+            participant_fitted = [participant, 
+                                participant_data['pain_group'].values[0], 
+                                fit_results.fun]
+            participant_fitted.extend([fitted_params[key] for key in columns[m][3:]])
+            
+            if len(fit_data[m]) == 0:
+                fit_data[m] = pd.DataFrame([participant_fitted], columns=fit_data[m].columns)
+            else:
+                fit_data[m] = pd.concat((fit_data[m], 
+                                    pd.DataFrame([participant_fitted], columns=fit_data[m].columns)),
+                                    ignore_index=True)
 
-    print('')
-    print('')
-    print('FIT REPORT')
-    print('==========')
-    print(f"Factual LR: {fit_data['factual_lr'].mean().round(4)}, {fit_data['factual_lr'].std().round(4)}")
-    print(f"Counterfactual LR: {fit_data['counterfactual_lr'].mean().round(4)}, {fit_data['counterfactual_lr'].std().round(4)}")
-    print(f"Temperature: {fit_data['temperature'].mean().round(4)}, {fit_data['temperature'].std().round(4)}")
-    print('==========')
-    print('')
+    for m in models:
+        print('')
+        print(f'FIT REPORT: {m}')
+        print('==========')
+        for col in fit_data[m].columns[2:]:
+            print(f'{col}: {fit_data[m][col].mean().round(4)}, {fit_data[m][col].std().round(4)}')
+        print('==========')
+        print('')
 
     #Metaparameters
-    number_of_runs = len(fit_data)
-    models = ['QLearning']
+    number_of_runs = len(fit_data[models[0]])
+    models = ['QLearning', 'ActorCritic']
     run_type = 'fit' #fit or simulate
 
     #Set up data columns
@@ -154,20 +161,21 @@ if __name__ == "__main__":
                            'transfer_phase': {'times_repeated': 4}}
 
             if m == 'QLearning':
-                factual_lr = 0.1 if run_type == 'simulation' else fit_data.iloc[n]['factual_lr']
-                counterfactual_lr = 0.5 if run_type == 'simulation' else fit_data.iloc[n]['counterfactual_lr']
-                temperature = 0.1 if run_type == 'simulation' else fit_data.iloc[n]['temperature']
+                factual_lr = 0.1 if run_type == 'simulation' else fit_data[m].iloc[n]['factual_lr']
+                counterfactual_lr = 0.5 if run_type == 'simulation' else fit_data[m].iloc[n]['counterfactual_lr']
+                temperature = 0.1 if run_type == 'simulation' else fit_data[m].iloc[n]['temperature']
 
                 model = QLearning(factual_lr=factual_lr, 
                                   counterfactual_lr=counterfactual_lr, 
                                   temperature=temperature)
 
             elif m == 'ActorCritic':
-                factual_lr = 0.1 if run_type == 'simulation' else fit_data.iloc[n]['factual_lr']
-                counterfactual_lr = 0.5 if run_type == 'simulation' else fit_data.iloc[n]['counterfactual_lr']
-                critic_lr = 0.1 if run_type == 'simulation' else fit_data.iloc[n]['critic_lr']
-                temperature = 0.1 if run_type == 'simulation' else fit_data.iloc[n]['temperature']
-                valence_factor = 0.5 if run_type == 'simulation' else fit_data.iloc[n]['valence_factor']
+                factual_lr = 0.1 if run_type == 'simulation' else fit_data[m].iloc[n]['factual_lr']
+                counterfactual_lr = 0.5 if run_type == 'simulation' else fit_data[m].iloc[n]['counterfactual_lr']
+                critic_lr = 0.1 if run_type == 'simulation' else fit_data[m].iloc[n]['critic_lr']
+                temperature = 0.1 if run_type == 'simulation' else fit_data[m].iloc[n]['temperature']
+                valence_factor = 0.5 if run_type == 'simulation' else fit_data[m].iloc[n]['valence_factor']
+                
                 model = ActorCritic(factual_actor_lr=0.1, 
                                     counterfactual_actor_lr=0.05, 
                                     critic_lr=0.1, 
