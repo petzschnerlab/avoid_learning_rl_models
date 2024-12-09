@@ -133,6 +133,63 @@ class RLToolbox:
                                                                       pd.DataFrame([state['context_prediction_errors']], 
                                                                                    columns=self.context_prediction_errors[state['state_id']].columns)], 
                                                                       ignore_index=True)
+        
+    def fit_log_likelihood(self, values, temperature):
+        '''
+        Action selection function for the fitting procedure
+
+        parameters
+        ----------
+        values: list[float]
+            List of Q-values
+        temperature: float
+            Temperature parameter for softmax action selection
+        '''
+        
+        transformed_values = np.divide(values, temperature)
+        return transformed_values - scipy.special.logsumexp(transformed_values)
+    
+    def fit_update_values(self, values, action, reward, factual_lr, counterfactual_lr):
+
+        '''
+        Update the Q-values for the fitting procedure
+
+        parameters
+        ----------
+        values: list[float]
+            List of Q-values
+        action: int
+            Action taken
+        reward: int
+            Reward received
+        factual_lr: float
+            Learning rate for factual Q-value update
+        counterfactual_lr: float
+            Learning rate for counterfactual Q-value update
+        '''
+        lr = [factual_lr, counterfactual_lr] if action == 0 else [counterfactual_lr, factual_lr]
+        return [values[i] + lr[i]*(reward[i] - values[i]) for i in range(len(values))]
+    
+    def fit(self, data, bounds):
+
+        '''
+        Fit the model to the data
+        '''
+
+        #Fit the model
+        free_params = [self.parameters[key] for key in self.parameters]
+        fit_results = scipy.optimize.minimize(self.fit_func, 
+                                              free_params, 
+                                              args=data,
+                                              bounds=bounds, 
+                                              method='L-BFGS-B')
+        
+        #Unpack the fitted params
+        fitted_params = {'factual_lr': fit_results.x[0],
+                         'counterfactual_lr': fit_results.x[1],
+                         'temperature': fit_results.x[2]}
+
+        return fit_results, fitted_params
 
     def update_model(self, state):
         
@@ -291,58 +348,6 @@ class QLearning(RLToolbox):
             state = self.select_action(state)
         self.update_task_data(state, phase=phase)
 
-    def fit_select_action(self, values, temperature):
-
-        '''
-        Action selection function for the fitting procedure
-
-        parameters
-        ----------
-        values: list[float]
-            List of Q-values
-        temperature: float
-            Temperature parameter for softmax action selection
-        '''
-        
-        transformed_values = np.exp(np.divide(values, temperature))
-        return (transformed_values/np.sum(transformed_values))
-
-    def fit_log_likelihood(self, values, temperature):
-        '''
-        Action selection function for the fitting procedure
-
-        parameters
-        ----------
-        values: list[float]
-            List of Q-values
-        temperature: float
-            Temperature parameter for softmax action selection
-        '''
-        
-        transformed_values = np.divide(values, temperature)
-        return transformed_values - scipy.special.logsumexp(transformed_values)
-
-    def fit_update_values(self, values, action, reward, factual_lr, counterfactual_lr):
-
-        '''
-        Update the Q-values for the fitting procedure
-
-        parameters
-        ----------
-        values: list[float]
-            List of Q-values
-        action: int
-            Action taken
-        reward: int
-            Reward received
-        factual_lr: float
-            Learning rate for factual Q-value update
-        counterfactual_lr: float
-            Learning rate for counterfactual Q-value update
-        '''
-        lr = [factual_lr, counterfactual_lr] if action == 0 else [counterfactual_lr, factual_lr]
-        return [values[i] + lr[i]*(reward[i] - values[i]) for i in range(len(values))]
-    
     def fit_func(self, x, *args):
 
         '''
@@ -370,28 +375,6 @@ class QLearning(RLToolbox):
         
         #Return the negative log likelihood of all observed actions
         return -np.sum(logp_actions[1:])
-
-    def fit(self, data):
-
-        '''
-        Fit the model to the data
-        '''
-
-        #Fit the model
-        free_params = [self.parameters[key] for key in self.parameters]
-        bounds = [(0, 1), (0, 1), (0.01, 10)]
-        fit_results = scipy.optimize.minimize(self.fit_func, 
-                                              free_params, 
-                                              args=data,
-                                              bounds=bounds, 
-                                              method='L-BFGS-B')
-        
-        #Unpack the fitted params
-        fitted_params = {'factual_lr': fit_results.x[0],
-                         'counterfactual_lr': fit_results.x[1],
-                         'temperature': fit_results.x[2]}
-
-        return fit_results, fitted_params
 
 class ActorCritic(RLToolbox):
 

@@ -81,7 +81,8 @@ if __name__ == "__main__":
 
         #Fit models
         model = QLearning(factual_lr=0.1, counterfactual_lr=0.05, temperature=0.1)
-        fit_results, fitted_params = model.fit((states, actions, rewards))
+        bounds = [(0, 1), (0, 1), (0.01, 10)]
+        fit_results, fitted_params = model.fit((states, actions, rewards), bounds=bounds)
 
         #Store fit results
         participant_fitted = [participant, 
