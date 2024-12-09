@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib
 matplotlib.use("TKAgg")
 import matplotlib.pyplot as plt
+import scipy
 
 class RLToolbox:
 
@@ -252,7 +253,7 @@ class QLearning(RLToolbox):
         self.parameters = {'factual_lr': self.factual_lr, 
                            'counterfactual_lr': self.counterfactual_lr, 
                            'temperature': self.temperature}
-
+    
     #RL functions
     def get_reward(self, state):
         random_numbers = [rnd.random() for i in range(len(state['stim_id']))]
@@ -290,6 +291,107 @@ class QLearning(RLToolbox):
             state = self.select_action(state)
         self.update_task_data(state, phase=phase)
 
+    def fit_select_action(self, values, temperature):
+
+        '''
+        Action selection function for the fitting procedure
+
+        parameters
+        ----------
+        values: list[float]
+            List of Q-values
+        temperature: float
+            Temperature parameter for softmax action selection
+        '''
+        
+        transformed_values = np.exp(np.divide(values, temperature))
+        return (transformed_values/np.sum(transformed_values))
+
+    def fit_log_likelihood(self, values, temperature):
+        '''
+        Action selection function for the fitting procedure
+
+        parameters
+        ----------
+        values: list[float]
+            List of Q-values
+        temperature: float
+            Temperature parameter for softmax action selection
+        '''
+        
+        transformed_values = np.divide(values, temperature)
+        return transformed_values - scipy.special.logsumexp(transformed_values)
+
+    def fit_update_values(self, values, action, reward, factual_lr, counterfactual_lr):
+
+        '''
+        Update the Q-values for the fitting procedure
+
+        parameters
+        ----------
+        values: list[float]
+            List of Q-values
+        action: int
+            Action taken
+        reward: int
+            Reward received
+        factual_lr: float
+            Learning rate for factual Q-value update
+        counterfactual_lr: float
+            Learning rate for counterfactual Q-value update
+        '''
+        lr = [factual_lr, counterfactual_lr] if action == 0 else [counterfactual_lr, factual_lr]
+        return [values[i] + lr[i]*(reward[i] - values[i]) for i in range(len(values))]
+    
+    def fit_func(self, x, *args):
+
+        '''
+        Fit the model to the data
+
+        data: tuple
+            Tuple of data to be fitted: actions, rewards
+        '''
+
+        #Unpack free parameters
+        factual_lr, counterfactual_lr, temperature = x
+        states, actions, rewards = args
+
+        #Initialize values
+        values = {state: np.array([0, 0]) for state in states}
+        logp_actions = np.zeros((len(actions),1))
+
+        for trial, (state, action, reward) in enumerate(zip(states, actions, rewards)):
+
+            #Compute and store the log probability of the observed action
+            logp_actions[trial] = self.fit_log_likelihood(values[state], temperature)[action]
+
+            #Update the Q values for the next trial [FUNC]
+            values[state] = self.fit_update_values(values[state], action, reward, factual_lr, counterfactual_lr)
+        
+        #Return the negative log likelihood of all observed actions
+        return -np.sum(logp_actions[1:])
+
+    def fit(self, data):
+
+        '''
+        Fit the model to the data
+        '''
+
+        #Fit the model
+        free_params = [self.parameters[key] for key in self.parameters]
+        bounds = [(0, 1), (0, 1), (0.01, 10)]
+        fit_results = scipy.optimize.minimize(self.fit_func, 
+                                              free_params, 
+                                              args=data,
+                                              bounds=bounds, 
+                                              method='L-BFGS-B')
+        
+        #Unpack the fitted params
+        fitted_params = {'factual_lr': fit_results.x[0],
+                         'counterfactual_lr': fit_results.x[1],
+                         'temperature': fit_results.x[2]}
+
+        return fit_results, fitted_params
 
 class ActorCritic(RLToolbox):
 
@@ -369,7 +471,6 @@ class ActorCritic(RLToolbox):
             state = self.get_final_w_values(state)
             state = self.select_action(state)
         self.update_task_data(state, phase=phase)
-
 
 class Relative(RLToolbox):
 
