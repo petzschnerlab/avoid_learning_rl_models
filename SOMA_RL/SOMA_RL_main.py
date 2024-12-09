@@ -27,7 +27,7 @@ class RLPipeline:
             Dictionary containing trial design parameters
         """
 
-        def __init__(self, task, model, trial_design):
+        def __init__(self, model, task=None, trial_design=None):
 
             #Get parameters
             self.trial_design = trial_design
@@ -41,6 +41,10 @@ class RLPipeline:
             self.task.rl_model.run_computations()
 
             return self.task.rl_model
+    
+        def fit(self, data, bounds):
+
+            return self.task.rl_model.fit(data, bounds)
 
 if __name__ == "__main__":
 
@@ -61,15 +65,24 @@ if __name__ == "__main__":
     data['action'] = data.apply(lambda x: x['choice_made'] if x['stim_order'] else np.abs(x['choice_made']-1), axis=1)
 
     data = data[['participant_id', 'group_code', 'symbol_names', 'reward_L', 'reward_R', 'action']]
+    data['symbol_names'] = data['symbol_names'].replace({'Reward1': 'State AB', 
+                                                         'Reward2': 'State CD', 
+                                                         'Punish1': 'State EF', 
+                                                         'Punish2': 'State GH'})
     data.columns = ['participant', 'pain_group', 'state', 'reward_L', 'reward_R', 'action']
 
     #DEBUGGING CLEANUP
     #Cut the dataframe to 50 participants: #TODO:This is for debugging, remove it later
-    data = data[data['participant'].isin(data['participant'].unique()[:50])]
+    data = data[data['participant'].isin(data['participant'].unique()[:30])]
     
     #Setup fit dataframe
     fit_data = pd.DataFrame(columns=['participant', 'pain_group', 'factual_lr', 'counterfactual_lr', 'temperature', 'log_likelihood'])
 
+    #Task setup
+    task = AvoidanceLearningTask()
+    task_design = {'learning_phase': {'number_of_trials': 24, 'number_of_blocks': 4},
+                           'transfer_phase': {'times_repeated': 4}}
+    
     #Loop through participants
     for participant in tqdm.tqdm(data['participant'].unique()):
 
@@ -82,8 +95,9 @@ if __name__ == "__main__":
         #Fit models
         model = QLearning(factual_lr=0.1, counterfactual_lr=0.05, temperature=0.1)
         bounds = [(0, 1), (0, 1), (0.01, 10)]
-        fit_results, fitted_params = model.fit((states, actions, rewards), bounds=bounds)
-
+        pipeline = RLPipeline(model, task, task_design)
+        fit_results, fitted_params = pipeline.fit((states, actions, rewards), bounds=bounds)
+        
         #Store fit results
         participant_fitted = [participant, 
                               participant_data['pain_group'].values[0], 
@@ -103,9 +117,9 @@ if __name__ == "__main__":
     print('')
     print('FIT REPORT')
     print('==========')
-    print(f"Factual LR: {fit_data['factual_lr'].mean()}, {fit_data['factual_lr'].std()}")
-    print(f"Counterfactual LR: {fit_data['counterfactual_lr'].mean()}, {fit_data['counterfactual_lr'].std()}")
-    print(f"Temperature: {fit_data['temperature'].mean()}, {fit_data['temperature'].std()}")
+    print(f"Factual LR: {fit_data['factual_lr'].mean().round(4)}, {fit_data['factual_lr'].std().round(4)}")
+    print(f"Counterfactual LR: {fit_data['counterfactual_lr'].mean().round(4)}, {fit_data['counterfactual_lr'].std().round(4)}")
+    print(f"Temperature: {fit_data['temperature'].mean().round(4)}, {fit_data['temperature'].std().round(4)}")
     print('==========')
     print('')
 
@@ -149,6 +163,11 @@ if __name__ == "__main__":
                                   temperature=temperature)
 
             elif m == 'ActorCritic':
+                factual_lr = 0.1 if run_type == 'simulation' else fit_data.iloc[n]['factual_lr']
+                counterfactual_lr = 0.5 if run_type == 'simulation' else fit_data.iloc[n]['counterfactual_lr']
+                critic_lr = 0.1 if run_type == 'simulation' else fit_data.iloc[n]['critic_lr']
+                temperature = 0.1 if run_type == 'simulation' else fit_data.iloc[n]['temperature']
+                valence_factor = 0.5 if run_type == 'simulation' else fit_data.iloc[n]['valence_factor']
                 model = ActorCritic(factual_actor_lr=0.1, 
                                     counterfactual_actor_lr=0.05, 
                                     critic_lr=0.1, 
@@ -186,7 +205,7 @@ if __name__ == "__main__":
                 raise ValueError('Model not recognized.')
 
             #Initialize pipeline
-            model = RLPipeline(task, model, task_design).simulate()
+            model = RLPipeline(model, task, task_design).simulate()
 
             #Extract model data
             params = ', '.join([f'{key}: {model.parameters[key]}'for key in model.parameters])
@@ -397,7 +416,7 @@ if __name__ == "__main__":
                 raise ValueError('Model not recognized.')
 
             #Initialize pipeline
-            model = RLPipeline(task, model, task_design).simulate()
+            model = RLPipeline(model, task, task_design).simulate()
 
             #Extract model data
             params = ', '.join([f'{key}: {model.parameters[key]}'for key in model.parameters])

@@ -135,6 +135,7 @@ class RLToolbox:
                                                                       ignore_index=True)
         
     def fit_log_likelihood(self, values, temperature):
+
         '''
         Action selection function for the fitting procedure
 
@@ -169,27 +170,6 @@ class RLToolbox:
         '''
         lr = [factual_lr, counterfactual_lr] if action == 0 else [counterfactual_lr, factual_lr]
         return [values[i] + lr[i]*(reward[i] - values[i]) for i in range(len(values))]
-    
-    def fit(self, data, bounds):
-
-        '''
-        Fit the model to the data
-        '''
-
-        #Fit the model
-        free_params = [self.parameters[key] for key in self.parameters]
-        fit_results = scipy.optimize.minimize(self.fit_func, 
-                                              free_params, 
-                                              args=data,
-                                              bounds=bounds, 
-                                              method='L-BFGS-B')
-        
-        #Unpack the fitted params
-        fitted_params = {'factual_lr': fit_results.x[0],
-                         'counterfactual_lr': fit_results.x[1],
-                         'temperature': fit_results.x[2]}
-
-        return fit_results, fitted_params
 
     def update_model(self, state):
         
@@ -348,6 +328,11 @@ class QLearning(RLToolbox):
             state = self.select_action(state)
         self.update_task_data(state, phase=phase)
 
+    def fit_forward(self, state):
+        state = self.compute_prediction_error(state)
+        self.update_model(state)
+        return self.get_q_value(state)['q_values']
+
     def fit_func(self, x, *args):
 
         '''
@@ -362,19 +347,42 @@ class QLearning(RLToolbox):
         states, actions, rewards = args
 
         #Initialize values
-        values = {state: np.array([0, 0]) for state in states}
         logp_actions = np.zeros((len(actions),1))
+        values = {state: np.array([0, 0]) for state in states}
 
-        for trial, (state, action, reward) in enumerate(zip(states, actions, rewards)):
+        for trial, (state_id, action, reward) in enumerate(zip(states, actions, rewards)):
 
             #Compute and store the log probability of the observed action
-            logp_actions[trial] = self.fit_log_likelihood(values[state], temperature)[action]
+            logp_actions[trial] = self.fit_log_likelihood(values[state_id], temperature)[action]
 
-            #Update the Q values for the next trial [FUNC]
-            values[state] = self.fit_update_values(values[state], action, reward, factual_lr, counterfactual_lr)
-        
+            #Forward: TODO: When using functions (e.g., self.compute_PE -> self.update model -> self.get_q_value), it's much slower 
+            pe = [reward[i] - values[state_id][i] for i in range(len(reward))]
+            lr = [factual_lr, counterfactual_lr] if action == 0 else [counterfactual_lr, factual_lr]
+            values[state_id] = [values[state_id][i] + (pe[i]*lr[i]) for i in range(len(values[state_id]))]
+
         #Return the negative log likelihood of all observed actions
         return -np.sum(logp_actions[1:])
+    
+    def fit(self, data, bounds):
+
+        '''
+        Fit the model to the data
+        '''
+
+        #Fit the model
+        free_params = [self.parameters[key] for key in self.parameters]
+        fit_results = scipy.optimize.minimize(self.fit_func, 
+                                              free_params, 
+                                              args=data,
+                                              bounds=bounds, 
+                                              method='L-BFGS-B')
+        
+        #Unpack the fitted params
+        fitted_params = {'factual_lr': fit_results.x[0],
+                         'counterfactual_lr': fit_results.x[1],
+                         'temperature': fit_results.x[2]}
+
+        return fit_results, fitted_params
 
 class ActorCritic(RLToolbox):
 
@@ -454,6 +462,57 @@ class ActorCritic(RLToolbox):
             state = self.get_final_w_values(state)
             state = self.select_action(state)
         self.update_task_data(state, phase=phase)
+
+    def fit_func(self, x, *args):
+
+        '''
+        Fit the model to the data
+
+        data: tuple
+            Tuple of data to be fitted: actions, rewards
+        '''
+
+        #Unpack free parameters
+        factual_lr, counterfactual_lr, critic_lr, temperature, valence_factor = x
+        states, actions, rewards = args
+
+        #Initialize values
+        values = {state: np.array([0, 0]) for state in states}
+        logp_actions = np.zeros((len(actions),1))
+
+        for trial, (state, action, reward) in enumerate(zip(states, actions, rewards)):
+
+            #Compute and store the log probability of the observed action
+            logp_actions[trial] = self.fit_log_likelihood(values[state], temperature)[action]
+
+            #Update the Q values for the next trial [FUNC]
+            values[state] = self.fit_update_values(values[state], action, reward, factual_lr, counterfactual_lr)
+        
+        #Return the negative log likelihood of all observed actions
+        return -np.sum(logp_actions[1:])
+    
+    def fit(self, data, bounds):
+
+        '''
+        Fit the model to the data
+        '''
+
+        #Fit the model
+        free_params = [self.parameters[key] for key in self.parameters]
+        fit_results = scipy.optimize.minimize(self.fit_func, 
+                                              free_params, 
+                                              args=data,
+                                              bounds=bounds, 
+                                              method='L-BFGS-B')
+        
+        #Unpack the fitted params
+        fitted_params = {'factual_lr': fit_results.x[0],
+                         'counterfactual_lr': fit_results.x[1],
+                         'critic_lr': fit_results.x[2],
+                         'temperature': fit_results.x[3],
+                         'valence_factor': fit_results.x[4]}
+
+        return fit_results, fitted_params
 
 class Relative(RLToolbox):
 
