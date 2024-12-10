@@ -73,14 +73,16 @@ if __name__ == "__main__":
 
     #DEBUGGING CLEANUP
     #Cut the dataframe to 50 participants: #TODO:This is for debugging, remove it later
-    data = data[data['participant'].isin(data['participant'].unique()[:5])]
+    #data = data[data['participant'].isin(data['participant'].unique()[:10])]
     
     #Setup fit dataframe
-    models = ['QLearning', 'ActorCritic', 'Relative']
+    models = ['QLearning', 'ActorCritic', 'Relative', 'Hybrid2012', 'Hybrid2021']
     columns = {}
     columns['QLearning'] = ['participant', 'pain_group', 'fit', 'factual_lr', 'counterfactual_lr', 'temperature']
     columns['ActorCritic'] = ['participant', 'pain_group', 'fit', 'factual_actor_lr', 'counterfactual_actor_lr', 'critic_lr', 'temperature', 'valence_factor']
     columns['Relative'] = ['participant', 'pain_group', 'fit', 'factual_lr', 'counterfactual_lr', 'contextual_lr', 'temperature']
+    columns['Hybrid2012'] = ['participant', 'pain_group', 'fit', 'factual_lr', 'counterfactual_lr', 'factual_actor_lr', 'counterfactual_actor_lr', 'critic_lr', 'temperature', 'mixing_factor', 'valence_factor']
+    columns['Hybrid2021'] = ['participant', 'pain_group', 'fit', 'factual_lr', 'counterfactual_lr', 'factual_actor_lr', 'counterfactual_actor_lr', 'critic_lr', 'temperature', 'mixing_factor', 'valence_factor', 'noise_factor', 'decay_factor']
 
     fit_data = {model: pd.DataFrame(columns=columns[model]) for model in models}
 
@@ -102,13 +104,36 @@ if __name__ == "__main__":
             task = AvoidanceLearningTask()
             if m == 'QLearning':
                 model = QLearning(factual_lr=0.1, counterfactual_lr=0.05, temperature=0.1)
-                bounds = [(0, 1), (0, 1), (0.01, 10)]
+                bounds = [(0, .99), (0, .99), (0.01, 10)]
             elif m == 'ActorCritic':
                 model = ActorCritic(factual_actor_lr=0.1, counterfactual_actor_lr=0.05, critic_lr=0.1, temperature=0.1, valence_factor=0.5)            
-                bounds = [(0, 1), (0, 1), (0,1), (0.01, 10), (-1, 1)]
+                bounds = [(0, .99), (0, .99), (0,.99), (0.01, 10), (-1, 1)]
             elif m == 'Relative':
                 model = Relative(factual_lr=0.1, counterfactual_lr=0.05, contextual_lr=0.1, temperature=0.1)
-                bounds = [(0, 1), (0, 1), (0,1), (0.01, 10)]
+                bounds = [(0, .99), (0, .99), (0,.99), (0.01, 10)]
+            elif m == 'Hybrid2012':
+                model = Hybrid(factual_lr=0.1, 
+                               counterfactual_lr=0.05, 
+                               factual_actor_lr=0.1, 
+                               counterfactual_actor_lr=0.05, 
+                               critic_lr=0.1, 
+                               temperature=0.1, 
+                               mixing_factor=0.5, 
+                               valence_factor=0.5)
+                bounds = [(0, .99), (0, .99), (0, .99), (0, .99), (0, .99), (0.01, 10), (0, 1), (-1, 1)]
+            elif m == 'Hybrid2021':
+                model = Hybrid2(factual_lr=0.1,
+                                 counterfactual_lr=0.05,
+                                 factual_actor_lr=0.1,
+                                 counterfactual_actor_lr=0.05,
+                                 critic_lr=0.1,
+                                 temperature=0.1,
+                                 mixing_factor=0.5,
+                                 valence_factor=0.5,
+                                 noise_factor=0.1,
+                                 decay_factor=0.1)
+                bounds = [(0, .99), (0, .99), (0, .99), (0, .99), (0, .99), (0.01, 10), (0, 1), (-1, 1), (0, 1), (0, 1)]
+                
             pipeline = RLPipeline(model, task, task_design)
             fit_results, fitted_params = pipeline.fit((states, actions, rewards), bounds=bounds)
             
@@ -234,17 +259,8 @@ if __name__ == "__main__":
             learning_accuracy = task_learning_data.groupby(['context', 'trial_total'])['accuracy'].mean().reset_index()
             learning_prediction_errors = task_learning_data.groupby(['context', 'trial_total'])['averaged_pe'].mean().reset_index()
 
-            match m:
-                case 'QLearning':
-                    value_label = 'q_values'
-                case 'ActorCritic':
-                    value_label = 'w_values'
-                case 'Relative':
-                    value_label = 'q_values'
-                case 'Hybrid2012':
-                    value_label = 'h_values'
-                case 'Hybrid2021':
-                    value_label = 'h_values'
+            value_labels = {'QLearning': 'q_values', 'ActorCritic': 'w_values', 'Relative': 'q_values', 'Hybrid2012': 'h_values', 'Hybrid2021': 'h_values'}
+            value_label = value_labels[m]
 
             task_learning_data[f'{value_label}1'] = task_learning_data[value_label].apply(lambda x: x[0])
             task_learning_data[f'{value_label}2'] = task_learning_data[value_label].apply(lambda x: x[1])

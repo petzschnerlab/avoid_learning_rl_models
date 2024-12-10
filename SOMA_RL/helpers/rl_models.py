@@ -94,7 +94,11 @@ class RLToolbox:
         new_w_values = []
         for i in range(len(state['rewards'])):
             new_w_values.append(state['w_values'][i] + (learning_rates[i] * prediction_errors[i]))
-        new_w_values = [w_val/np.sum(np.abs(new_w_values)) for w_val in new_w_values]
+        #check whether the new w values are nan
+        try:
+            new_w_values = [w_val/np.sum(np.abs(new_w_values)) for w_val in new_w_values]
+        except:
+            print('debug')
 
         self.w_values[state['state_id']] = pd.concat([self.w_values[state['state_id']],
                                                     pd.DataFrame([new_w_values], 
@@ -463,15 +467,17 @@ class ActorCritic(RLToolbox):
             #Forward: TODO: When using functions (e.g., self.compute_PE -> self.update model -> self.get_q_value), it's much slower 
             for ri, r in enumerate(reward):
                 if r > 0:
-                    reward[ri] = 1-self.valence_factor
+                    reward[ri] = 1-valence_factor
                 elif r < 0:
-                    reward[ri] = -self.valence_factor
+                    reward[ri] = -valence_factor
                 else:
                     reward[ri] = 0
             pe = [reward[i] - v_values[state_id][0] for i in range(len(reward))]
             lr = [factual_actor_lr, counterfactual_actor_lr] if action == 0 else [counterfactual_actor_lr, factual_actor_lr]
             v_values[state_id] = [v_values[state_id][i] + (critic_lr*pe[i]) for i in range(len(v_values[state_id]))]
             new_w_values = [w_values[state_id][i] + (lr[i]*pe[i]) for i in range(len(w_values[state_id]))]
+            if np.sum(np.abs(new_w_values)) ==0:
+                print('debug')
             w_values[state_id] = [w_val/np.sum(np.abs(new_w_values)) for w_val in new_w_values]
 
         #Return the negative log likelihood of all observed actions
@@ -669,6 +675,54 @@ class Hybrid(RLToolbox):
             state = self.select_action(state)
         self.update_task_data(state, phase=phase)
 
+    def fit_func(self, x, *args):
+
+        '''
+        Fit the model to the data
+
+        data: tuple
+            Tuple of data to be fitted: actions, rewards
+        '''
+
+        #Unpack parameters
+        factual_lr, counterfactual_lr, factual_actor_lr, counterfactual_actor_lr, critic_lr, temperature, mixing_factor, valence_factor = x
+        states, actions, rewards = args
+
+        #Initialize values
+        logp_actions = np.zeros((len(actions),1))
+        q_values = {state: np.array([0,0]) for state in states}
+        v_values = {state: np.array([0]) for state in states}
+        w_values = {state: np.array([0.01, 0.01]) for state in states}
+        h_values = {state: np.array([0,0]) for state in states}
+
+        for trial, (state_id, action, reward) in enumerate(zip(states, actions, rewards)):
+            
+            #Compute and store the log probability of the observed action
+            logp_actions[trial] = self.fit_log_likelihood(h_values[state_id], temperature)[action]
+
+            #Forward: TODO: When using functions (e.g., self.compute_PE -> self.update model -> self.get_q_value), it's much slower 
+            for ri, r in enumerate(reward):
+                if r > 0:
+                    reward[ri] = 1-valence_factor
+                elif r < 0:
+                    reward[ri] = -valence_factor
+                else:
+                    reward[ri] = 0
+
+            q_pe = [reward[i] - q_values[state_id][i] for i in range(len(reward))]
+            v_pe = [reward[i] - v_values[state_id][0] for i in range(len(reward))]
+            
+            q_lr = [factual_lr, counterfactual_lr] if action == 0 else [counterfactual_lr, factual_lr]
+            w_lr = [factual_actor_lr, counterfactual_actor_lr] if action == 0 else [counterfactual_actor_lr, factual_actor_lr]
+
+            q_values[state_id] = [q_values[state_id][i] + (q_lr[i]*q_pe[i]) for i in range(len(q_values[state_id]))]
+            v_values[state_id] = v_values[state_id] + (critic_lr * v_pe[action])
+            w_values[state_id] = [w_values[state_id][i] + (w_lr[i]*v_pe[i]) for i in range(len(w_values[state_id]))]
+            h_values[state_id] = [(w_values[state_id][i] * (1-mixing_factor)) + (q_values[state_id][i] * mixing_factor) for i in range(len(w_values[state_id]))]
+        
+        #Return the negative log likelihood of all observed actions
+        return -np.sum(logp_actions[1:])
+
 class Hybrid2(RLToolbox):
 
     """
@@ -762,3 +816,51 @@ class Hybrid2(RLToolbox):
             state = self.get_decayed_w_values(state)
             state = self.select_action(state)
         self.update_task_data(state, phase=phase)
+
+    def fit_func(self, x, *args):
+
+        '''
+        Fit the model to the data
+
+        data: tuple
+            Tuple of data to be fitted: actions, rewards
+        '''
+
+        #Unpack parameters
+        factual_lr, counterfactual_lr, factual_actor_lr, counterfactual_actor_lr, critic_lr, temperature, mixing_factor, valence_factor, noise_factor, decay_factor = x
+        states, actions, rewards = args
+
+        #Initialize values
+        logp_actions = np.zeros((len(actions),1))
+        q_values = {state: np.array([0,0]) for state in states}
+        v_values = {state: np.array([0]) for state in states}
+        w_values = {state: np.array([0.01, 0.01]) for state in states}
+        h_values = {state: np.array([0,0]) for state in states}
+
+        for trial, (state_id, action, reward) in enumerate(zip(states, actions, rewards)):
+            
+            #Compute and store the log probability of the observed action
+            logp_actions[trial] = self.fit_log_likelihood(h_values[state_id], temperature)[action]
+
+            #Forward: TODO: When using functions (e.g., self.compute_PE -> self.update model -> self.get_q_value), it's much slower 
+            for ri, r in enumerate(reward):
+                if r > 0:
+                    reward[ri] = 1-valence_factor
+                elif r < 0:
+                    reward[ri] = -valence_factor
+                else:
+                    reward[ri] = 0
+
+            q_pe = [reward[i] - q_values[state_id][i] for i in range(len(reward))]
+            v_pe = [reward[i] - v_values[state_id][0] for i in range(len(reward))]
+            
+            q_lr = [factual_lr, counterfactual_lr] if action == 0 else [counterfactual_lr, factual_lr]
+            w_lr = [factual_actor_lr, counterfactual_actor_lr] if action == 0 else [counterfactual_actor_lr, factual_actor_lr]
+
+            q_values[state_id] = [q_values[state_id][i] + (q_lr[i]*q_pe[i]) for i in range(len(q_values[state_id]))]
+            v_values[state_id] = v_values[state_id] + (critic_lr * v_pe[action])
+            w_values[state_id] = [w_values[state_id][i] + (w_lr[i]*v_pe[i]) for i in range(len(w_values[state_id]))]
+            h_values[state_id] = [(w_values[state_id][i] * (1-mixing_factor)) + (q_values[state_id][i] * mixing_factor) for i in range(len(w_values[state_id]))]
+        
+        #Return the negative log likelihood of all observed actions
+        return -np.sum(logp_actions[1:])
