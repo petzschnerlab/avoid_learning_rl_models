@@ -91,7 +91,11 @@ if __name__ == "__main__":
                            'transfer_phase': {'times_repeated': 4}}
     
     #Loop through participants
-    for participant in tqdm.tqdm(data['participant'].unique()):
+    loop = tqdm.tqdm(range(data['participant'].nunique()*len(models)))
+    for n, participant in enumerate(data['participant'].unique()):
+
+        #Update loop
+        loop.set_description(f"Participant {n+1}/{data['participant'].nunique()}")
 
         #Extract participant data
         participant_data = data[data['participant'] == participant]
@@ -100,6 +104,7 @@ if __name__ == "__main__":
         rewards = participant_data[['reward_L', 'reward_R']].values
 
         for m in models:
+            loop.update(1)
             #Fit models
             task = AvoidanceLearningTask()
             if m == 'QLearning':
@@ -181,7 +186,7 @@ if __name__ == "__main__":
     for n in range(number_of_runs):
         for m in models:
             loop.update(1)
-            loop.set_description(f'Run {n+1}/{number_of_runs}')
+            loop.set_description(f'Participant {n+1}/{number_of_runs}')
 
             #Initialize task, model, and task design
             task = AvoidanceLearningTask()
