@@ -39,6 +39,14 @@ class AvoidanceLearningTask:
             self.rl_model.context_values = {state: pd.DataFrame([[0]], columns=['C']) for state in states}
             self.rl_model.context_prediction_errors = {state: pd.DataFrame([[0]], columns=['PE']) for state in states}
 
+        if self.rl_model.__class__.__name__ == 'QRelative':
+            self.rl_model.context_values = {state: pd.DataFrame([[0]], columns=['C']) for state in states}
+            self.rl_model.context_prediction_errors = {state: pd.DataFrame([[0]], columns=['PE']) for state in states}
+            self.rl_model.q_prediction_errors = {state: pd.DataFrame([[0]*number_actions], columns=[f'PE{i+1}' for i in range(number_actions)]) for state in states}
+            self.rl_model.c_prediction_errors = {state: pd.DataFrame([[0]*number_actions], columns=[f'PE{i+1}' for i in range(number_actions)]) for state in states}
+            self.rl_model.c_values = {state: pd.DataFrame([[0]*number_actions], columns=[f'C{i+1}' for i in range(number_actions)]) for state in states}
+            self.rl_model.m_values = {state: pd.DataFrame([[0]*number_actions], columns=[f'M{i+1}' for i in range(number_actions)]) for state in states}
+
         if self.rl_model.__class__.__name__ == 'ActorCritic':
             self.rl_model.w_values = {state: pd.DataFrame([[0.01]*number_actions], columns=[f'Q{i+1}' for i in range(number_actions)]) for state in states}
             self.rl_model.v_values = {state: pd.DataFrame([[0]], columns=['V']) for state in states}
@@ -124,6 +132,14 @@ class AvoidanceLearningTask:
         self.rl_model.initial_w_values = self.rl_model.w_values_summary.iloc[0].copy()
         self.rl_model.initial_w_values['N'] = 0
 
+    def combine_m_values(self):
+
+        stimuli = ['A','B','C','D','E','F','G','H']
+        self.rl_model.m_values_summary = pd.concat([self.rl_model.m_values[state] for state in self.rl_model.m_values.keys()], axis=1)
+        self.rl_model.m_values_summary.columns = stimuli
+        self.rl_model.final_m_values = self.rl_model.m_values_summary.iloc[-1].copy()
+        self.rl_model.final_m_values['N'] = 0
+
     def initiate_model(self, rl_model):
 
         #Initialize model, create dataframes, and load methods
@@ -138,7 +154,8 @@ class AvoidanceLearningTask:
             'run_computations': self.run_computations,
             'combine_q_values': self.combine_q_values,
             'combine_v_values': self.combine_v_values,
-            'combine_w_values': self.combine_w_values
+            'combine_w_values': self.combine_w_values,
+            'combine_m_values': self.combine_m_values
         }
         self.rl_model.load_methods(methods)
 
@@ -161,7 +178,15 @@ class AvoidanceLearningTask:
             self.task_learning_data_columns += ['v_prediction_errors']
             self.task_learning_data_columns.remove('prediction_errors')
             self.task_transfer_data_columns += ['w_values']
-        
+
+        if 'QRelative' == self.rl_model.__class__.__name__:
+            self.task_learning_data_columns += ['context_value']
+            self.task_learning_data_columns += ['context_prediction_errors']
+            self.task_learning_data_columns += ['c_values']
+            self.task_learning_data_columns += ['m_values']
+            self.task_transfer_data_columns += ['m_values']
+            self.task_transfer_data_columns.remove('q_values')
+
     def run_learning_phase(self, task_design):
 
         number_of_trials = task_design['learning_phase']['number_of_trials']
@@ -223,6 +248,8 @@ class AvoidanceLearningTask:
             self.rl_model.combine_q_values()
             self.rl_model.combine_v_values()
             self.rl_model.combine_w_values()
+        elif 'QRelative' == self.rl_model.__class__.__name__:
+            self.rl_model.combine_m_values()
         else:
             self.rl_model.combine_q_values()
 
