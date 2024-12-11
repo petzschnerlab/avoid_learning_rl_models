@@ -82,7 +82,7 @@ class RLToolbox:
                                                                pd.DataFrame([state['v_prediction_errors']], 
                                                                             columns=self.v_prediction_errors[state['state_id']].columns)], 
                                                                ignore_index=True)
-        if 'QRelative' == self.__class__.__name__:
+        elif 'QRelative' == self.__class__.__name__:
             self.q_prediction_errors[state['state_id']] = pd.concat([self.q_prediction_errors[state['state_id']],
                                                                 pd.DataFrame([state['q_prediction_errors']],
                                                                                 columns=self.q_prediction_errors[state['state_id']].columns)],
