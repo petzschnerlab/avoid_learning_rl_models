@@ -1,3 +1,4 @@
+import time
 import random as rnd
 import pandas as pd
 import numpy as np
@@ -19,174 +20,110 @@ class RLToolbox:
 
     #Extraction functions
     def get_q_value(self, state):
-        state['q_values'] = list(self.q_values[state['state_id']].iloc[-1])
+        state['q_values'] = self.q_values[state['state_id']]
         return state
     
     def get_v_value(self, state):
-        state['v_values'] = list(self.v_values[state['state_id']].iloc[-1])
+        state['v_values'] = self.v_values[state['state_id']]
         return state
     
     def get_w_value(self, state):
-        state['w_values'] = list(self.w_values[state['state_id']].iloc[-1])
+        state['w_values'] = self.w_values[state['state_id']]
         return state
 
     def get_c_value(self, state):
-        state['c_values'] = list(self.c_values[state['state_id']].iloc[-1])
+        state['c_values'] = self.c_values[state['state_id']]
         return state
     
     def get_m_value(self, state):
-        state['m_values'] = list(self.m_values[state['state_id']].iloc[-1])
+        state['m_values'] = self.m_values[state['state_id']]
+        return state
+    
+    def get_h_values(self, state):
+        state['h_values'] = [(state['w_values'][i] * (1-self.mixing_factor)) + (state['q_values'][i] * self.mixing_factor) for i in range(len(state['w_values']))]
         return state
 
     def get_final_q_values(self, state):
-        state['q_values'] = [float(self.final_q_values[stim]) for stim in state['stim_id']]
+        state['q_values'] = [self.final_q_values[stim] for stim in state['stim_id']]
         return state
     
     def get_final_m_values(self, state):
-        state['m_values'] = [float(self.final_m_values[stim]) for stim in state['stim_id']]
+        state['m_values'] = [self.final_m_values[stim] for stim in state['stim_id']]
         return state
 
     def get_context_value(self, state):
-        state['context_value'] = list(self.context_values[state['state_id']].iloc[-1])
+        state['context_value'] = self.context_values[state['state_id']]
         return state
     
     def get_decayed_q_values(self, state):
-        q_final = [float(self.final_q_values[stim]) for stim in state['stim_id']]
-        q_initial = [float(self.initial_q_values[stim]) for stim in state['stim_id']]
+        q_final = [self.final_q_values[stim] for stim in state['stim_id']]
+        q_initial = [self.initial_q_values[stim] for stim in state['stim_id']]
         q_final_decayed = [q*(1-self.decay_factor) for q in q_final]
         q_initial_decayed = [q*(self.decay_factor) for q in q_initial]
         state['q_values'] = [q_final_decayed[i] + q_initial_decayed[i] for i in range(len(q_final))]
         return state
     
     def get_final_w_values(self, state):
-        state['w_values'] = [float(self.final_w_values[stim]) for stim in state['stim_id']]
+        state['w_values'] = [self.final_w_values[stim] for stim in state['stim_id']]
         return state
     
     def get_decayed_w_values(self, state):
-        w_final = [float(self.final_w_values[stim]) for stim in state['stim_id']]
-        w_initial = [float(self.initial_w_values[stim]) for stim in state['stim_id']]
+        w_final = [self.final_w_values[stim] for stim in state['stim_id']]
+        w_initial = [self.initial_w_values[stim] for stim in state['stim_id']]
         w_final_decayed = [w*(1-self.decay_factor) for w in w_final]
         w_initial_decayed = [w*(self.decay_factor) for w in w_initial]
         state['w_values'] = [w_final_decayed[i] + w_initial_decayed[i] for i in range(len(w_final))]
-        return state
-
-    def get_h_values(self, state):
-        state['h_values'] = [(state['w_values'][i] * (1-self.mixing_factor)) + (state['q_values'][i] * self.mixing_factor) for i in range(len(state['w_values']))]
         return state
 
     #Update functions
     def update_prediction_errors(self, state):
 
         if 'Hybrid' in self.__class__.__name__:
-            self.q_prediction_errors[state['state_id']] = pd.concat([self.q_prediction_errors[state['state_id']], 
-                                                               pd.DataFrame([state['q_prediction_errors']], 
-                                                                            columns=self.q_prediction_errors[state['state_id']].columns)], 
-                                                               ignore_index=True)
-            self.v_prediction_errors[state['state_id']] = pd.concat([self.v_prediction_errors[state['state_id']], 
-                                                               pd.DataFrame([state['v_prediction_errors']], 
-                                                                            columns=self.v_prediction_errors[state['state_id']].columns)], 
-                                                               ignore_index=True)
+            self.q_prediction_errors[state['state_id']] = state['q_prediction_errors']
+            self.v_prediction_errors[state['state_id']] = state['v_prediction_errors']
+
         elif 'QRelative' == self.__class__.__name__:
-            self.q_prediction_errors[state['state_id']] = pd.concat([self.q_prediction_errors[state['state_id']],
-                                                                pd.DataFrame([state['q_prediction_errors']],
-                                                                                columns=self.q_prediction_errors[state['state_id']].columns)],
-                                                                ignore_index=True)
-            self.c_prediction_errors[state['state_id']] = pd.concat([self.c_prediction_errors[state['state_id']],
-                                                                pd.DataFrame([state['c_prediction_errors']],
-                                                                                columns=self.c_prediction_errors[state['state_id']].columns)],
-                                                                ignore_index=True)
+            self.q_prediction_errors[state['state_id']] = state['q_prediction_errors']
+            self.c_prediction_errors[state['state_id']] = state['c_prediction_errors']
         else:
-            self.prediction_errors[state['state_id']] = pd.concat([self.prediction_errors[state['state_id']], 
-                                                               pd.DataFrame([state['prediction_errors']], 
-                                                                            columns=self.prediction_errors[state['state_id']].columns)], 
-                                                               ignore_index=True)
+            self.prediction_errors[state['state_id']] = state['prediction_errors']
 
     def update_q_values(self, state):
-
         learning_rates = [self.factual_lr, self.counterfactual_lr] if state['action'] == 0 else [self.counterfactual_lr, self.factual_lr]
         prediction_errors = state['q_prediction_errors'] if 'Hybrid' in self.__class__.__name__ or 'QRelative' == self.__class__.__name__ else state['prediction_errors']
-            
-        new_q_values = []
-        for i in range(len(state['rewards'])):
-            new_q_values.append(state['q_values'][i] + (learning_rates[i] * prediction_errors[i]))
-
-        self.q_values[state['state_id']] = pd.concat([self.q_values[state['state_id']],
-                                                      pd.DataFrame([new_q_values], 
-                                                                   columns=self.q_values[state['state_id']].columns)], 
-                                                    ignore_index=True)
+        self.q_values[state['state_id']] = [state['q_values'][i] + (learning_rates[i] * prediction_errors[i]) for i in range(len(state['q_values']))]
         
     def update_w_values(self, state):
-
         learning_rates = [self.factual_actor_lr, self.counterfactual_actor_lr] if state['action'] == 0 else [self.counterfactual_actor_lr, self.factual_actor_lr]
         prediction_errors = state['v_prediction_errors'] if 'Hybrid' in self.__class__.__name__ else state['prediction_errors']
-            
-        new_w_values = []
-        for i in range(len(state['rewards'])):
-            new_w_values.append(state['w_values'][i] + (learning_rates[i] * prediction_errors[i]))
-        #check whether the new w values are nan
-        try:
-            new_w_values = [w_val/np.sum(np.abs(new_w_values)) for w_val in new_w_values]
-        except:
-            print('debug')
+        new_w_values = [state['w_values'][i] + (learning_rates[i] * prediction_errors[i]) for i in range(len(state['w_values']))]
 
-        self.w_values[state['state_id']] = pd.concat([self.w_values[state['state_id']],
-                                                    pd.DataFrame([new_w_values], 
-                                                                columns=self.w_values[state['state_id']].columns)], 
-                                                    ignore_index=True)
+        #Check if the new w values are all zeros, and adjust them to initial values if so
+        if np.sum([np.abs(new_w_values[i]) for i in range(len(new_w_values))]) == 0:
+            new_w_values = [0.01]*len(new_w_values)
+
+        self.w_values[state['state_id']] = new_w_values/np.sum(np.abs(new_w_values))
     
     def update_v_values(self, state):
-
         prediction_errors = state['v_prediction_errors'] if 'Hybrid' in self.__class__.__name__ else state['prediction_errors']
-
-        new_v_values = state['v_values'][0] + (self.critic_lr * prediction_errors[state['action']]) #TODO: Should we use the averaged prediction error or the selected action's prediction error?
-
-        self.v_values[state['state_id']] = pd.concat([self.v_values[state['state_id']],
-                                                      pd.DataFrame([new_v_values], 
-                                                                   columns=self.v_values[state['state_id']].columns)], 
-                                                    ignore_index=True)
+        self.v_values[state['state_id']] = [state['v_values'][0] + (self.critic_lr * prediction_errors[state['action']])] #TODO: Should we use the averaged prediction error or the selected action's prediction error?
     
     def update_h_values(self, state):
+        self.h_values[state['state_id']] = state['h_values']
 
-        self.h_values[state['state_id']] = pd.concat([self.h_values[state['state_id']],
-                                                      pd.DataFrame([state['h_values']], 
-                                                                   columns=self.h_values[state['state_id']].columns)], 
-                                                    ignore_index=True)
     def update_c_values(self, state):
-
         learning_rates = [self.factual_lr, self.counterfactual_lr] if state['action'] == 0 else [self.counterfactual_lr, self.factual_lr]
-            
-        new_c_values = []
-        for i in range(len(state['rewards'])):
-            new_c_values.append(state['c_values'][i] + (learning_rates[i] * state['c_prediction_errors'][i]))
-
-        self.c_values[state['state_id']] = pd.concat([self.c_values[state['state_id']],
-                                                      pd.DataFrame([new_c_values], 
-                                                                   columns=self.c_values[state['state_id']].columns)], 
-                                                    ignore_index=True)
+        self.c_values[state['state_id']] = [state['c_values'][i] + (learning_rates[i] * state['c_prediction_errors'][i]) for i in range(len(state['c_values']))]
                                                 
     def update_m_values(self, state):
-
         m_values = [(state['q_values'][i] * (1-self.mixing_factor)) + (state['c_values'][i] * self.mixing_factor) for i in range(len(state['q_values']))]
-        
-        self.m_values[state['state_id']] = pd.concat([self.m_values[state['state_id']], 
-                                                                      pd.DataFrame([m_values], 
-                                                                                   columns=self.m_values[state['state_id']].columns)], 
-                                                                      ignore_index=True)
+        self.m_values[state['state_id']] = m_values
 
     def update_context_values(self, state):
-
-        new_context_value = state['context_value'] + (self.contextual_lr * state['context_prediction_errors'])
-
-        self.context_values[state['state_id']] = pd.concat([self.context_values[state['state_id']], 
-                                                            pd.DataFrame([new_context_value], 
-                                                                         columns=self.context_values[state['state_id']].columns)], 
-                                                            ignore_index=True)
+        self.context_values[state['state_id']] = state['context_value'] + (self.contextual_lr * state['context_prediction_errors'])
     
     def update_context_prediction_errors(self, state):
-        self.context_prediction_errors[state['state_id']] = pd.concat([self.context_prediction_errors[state['state_id']], 
-                                                                      pd.DataFrame([state['context_prediction_errors']], 
-                                                                                   columns=self.context_prediction_errors[state['state_id']].columns)], 
-                                                                      ignore_index=True)
+        self.context_prediction_errors[state['state_id']] = state['context_prediction_errors']
 
     def reward_valence(self, reward):
         for ri, r in enumerate(reward):
@@ -221,7 +158,40 @@ class RLToolbox:
         
         if 'Hybrid' in self.__class__.__name__:
             self.update_h_values(state)
+    
+    def reset_datalists(self):
 
+        for s in self.states:
+
+            if 'Hybrid' in self.__class__.__name__:
+                self.q_prediction_errors[s] = [0]*len(self.q_prediction_errors[s])
+                self.v_prediction_errors[s] = [0]*len(self.v_prediction_errors[s])
+            elif 'QRelative' == self.__class__.__name__:
+                self.q_prediction_errors[s] = [0]*len(self.q_prediction_errors[s])
+                self.c_prediction_errors[s] = [0]*len(self.c_prediction_errors[s])
+            else:
+                self.prediction_errors[s] = [0]*len(self.prediction_errors[s])
+
+            if self.__class__.__name__ != 'ActorCritic':
+                self.q_values[s] = [0]*len(self.q_values[s])
+
+            if self.__class__.__name__ == 'Relative':
+                self.context_values[s] = [0]*len(self.context_values[s])
+                self.context_prediction_errors[s] = [0]*len(self.context_prediction_errors[s])
+
+            if self.__class__.__name__ == 'QRelative':
+                self.context_values[s] = [0]*len(self.context_values[s])
+                self.context_prediction_errors[s] = [0]*len(self.context_prediction_errors[s])
+                self.c_values[s] = [0]*len(self.c_values[s])
+                self.m_values[s] = [0]*len(self.m_values[s])
+
+            if self.__class__.__name__ == 'ActorCritic' or 'Hybrid' in self.__class__.__name__: 
+                self.w_values[s] = [0.01]*len(self.w_values[s])
+                self.v_values[s] = [0]*len(self.v_values[s])
+                
+            if 'Hybrid' in self.__class__.__name__:
+                self.h_values[s] = [0]*len(self.h_values[s])
+    
     def fit_log_likelihood(self, values):
 
         '''
@@ -417,7 +387,10 @@ class QLearning(RLToolbox):
         data: tuple
             Tuple of data to be fitted: actions, rewards
         '''
-
+        
+        #Reset indices on succeeding fits
+        self.reset_datalists()
+        
         #Unpack free parameters
         self.factual_lr, self.counterfactual_lr, self.temperature = x
         states, actions, rewards = args
@@ -429,8 +402,8 @@ class QLearning(RLToolbox):
 
             #Populate state
             state = {'rewards': reward, 
-                     'action': action, 
-                     'state_id': state_id}
+                    'action': action, 
+                    'state_id': state_id}
             
             #Forward: TODO: When using functions (e.g., self.compute_PE -> self.update model -> self.get_q_value), it's much slower 
             state = self.fit_forward(state)
@@ -541,6 +514,9 @@ class ActorCritic(RLToolbox):
             Tuple of data to be fitted: actions, rewards
         '''
 
+        #Reset indices on succeeding fits
+        self.reset_datalists()
+            
         #Unpack free parameters
         self.factual_actor_lr, self.counterfactual_actor_lr, self.critic_lr, self.temperature, self.valence_factor = x    
         states, actions, rewards = args
@@ -653,6 +629,9 @@ class Relative(RLToolbox):
             Tuple of data to be fitted: actions, rewards
         '''
 
+        #Reset indices on succeeding fits
+        self.reset_datalists()
+
         #Unpack free parameters
         self.factual_lr, self.counterfactual_lr, self.contextual_lr, self.temperature = x
         states, actions, rewards = args
@@ -677,7 +656,7 @@ class Relative(RLToolbox):
         #Return the negative log likelihood of all observed actions
         return -np.sum(logp_actions[1:])
     
-class Hybrid(RLToolbox):
+class Hybrid2012(RLToolbox):
 
     """
     Reinforcement Learning Model: Hybrid Actor-Critic-Q-Learning Model (Gold et al., 2012)
@@ -761,6 +740,7 @@ class Hybrid(RLToolbox):
         else:
             state = self.get_final_q_values(state)
             state = self.get_final_w_values(state)
+            state = self.get_h_values(state)
             state = self.select_action(state)
         self.update_task_data(state, phase=phase)
 
@@ -788,6 +768,9 @@ class Hybrid(RLToolbox):
             Tuple of data to be fitted: actions, rewards
         '''
 
+        #Reset indices on succeeding fits
+        self.reset_datalists()
+
         #Unpack parameters
         self.factual_lr, self.counterfactual_lr, self.factual_actor_lr, self.counterfactual_actor_lr, self.critic_lr, self.temperature, self.mixing_factor, self.valence_factor = x
         states, actions, rewards = args
@@ -811,7 +794,7 @@ class Hybrid(RLToolbox):
         #Return the negative log likelihood of all observed actions
         return -np.sum(logp_actions[1:])
 
-class Hybrid2(RLToolbox):
+class Hybrid2021(RLToolbox):
 
     """
     Reinforcement Learning Model: Hybrid Actor-Critic-Q-Learning Model (Geana et al., 2021)
@@ -930,6 +913,9 @@ class Hybrid2(RLToolbox):
         data: tuple
             Tuple of data to be fitted: actions, rewards
         '''
+
+        #Reset indices on succeeding fits
+        self.reset_datalists()
 
         #Unpack parameters
         self.factual_lr, self.counterfactual_lr, self.factual_actor_lr, self.counterfactual_actor_lr, self.critic_lr, self.temperature, self.mixing_factor, self.valence_factor, self.noise_factor, self.decay_factor = x
@@ -1053,6 +1039,9 @@ class QRelative(RLToolbox):
             Tuple of data to be fitted: actions, rewards
         '''
 
+        #Reset indices on succeeding fits
+        self.reset_datalists()
+
         #Unpack free parameters
         self.factual_lr, self.counterfactual_lr, self.contextual_lr, self.temperature, self.mixing_factor = x
         states, actions, rewards = args
@@ -1077,109 +1066,114 @@ class QRelative(RLToolbox):
         #Return the negative log likelihood of all observed actions
         return -np.sum(logp_actions[1:])
     
-def get_model(model, fit_data=None):
+class RLModel:
 
-    if model == 'QLearning':
-        factual_lr = 0.1 if fit_data is None else fit_data['factual_lr']
-        counterfactual_lr = 0.5 if fit_data is None else fit_data['counterfactual_lr']
-        temperature = 0.1 if fit_data is None else fit_data['temperature']
+    def __init__(self, model, fit_data=None):
+        self.model = self.get_model(model, fit_data)
 
-        model = QLearning(factual_lr=factual_lr, 
-                        counterfactual_lr=counterfactual_lr, 
-                        temperature=temperature)
+    def get_model(self, model, fit_data=None):
 
-        model.bounds = [(0, .99), (0, .99), (0.01, 10)]
+        if model == 'QLearning':
+            factual_lr = 0.1 if fit_data is None else fit_data['factual_lr']
+            counterfactual_lr = 0.5 if fit_data is None else fit_data['counterfactual_lr']
+            temperature = 0.1 if fit_data is None else fit_data['temperature']
 
-    elif model == 'ActorCritic':
-        factual_actor_lr = 0.1 if fit_data is None else fit_data['factual_actor_lr']
-        counterfactual_actor_lr = 0.5 if fit_data is None else fit_data['counterfactual_actor_lr']
-        critic_lr = 0.1 if fit_data is None else fit_data['critic_lr']
-        temperature = 0.1 if fit_data is None else fit_data['temperature']
-        valence_factor = 0.5 if fit_data is None else fit_data['valence_factor']
-        
-        model = ActorCritic(factual_actor_lr=factual_actor_lr,
-                            counterfactual_actor_lr=counterfactual_actor_lr,
-                            critic_lr=critic_lr,
-                            temperature=temperature,
-                            valence_factor=valence_factor)
-        
-        model.bounds = [(0, .99), (0, .99), (0,.99), (0.01, 10), (-1, 1)]
+            model = QLearning(factual_lr=factual_lr, 
+                            counterfactual_lr=counterfactual_lr, 
+                            temperature=temperature)
 
-    elif model == 'Relative':
-        factual_lr = 0.1 if fit_data is None else fit_data['factual_lr']
-        counterfactual_lr = 0.05 if fit_data is None else fit_data['counterfactual_lr']
-        contextual_lr = 0.1 if fit_data is None else fit_data['contextual_lr']
-        temperature = 0.1 if fit_data is None else fit_data['temperature']
+            model.bounds = [(0.01, .99), (0.01, .99), (0.01, 10)]
 
-        model = Relative(factual_lr=factual_lr,
+        elif model == 'ActorCritic':
+            factual_actor_lr = 0.1 if fit_data is None else fit_data['factual_actor_lr']
+            counterfactual_actor_lr = 0.5 if fit_data is None else fit_data['counterfactual_actor_lr']
+            critic_lr = 0.1 if fit_data is None else fit_data['critic_lr']
+            temperature = 0.1 if fit_data is None else fit_data['temperature']
+            valence_factor = 0.5 if fit_data is None else fit_data['valence_factor']
+            
+            model = ActorCritic(factual_actor_lr=factual_actor_lr,
+                                counterfactual_actor_lr=counterfactual_actor_lr,
+                                critic_lr=critic_lr,
+                                temperature=temperature,
+                                valence_factor=valence_factor)
+            
+            model.bounds = [(0.01, .99), (0.01, .99), (0.01,.99), (0.01, 10), (-1, 1)]
+
+        elif model == 'Relative':
+            factual_lr = 0.1 if fit_data is None else fit_data['factual_lr']
+            counterfactual_lr = 0.05 if fit_data is None else fit_data['counterfactual_lr']
+            contextual_lr = 0.1 if fit_data is None else fit_data['contextual_lr']
+            temperature = 0.1 if fit_data is None else fit_data['temperature']
+
+            model = Relative(factual_lr=factual_lr,
+                            counterfactual_lr=counterfactual_lr,
+                            contextual_lr=contextual_lr,
+                            temperature=temperature)
+            
+            model.bounds = [(0.01, .99), (0.01, .99), (0.01,.99), (0.01, 10)]
+
+        elif model == 'Hybrid2012':
+            factual_lr = 0.1 if fit_data is None else fit_data['factual_lr']
+            counterfactual_lr = 0.05 if fit_data is None else fit_data['counterfactual_lr']
+            factual_actor_lr = 0.1 if fit_data is None else fit_data['factual_actor_lr']
+            counterfactual_actor_lr = 0.05 if fit_data is None else fit_data['counterfactual_actor_lr']
+            critic_lr = 0.1 if fit_data is None else fit_data['critic_lr']
+            temperature = 0.1 if fit_data is None else fit_data['temperature']
+            mixing_factor = 0.5 if fit_data is None else fit_data['mixing_factor']
+            valence_factor = 0.5 if fit_data is None else fit_data['valence_factor']
+
+            model = Hybrid2012(factual_lr=factual_lr,
                         counterfactual_lr=counterfactual_lr,
-                        contextual_lr=contextual_lr,
-                        temperature=temperature)
-        
-        model.bounds = [(0, .99), (0, .99), (0,.99), (0.01, 10)]
-
-    elif model == 'Hybrid2012':
-        factual_lr = 0.1 if fit_data is None else fit_data['factual_lr']
-        counterfactual_lr = 0.05 if fit_data is None else fit_data['counterfactual_lr']
-        factual_actor_lr = 0.1 if fit_data is None else fit_data['factual_actor_lr']
-        counterfactual_actor_lr = 0.05 if fit_data is None else fit_data['counterfactual_actor_lr']
-        critic_lr = 0.1 if fit_data is None else fit_data['critic_lr']
-        temperature = 0.1 if fit_data is None else fit_data['temperature']
-        mixing_factor = 0.5 if fit_data is None else fit_data['mixing_factor']
-        valence_factor = 0.5 if fit_data is None else fit_data['valence_factor']
-
-        model = Hybrid(factual_lr=factual_lr,
-                    counterfactual_lr=counterfactual_lr,
-                    factual_actor_lr=factual_actor_lr,
-                    counterfactual_actor_lr=counterfactual_actor_lr,
-                    critic_lr=critic_lr,
-                    temperature=temperature,
-                    mixing_factor=mixing_factor,
-                    valence_factor=valence_factor)
-    
-        model.bounds = [(0, .99), (0, .99), (0, .99), (0, .99), (0, .99), (0.01, 10), (0, 1), (-1, 1)]
-
-    elif model == 'Hybrid2021':
-        factual_lr = 0.1 if fit_data is None else fit_data['factual_lr']
-        counterfactual_lr = 0.05 if fit_data is None else fit_data['counterfactual_lr']
-        factual_actor_lr = 0.1 if fit_data is None else fit_data['factual_actor_lr']
-        counterfactual_actor_lr = 0.05 if fit_data is None else fit_data['counterfactual_actor_lr']
-        critic_lr = 0.1 if fit_data is None else fit_data['critic_lr']
-        temperature = 0.1 if fit_data is None else fit_data['temperature']
-        mixing_factor = 0.5 if fit_data is None else fit_data['mixing_factor']
-        valence_factor = 0.5 if fit_data is None else fit_data['valence_factor']
-        noise_factor = 0.1 if fit_data is None else fit_data['noise_factor']
-        decay_factor = 0.1 if fit_data is None else fit_data['decay_factor']
-
-        model = Hybrid2(factual_lr=factual_lr,
-                    counterfactual_lr=counterfactual_lr,
-                    factual_actor_lr=factual_actor_lr,
-                    counterfactual_actor_lr=counterfactual_actor_lr,
-                    critic_lr=critic_lr,
-                    temperature=temperature,
-                    mixing_factor=mixing_factor,
-                    valence_factor=valence_factor,
-                    noise_factor=noise_factor,
-                    decay_factor=decay_factor)
-        
-        model.bounds = [(0, .99), (0, .99), (0, .99), (0, .99), (0, .99), (0.01, 10), (0, 1), (-1, 1), (0, 1), (0, 1)]
-        
-    elif model == 'QRelative':
-        factual_lr = 0.1 if fit_data is None else fit_data['factual_lr']
-        counterfactual_lr = 0.05 if fit_data is None else fit_data['counterfactual_lr']
-        contextual_lr = 0.1 if fit_data is None else fit_data['contextual_lr']
-        temperature = 0.1 if fit_data is None else fit_data['temperature']
-        mixing_factor = 0.5 if fit_data is None else fit_data['mixing_factor']
-
-        model = QRelative(factual_lr=factual_lr,
-                        counterfactual_lr=counterfactual_lr,
-                        contextual_lr=contextual_lr,
+                        factual_actor_lr=factual_actor_lr,
+                        counterfactual_actor_lr=counterfactual_actor_lr,
+                        critic_lr=critic_lr,
                         temperature=temperature,
-                        mixing_factor=mixing_factor)
+                        mixing_factor=mixing_factor,
+                        valence_factor=valence_factor)
         
-        model.bounds = [(0, .99), (0, .99), (0, .99), (0.01, 10), (0, 1)]
+            model.bounds = [(0.01, .99), (0.01, .99), (0.01, .99), (0.01, .99), (0.01, .99), (0.01, 10), (0, 1), (-1, 1)]
+
+        elif model == 'Hybrid2021':
+            factual_lr = 0.1 if fit_data is None else fit_data['factual_lr']
+            counterfactual_lr = 0.05 if fit_data is None else fit_data['counterfactual_lr']
+            factual_actor_lr = 0.1 if fit_data is None else fit_data['factual_actor_lr']
+            counterfactual_actor_lr = 0.05 if fit_data is None else fit_data['counterfactual_actor_lr']
+            critic_lr = 0.1 if fit_data is None else fit_data['critic_lr']
+            temperature = 0.1 if fit_data is None else fit_data['temperature']
+            mixing_factor = 0.5 if fit_data is None else fit_data['mixing_factor']
+            valence_factor = 0.5 if fit_data is None else fit_data['valence_factor']
+            noise_factor = 0.1 if fit_data is None else fit_data['noise_factor']
+            decay_factor = 0.1 if fit_data is None else fit_data['decay_factor']
+
+            model = Hybrid2021(factual_lr=factual_lr,
+                        counterfactual_lr=counterfactual_lr,
+                        factual_actor_lr=factual_actor_lr,
+                        counterfactual_actor_lr=counterfactual_actor_lr,
+                        critic_lr=critic_lr,
+                        temperature=temperature,
+                        mixing_factor=mixing_factor,
+                        valence_factor=valence_factor,
+                        noise_factor=noise_factor,
+                        decay_factor=decay_factor)
+            
+            model.bounds = [(0.01, .99), (0.01, .99), (0.01, .99), (0.01, .99), (0.01, .99), (0.01, 10), (0, 1), (-1, 1), (0, 1), (0, 1)]
+            
+        elif model == 'QRelative':
+            factual_lr = 0.1 if fit_data is None else fit_data['factual_lr']
+            counterfactual_lr = 0.05 if fit_data is None else fit_data['counterfactual_lr']
+            contextual_lr = 0.1 if fit_data is None else fit_data['contextual_lr']
+            temperature = 0.1 if fit_data is None else fit_data['temperature']
+            mixing_factor = 0.5 if fit_data is None else fit_data['mixing_factor']
+
+            model = QRelative(factual_lr=factual_lr,
+                            counterfactual_lr=counterfactual_lr,
+                            contextual_lr=contextual_lr,
+                            temperature=temperature,
+                            mixing_factor=mixing_factor)
+            
+            model.bounds = [(0.01, .99), (0.01, .99), (0.01, .99), (0.01, 10), (0, 1)]
+            
+        else:
+            raise ValueError('Model not recognized.')
         
-    else:
-        raise ValueError('Model not recognized.')
-    
-    return model
+        return model

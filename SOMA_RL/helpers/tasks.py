@@ -1,10 +1,12 @@
 import random as rnd
+import numpy as np
 import pandas as pd
 
 class AvoidanceLearningTask:
 
-    def __init__(self):
+    def __init__(self, task_design):
         self.task = 'Avoidance Learning Task'
+        self.task_design = task_design
 
         self.stimuli_ids = [['A', 'B'], 
                             ['C', 'D'],
@@ -28,50 +30,62 @@ class AvoidanceLearningTask:
         
         self.task_transfer_data_columns = ['block_number', 'trial_number', 'state_id',
                                                     'stim_id', 'q_values', 'action']
-    
-    def create_model_matrices(self, states, number_actions):
-        self.rl_model.q_values = {state: pd.DataFrame([[0]*number_actions], columns=[f'Q{i+1}' for i in range(number_actions)]) for state in states}
-        self.rl_model.prediction_errors = {state: pd.DataFrame([[0]*number_actions], columns=[f'PE{i+1}' for i in range(number_actions)]) for state in states}
-        self.rl_model.task_learning_data = pd.DataFrame(columns=self.task_learning_data_columns)
-        self.rl_model.task_transfer_data = pd.DataFrame(columns=self.task_transfer_data_columns)
+            
+    def create_model_lists(self, states, learning_dimensions, transfer_dimensions):
+        self.rl_model.number_state_trials = learning_dimensions[0]
+        self.rl_model.q_values = {state: [0]*learning_dimensions[1] for state in states}
+        self.rl_model.prediction_errors = {state: [0]*learning_dimensions[1] for state in states}
+        self.rl_model.task_learning_data = pd.DataFrame(np.zeros((learning_dimensions[0]*len(states), len(self.task_learning_data_columns))), columns=self.task_learning_data_columns)
+        self.rl_model.task_transfer_data = pd.DataFrame(np.zeros((transfer_dimensions[0], len(self.task_transfer_data_columns))), columns=self.task_transfer_data_columns)
 
         if self.rl_model.__class__.__name__ == 'Relative':
-            self.rl_model.context_values = {state: pd.DataFrame([[0]], columns=['C']) for state in states}
-            self.rl_model.context_prediction_errors = {state: pd.DataFrame([[0]], columns=['PE']) for state in states}
+            self.rl_model.context_values = {state: [0] for state in states}
+            self.rl_model.context_prediction_errors = {state: [0] for state in states}
 
         if self.rl_model.__class__.__name__ == 'QRelative':
-            self.rl_model.context_values = {state: pd.DataFrame([[0]], columns=['C']) for state in states}
-            self.rl_model.context_prediction_errors = {state: pd.DataFrame([[0]], columns=['PE']) for state in states}
-            self.rl_model.q_prediction_errors = {state: pd.DataFrame([[0]*number_actions], columns=[f'PE{i+1}' for i in range(number_actions)]) for state in states}
-            self.rl_model.c_prediction_errors = {state: pd.DataFrame([[0]*number_actions], columns=[f'PE{i+1}' for i in range(number_actions)]) for state in states}
-            self.rl_model.c_values = {state: pd.DataFrame([[0]*number_actions], columns=[f'C{i+1}' for i in range(number_actions)]) for state in states}
-            self.rl_model.m_values = {state: pd.DataFrame([[0]*number_actions], columns=[f'M{i+1}' for i in range(number_actions)]) for state in states}
+            self.rl_model.context_values = {state: [0] for state in states}
+            self.rl_model.context_prediction_errors = {state: [0] for state in states}
+            self.rl_model.q_prediction_errors = {state: [0]*learning_dimensions[1] for state in states}
+            self.rl_model.c_prediction_errors = {state: [0]*learning_dimensions[1] for state in states}
+            self.rl_model.c_values = {state: [0]*learning_dimensions[1] for state in states}
+            self.rl_model.m_values = {state:[0]*learning_dimensions[1] for state in states}
 
         if self.rl_model.__class__.__name__ == 'ActorCritic':
-            self.rl_model.w_values = {state: pd.DataFrame([[0.01]*number_actions], columns=[f'Q{i+1}' for i in range(number_actions)]) for state in states}
-            self.rl_model.v_values = {state: pd.DataFrame([[0]], columns=['V']) for state in states}
+            self.rl_model.w_values = {state: [0.01]*learning_dimensions[1] for state in states}
+            self.rl_model.v_values = {state: [0] for state in states}
             delattr(self.rl_model, 'q_values')
         
         if 'Hybrid' in self.rl_model.__class__.__name__:
-            self.rl_model.w_values = {state: pd.DataFrame([[0.01]*number_actions], columns=[f'Q{i+1}' for i in range(number_actions)]) for state in states}
-            self.rl_model.v_values = {state: pd.DataFrame([[0]], columns=['V']) for state in states}
-            self.rl_model.h_values = {state: pd.DataFrame([[0]*number_actions], columns=[f'Q{i+1}' for i in range(number_actions)]) for state in states}
-            self.rl_model.q_prediction_errors = {state: pd.DataFrame([[0]*number_actions], columns=[f'PE{i+1}' for i in range(number_actions)]) for state in states}
-            self.rl_model.v_prediction_errors = {state: pd.DataFrame([[0]*number_actions], columns=[f'PE{i+1}' for i in range(number_actions)]) for state in states}
+            self.rl_model.w_values = {state: [0.01]*learning_dimensions[1] for state in states}
+            self.rl_model.v_values = {state: [0] for state in states}
+            self.rl_model.h_values = {state: [0]*learning_dimensions[1] for state in states}
+            self.rl_model.q_prediction_errors = {state: [0]*learning_dimensions[1] for state in states}
+            self.rl_model.v_prediction_errors = {state: [0]*learning_dimensions[1] for state in states}
             delattr(self.rl_model, 'prediction_errors')
 
+            self.rl_model.initial_q_values = pd.DataFrame([self.rl_model.q_values[self.rl_model.states[0]][0]]*9).T
+            self.rl_model.initial_q_values.columns = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'N']
+
+            self.rl_model.initial_w_values = pd.DataFrame([self.rl_model.q_values[self.rl_model.states[0]][0]]*9).T
+            self.rl_model.initial_w_values.columns = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'N']
+    
     def update_task_data(self, state, phase='learning'):
+        
         if phase == 'learning':
-            self.rl_model.task_learning_data = pd.concat([self.rl_model.task_learning_data, 
-                                        pd.DataFrame([[state[col_name] for col_name in self.task_learning_data_columns]], 
-                                                     columns=self.task_learning_data_columns)], 
-                                        ignore_index=True)
+            n = self.rl_model.task_counts['learning']
+            series = pd.Series({col_name: state[col_name] for col_name in self.task_learning_data_columns})
+            if n == 0:
+                self.rl_model.task_learning_data = self.rl_model.task_learning_data.astype(series.dtypes)
+            self.rl_model.task_learning_data.iloc[n] = series
+            self.rl_model.task_counts['learning'] += 1
         else:
-            self.rl_model.task_transfer_data = pd.concat([self.rl_model.task_transfer_data, 
-                                        pd.DataFrame([[state[col_name] for col_name in self.task_transfer_data_columns]], 
-                                                     columns=self.task_transfer_data_columns)],
-                                        ignore_index=True)
-            
+            series = pd.Series({col_name: state[col_name] for col_name in self.task_transfer_data_columns})
+            n = self.rl_model.task_counts['transfer']
+            if n == 0:
+                self.rl_model.task_transfer_data = self.rl_model.task_transfer_data.astype(series.dtypes)
+            self.rl_model.task_transfer_data.iloc[n] = series
+            self.rl_model.task_counts['transfer'] += 1
+
     def compute_accuracy(self):
 
         self.rl_model.accuracy = {}
@@ -102,50 +116,43 @@ class AvoidanceLearningTask:
     def combine_q_values(self):
 
         stimuli = ['A','B','C','D','E','F','G','H']
-        self.rl_model.q_values_summary = pd.concat([self.rl_model.q_values[state] for state in self.rl_model.q_values.keys()], axis=1)
-        self.rl_model.q_values_summary.columns = stimuli
-        self.rl_model.final_q_values = self.rl_model.q_values_summary.iloc[-1].copy()
+        self.rl_model.final_q_values = pd.DataFrame(np.array([self.rl_model.q_values[state] for state in self.rl_model.q_values.keys()]).flatten()).T
+        self.rl_model.final_q_values.columns = stimuli
         self.rl_model.final_q_values['N'] = 0
-
-        self.rl_model.initial_q_values = self.rl_model.q_values_summary.iloc[0].copy()
-        self.rl_model.initial_q_values['N'] = 0
 
     def combine_v_values(self):
 
         stimuli = ['A','B','C','D','E','F','G','H']
-        v_columns = [[self.rl_model.v_values[state], self.rl_model.v_values[state]] for state in self.rl_model.v_values.keys()] #Duplicate for compatibility
-        v_columns = [item for sublist in v_columns for item in sublist]
-        self.rl_model.v_values_summary = pd.concat(v_columns, axis=1)
-
-        self.rl_model.v_values_summary.columns = stimuli
-        self.rl_model.final_v_values = self.rl_model.v_values_summary.iloc[-1].copy()
+        v_array = np.array([[self.rl_model.v_values[state]]*2 for state in self.rl_model.v_values.keys()])
+        self.rl_model.final_v_values = pd.DataFrame(v_array.flatten()).T
+        self.rl_model.final_v_values.columns = stimuli
         self.rl_model.final_v_values['N'] = 0
 
     def combine_w_values(self):
 
         stimuli = ['A','B','C','D','E','F','G','H']
-        self.rl_model.w_values_summary = pd.concat([self.rl_model.w_values[state] for state in self.rl_model.w_values.keys()], axis=1)
-        self.rl_model.w_values_summary.columns = stimuli
-        self.rl_model.final_w_values = self.rl_model.w_values_summary.iloc[-1].copy()
+        self.rl_model.final_w_values = pd.DataFrame(np.array([self.rl_model.w_values[state] for state in self.rl_model.w_values.keys()]).flatten()).T
+        self.rl_model.final_w_values.columns = stimuli
         self.rl_model.final_w_values['N'] = 0
-
-        self.rl_model.initial_w_values = self.rl_model.w_values_summary.iloc[0].copy()
-        self.rl_model.initial_w_values['N'] = 0
 
     def combine_m_values(self):
 
         stimuli = ['A','B','C','D','E','F','G','H']
-        self.rl_model.m_values_summary = pd.concat([self.rl_model.m_values[state] for state in self.rl_model.m_values.keys()], axis=1)
-        self.rl_model.m_values_summary.columns = stimuli
-        self.rl_model.final_m_values = self.rl_model.m_values_summary.iloc[-1].copy()
+        self.rl_model.final_m_values = pd.DataFrame(np.array([self.rl_model.m_values[state] for state in self.rl_model.m_values.keys()]).flatten()).T
+        self.rl_model.final_m_values.columns = stimuli
         self.rl_model.final_m_values['N'] = 0
 
     def initiate_model(self, rl_model):
 
         #Initialize model, create dataframes, and load methods
-        self.rl_model = rl_model        
-        self.create_model_matrices(states=['State AB', 'State CD', 'State EF', 'State GH'],
-                                            number_actions=2)
+        states = ['State AB', 'State CD', 'State EF', 'State GH']
+        self.rl_model = rl_model     
+        self.rl_model.states = states
+        number_of_learning_trials = (self.task_design['learning_phase']['number_of_trials'] * self.task_design['learning_phase']['number_of_blocks'])//len(states)
+        num_stim = (len(self.stimuli_ids)*2)+1
+        num_pairs = num_stim*(num_stim-1)//2 - len(self.stimuli_ids)
+        number_of_transfer_trials = num_pairs * self.task_design['transfer_phase']['times_repeated']
+        self.rl_model.task_counts = {phase: 0 for phase in ['learning', 'transfer']}
         
         methods = {
             'update_task_data': self.update_task_data,
@@ -186,6 +193,10 @@ class AvoidanceLearningTask:
             self.task_learning_data_columns += ['m_values']
             self.task_transfer_data_columns += ['m_values']
             self.task_transfer_data_columns.remove('q_values')
+            
+        self.create_model_lists(states=states,
+                                learning_dimensions=[number_of_learning_trials, 2],
+                                transfer_dimensions=[number_of_transfer_trials, 2])
 
     def run_learning_phase(self, task_design):
 
@@ -223,7 +234,7 @@ class AvoidanceLearningTask:
                          'correct_action': correct_action}
 
                 #Run model
-                self.rl_model.forward(state, phase='learning')
+                self.rl_model.forward(state, phase='learning')                
     
     def run_transfer_phase(self, task_design):
 
@@ -240,7 +251,6 @@ class AvoidanceLearningTask:
         rnd.shuffle(self.transfer_pairs)
 
         #Setup q-values & w-values
-        
         if self.rl_model.__class__.__name__ == 'ActorCritic':
             self.rl_model.combine_v_values()
             self.rl_model.combine_w_values()
@@ -265,9 +275,8 @@ class AvoidanceLearningTask:
                      'stim_id': stimuli_id}
         
             #Run model
-            self.rl_model.forward(state, phase='transfer')
+            self.rl_model.forward(state, phase='transfer')            
 
-    def run_experiment(self, task_design = {'learning_phase': {'number_of_trials': 100, 'number_of_blocks': 4},
-                                             'transfer_phase': {'times_repeated': 4}}):
-        self.run_learning_phase(task_design)
-        self.run_transfer_phase(task_design)
+    def run_experiment(self):
+        self.run_learning_phase(self.task_design)
+        self.run_transfer_phase(self.task_design)
