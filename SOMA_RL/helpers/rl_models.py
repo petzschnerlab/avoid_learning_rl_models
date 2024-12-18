@@ -1074,9 +1074,9 @@ class RLModel:
     def get_model(self, model, fit_data=None):
 
         if model == 'QLearning':
-            factual_lr = 0.1 if fit_data is None else fit_data['factual_lr']
-            counterfactual_lr = 0.5 if fit_data is None else fit_data['counterfactual_lr']
-            temperature = 0.1 if fit_data is None else fit_data['temperature']
+            factual_lr = 0.1 if fit_data is None else fit_data['factual_lr'].values[0]
+            counterfactual_lr = 0.5 if fit_data is None else fit_data['counterfactual_lr'].values[0]
+            temperature = 0.1 if fit_data is None else fit_data['temperature'].values[0]
 
             model = QLearning(factual_lr=factual_lr, 
                             counterfactual_lr=counterfactual_lr, 
@@ -1085,11 +1085,11 @@ class RLModel:
             model.bounds = [(0.01, .99), (0.01, .99), (0.01, 10)]
 
         elif model == 'ActorCritic':
-            factual_actor_lr = 0.1 if fit_data is None else fit_data['factual_actor_lr']
-            counterfactual_actor_lr = 0.5 if fit_data is None else fit_data['counterfactual_actor_lr']
-            critic_lr = 0.1 if fit_data is None else fit_data['critic_lr']
-            temperature = 0.1 if fit_data is None else fit_data['temperature']
-            valence_factor = 0.5 if fit_data is None else fit_data['valence_factor']
+            factual_actor_lr = 0.1 if fit_data is None else fit_data['factual_actor_lr'].values[0]
+            counterfactual_actor_lr = 0.5 if fit_data is None else fit_data['counterfactual_actor_lr'].values[0]
+            critic_lr = 0.1 if fit_data is None else fit_data['critic_lr'].values[0]
+            temperature = 0.1 if fit_data is None else fit_data['temperature'].values[0]
+            valence_factor = 0.5 if fit_data is None else fit_data['valence_factor'].values[0]
             
             model = ActorCritic(factual_actor_lr=factual_actor_lr,
                                 counterfactual_actor_lr=counterfactual_actor_lr,
@@ -1100,10 +1100,10 @@ class RLModel:
             model.bounds = [(0.01, .99), (0.01, .99), (0.01,.99), (0.01, 10), (-1, 1)]
 
         elif model == 'Relative':
-            factual_lr = 0.1 if fit_data is None else fit_data['factual_lr']
-            counterfactual_lr = 0.05 if fit_data is None else fit_data['counterfactual_lr']
-            contextual_lr = 0.1 if fit_data is None else fit_data['contextual_lr']
-            temperature = 0.1 if fit_data is None else fit_data['temperature']
+            factual_lr = 0.1 if fit_data is None else fit_data['factual_lr'].values[0]
+            counterfactual_lr = 0.05 if fit_data is None else fit_data['counterfactual_lr'].values[0]
+            contextual_lr = 0.1 if fit_data is None else fit_data['contextual_lr'].values[0]
+            temperature = 0.1 if fit_data is None else fit_data['temperature'].values[0]
 
             model = Relative(factual_lr=factual_lr,
                             counterfactual_lr=counterfactual_lr,
@@ -1113,14 +1113,14 @@ class RLModel:
             model.bounds = [(0.01, .99), (0.01, .99), (0.01,.99), (0.01, 10)]
 
         elif model == 'Hybrid2012':
-            factual_lr = 0.1 if fit_data is None else fit_data['factual_lr']
-            counterfactual_lr = 0.05 if fit_data is None else fit_data['counterfactual_lr']
-            factual_actor_lr = 0.1 if fit_data is None else fit_data['factual_actor_lr']
-            counterfactual_actor_lr = 0.05 if fit_data is None else fit_data['counterfactual_actor_lr']
-            critic_lr = 0.1 if fit_data is None else fit_data['critic_lr']
-            temperature = 0.1 if fit_data is None else fit_data['temperature']
-            mixing_factor = 0.5 if fit_data is None else fit_data['mixing_factor']
-            valence_factor = 0.5 if fit_data is None else fit_data['valence_factor']
+            factual_lr = 0.1 if fit_data is None else fit_data['factual_lr'].values[0]
+            counterfactual_lr = 0.05 if fit_data is None else fit_data['counterfactual_lr'].values[0]
+            factual_actor_lr = 0.1 if fit_data is None else fit_data['factual_actor_lr'].values[0]
+            counterfactual_actor_lr = 0.05 if fit_data is None else fit_data['counterfactual_actor_lr'].values[0]
+            critic_lr = 0.1 if fit_data is None else fit_data['critic_lr'].values[0]
+            temperature = 0.1 if fit_data is None else fit_data['temperature'].values[0]
+            mixing_factor = 0.5 if fit_data is None else fit_data['mixing_factor'].values[0]
+            valence_factor = 0.5 if fit_data is None else fit_data['valence_factor'].values[0]
 
             model = Hybrid2012(factual_lr=factual_lr,
                         counterfactual_lr=counterfactual_lr,
@@ -1134,16 +1134,16 @@ class RLModel:
             model.bounds = [(0.01, .99), (0.01, .99), (0.01, .99), (0.01, .99), (0.01, .99), (0.01, 10), (0, 1), (-1, 1)]
 
         elif model == 'Hybrid2021':
-            factual_lr = 0.1 if fit_data is None else fit_data['factual_lr']
-            counterfactual_lr = 0.05 if fit_data is None else fit_data['counterfactual_lr']
-            factual_actor_lr = 0.1 if fit_data is None else fit_data['factual_actor_lr']
-            counterfactual_actor_lr = 0.05 if fit_data is None else fit_data['counterfactual_actor_lr']
-            critic_lr = 0.1 if fit_data is None else fit_data['critic_lr']
-            temperature = 0.1 if fit_data is None else fit_data['temperature']
-            mixing_factor = 0.5 if fit_data is None else fit_data['mixing_factor']
-            valence_factor = 0.5 if fit_data is None else fit_data['valence_factor']
-            noise_factor = 0.1 if fit_data is None else fit_data['noise_factor']
-            decay_factor = 0.1 if fit_data is None else fit_data['decay_factor']
+            factual_lr = 0.1 if fit_data is None else fit_data['factual_lr'].values[0]
+            counterfactual_lr = 0.05 if fit_data is None else fit_data['counterfactual_lr'].values[0]
+            factual_actor_lr = 0.1 if fit_data is None else fit_data['factual_actor_lr'].values[0]
+            counterfactual_actor_lr = 0.05 if fit_data is None else fit_data['counterfactual_actor_lr'].values[0]
+            critic_lr = 0.1 if fit_data is None else fit_data['critic_lr'].values[0]
+            temperature = 0.1 if fit_data is None else fit_data['temperature'].values[0]
+            mixing_factor = 0.5 if fit_data is None else fit_data['mixing_factor'].values[0]
+            valence_factor = 0.5 if fit_data is None else fit_data['valence_factor'].values[0]
+            noise_factor = 0.1 if fit_data is None else fit_data['noise_factor'].values[0]
+            decay_factor = 0.1 if fit_data is None else fit_data['decay_factor'].values[0]
 
             model = Hybrid2021(factual_lr=factual_lr,
                         counterfactual_lr=counterfactual_lr,
@@ -1159,11 +1159,11 @@ class RLModel:
             model.bounds = [(0.01, .99), (0.01, .99), (0.01, .99), (0.01, .99), (0.01, .99), (0.01, 10), (0, 1), (-1, 1), (0, 1), (0, 1)]
             
         elif model == 'QRelative':
-            factual_lr = 0.1 if fit_data is None else fit_data['factual_lr']
-            counterfactual_lr = 0.05 if fit_data is None else fit_data['counterfactual_lr']
-            contextual_lr = 0.1 if fit_data is None else fit_data['contextual_lr']
-            temperature = 0.1 if fit_data is None else fit_data['temperature']
-            mixing_factor = 0.5 if fit_data is None else fit_data['mixing_factor']
+            factual_lr = 0.1 if fit_data is None else fit_data['factual_lr'].values[0]
+            counterfactual_lr = 0.05 if fit_data is None else fit_data['counterfactual_lr'].values[0]
+            contextual_lr = 0.1 if fit_data is None else fit_data['contextual_lr'].values[0]
+            temperature = 0.1 if fit_data is None else fit_data['temperature'].values[0]
+            mixing_factor = 0.5 if fit_data is None else fit_data['mixing_factor'].values[0]
 
             model = QRelative(factual_lr=factual_lr,
                             counterfactual_lr=counterfactual_lr,

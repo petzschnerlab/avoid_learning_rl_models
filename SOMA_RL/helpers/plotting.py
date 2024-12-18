@@ -4,7 +4,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from scipy import stats
 
-def plot_simulations(accuracy, prediction_errors, values, choice_rates, models, group, number_of_runs):
+def plot_simulations(accuracy, prediction_errors, values, choice_rates, models, group):
     
     colors = ['#33A02C', '#B2DF8A', '#FB9A99', '#E31A1C', '#D3D3D3']
     bi_colors = ['#B2DF8A', '#FB9A99']
@@ -12,11 +12,13 @@ def plot_simulations(accuracy, prediction_errors, values, choice_rates, models, 
     fig, ax = plt.subplots(4, np.max((2,len(models))), figsize=(4*len(models), 15))
     for i, m in enumerate(models):
 
+        number_of_participants = accuracy[m]['run'].nunique()
+
         #Plot accuracy
         model_accuracy = accuracy[m].groupby(['context','trial_total','run'], observed=False).mean().reset_index()
         model_accuracy['context'] = pd.Categorical(model_accuracy['context'], categories=['Reward', 'Loss Avoid'], ordered=True)
         for ci, context in enumerate(['Reward', 'Loss Avoid']):
-            CIs = model_accuracy.groupby(['context','trial_total'], observed=False)['accuracy'].sem()*stats.t.ppf(0.975, number_of_runs-1)
+            CIs = model_accuracy.groupby(['context','trial_total'], observed=False)['accuracy'].sem()*stats.t.ppf(0.975, number_of_participants-1)
             averaged_accuracy = model_accuracy.groupby(['context','trial_total'], observed=False).mean().reset_index()
             context_accuracy = averaged_accuracy[averaged_accuracy['context'] == context]['accuracy'].reset_index(drop=True).astype(float)*100
             context_CIs = CIs[CIs.index.get_level_values('context') == context].reset_index(drop=True)*100
@@ -36,7 +38,7 @@ def plot_simulations(accuracy, prediction_errors, values, choice_rates, models, 
         model_pe = prediction_errors[m].groupby(['context','trial_total', 'run'], observed=False).mean().reset_index()
         model_pe['context'] = pd.Categorical(model_pe['context'], categories=['Reward', 'Loss Avoid'], ordered=True)
         for ci, context in enumerate(['Reward', 'Loss Avoid']):
-            CIs = model_pe.groupby(['context','trial_total'], observed=False)['averaged_pe'].sem()*stats.t.ppf(0.975, number_of_runs-1)
+            CIs = model_pe.groupby(['context','trial_total'], observed=False)['averaged_pe'].sem()*stats.t.ppf(0.975, number_of_participants-1)
             averaged_pe = model_pe.groupby(['context','trial_total'], observed=False).mean().reset_index()
             context_pe = averaged_pe[averaged_pe['context'] == context]['averaged_pe'].reset_index(drop=True)
             context_CIs = CIs[CIs.index.get_level_values('context') == context].reset_index(drop=True)
@@ -57,7 +59,7 @@ def plot_simulations(accuracy, prediction_errors, values, choice_rates, models, 
         model_values['context'] = pd.Categorical(model_values['context'], categories=['Reward', 'Loss Avoid'], ordered=True)
         for ci, context in enumerate(['Reward', 'Loss Avoid']):
             for vi, val in enumerate(['values1', 'values2']):
-                CIs = model_values.groupby(['context','trial_total'], observed=False)[val].sem()*stats.t.ppf(0.975, number_of_runs-1)
+                CIs = model_values.groupby(['context','trial_total'], observed=False)[val].sem()*stats.t.ppf(0.975, number_of_participants-1)
                 averaged_values = model_values.groupby(['context','trial_total'], observed=False).mean().reset_index()
                 context_values = averaged_values[averaged_values['context'] == context][val].reset_index(drop=True)
                 context_CIs = CIs[CIs.index.get_level_values('context') == context].reset_index(drop=True)
