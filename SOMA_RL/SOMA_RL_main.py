@@ -98,7 +98,13 @@ class RLFit:
         learning_accuracy = task_learning_data.groupby(['context', 'trial_total'])['accuracy'].mean().reset_index()
         learning_prediction_errors = task_learning_data.groupby(['context', 'trial_total'])['averaged_pe'].mean().reset_index()
 
-        value_labels = {'QLearning': 'q_values', 'ActorCritic': 'w_values', 'Relative': 'q_values', 'Hybrid2012': 'h_values', 'Hybrid2021': 'h_values', 'QRelative': 'm_values'}
+        value_labels = {'QLearning': 'q_values', 
+                        'ActorCritic': 'w_values', 
+                        'Relative': 'q_values', 
+                        'Hybrid2012': 'h_values', 
+                        'Hybrid2021': 'h_values', 
+                        'QRelative': 'm_values', 
+                        'wRelative': 'q_values'}
         value_label = value_labels[model_name]
 
         task_learning_data[f'{value_label}1'] = task_learning_data[value_label].apply(lambda x: x[0])
@@ -163,17 +169,18 @@ if __name__ == "__main__":
 
     #DEBUGGING CLEANUP
     #Cut the dataframe to 50 participants: #TODO:This is for debugging, remove it later
-    #data = data[data['participant'].isin(data['participant'].unique()[:10])]
+    #data = data[data['participant'].isin(data['participant'].unique()[:20])]
     
     #Setup fit dataframe
-    models = ['QLearning', 'ActorCritic', 'Relative', 'Hybrid2012']
+    models = ['QLearning', 'ActorCritic', 'Relative', 'Hybrid2012', 'wRelative']
 
     columns = {'QLearning': ['participant', 'pain_group', 'fit', 'factual_lr', 'counterfactual_lr', 'temperature'],
                'ActorCritic': ['participant', 'pain_group', 'fit', 'factual_actor_lr', 'counterfactual_actor_lr', 'critic_lr', 'temperature', 'valence_factor'],
                'Relative': ['participant', 'pain_group', 'fit', 'factual_lr', 'counterfactual_lr', 'contextual_lr', 'temperature'],
                'Hybrid2012': ['participant', 'pain_group', 'fit', 'factual_lr', 'counterfactual_lr', 'factual_actor_lr', 'counterfactual_actor_lr', 'critic_lr', 'temperature', 'mixing_factor', 'valence_factor'],
                'Hybrid2021': ['participant', 'pain_group', 'fit', 'factual_lr', 'counterfactual_lr', 'factual_actor_lr', 'counterfactual_actor_lr', 'critic_lr', 'temperature', 'mixing_factor', 'valence_factor', 'noise_factor', 'decay_factor'],
-               'QRelative': ['participant', 'pain_group', 'fit', 'factual_lr', 'counterfactual_lr', 'contextual_lr', 'temperature', 'mixing_factor']}
+               'QRelative': ['participant', 'pain_group', 'fit', 'factual_lr', 'counterfactual_lr', 'contextual_lr', 'temperature', 'mixing_factor'],
+               'wRelative': ['participant', 'pain_group', 'fit', 'factual_lr', 'counterfactual_lr', 'contextual_lr', 'temperature', 'mixing_factor']}
 
     #Task setup
     task_design = {'learning_phase': {'number_of_trials': 24, 'number_of_blocks': 4},
@@ -257,7 +264,7 @@ if __name__ == "__main__":
 
     #Run simulations
     number_of_metrics = 4
-    loop = tqdm.tqdm(range(len(fit_data['participant'].unique())*len(models)*number_of_metrics)) if not multiprocessing else None
+    loop = tqdm.tqdm(range(fit_data[models[0]]['participant'].nunique()*len(models)*number_of_metrics)) if not multiprocessing else None
     inputs = []
     for n, participant in enumerate(fit_data[models[0]]['participant'].unique()):
         for m in models:

@@ -142,7 +142,7 @@ class RLToolbox:
         if self.__class__.__name__ != 'ActorCritic':
             self.update_q_values(state)
 
-        if self.__class__.__name__ == 'Relative':
+        if 'Relative' in self.__class__.__name__:
             self.update_context_values(state)
             self.update_context_prediction_errors(state)
 
@@ -175,7 +175,7 @@ class RLToolbox:
             if self.__class__.__name__ != 'ActorCritic':
                 self.q_values[s] = [0]*len(self.q_values[s])
 
-            if self.__class__.__name__ == 'Relative':
+            if 'Relative' in self.__class__.__name__:
                 self.context_values[s] = [0]*len(self.context_values[s])
                 self.context_prediction_errors[s] = [0]*len(self.context_prediction_errors[s])
 
@@ -351,7 +351,7 @@ class QLearning(RLToolbox):
 
         return state
     
-    def compute_prediction_error(rewards, state):
+    def compute_prediction_error(self, state):
         state['prediction_errors'] = [state['rewards'][i] - state['q_values'][i] for i in range(len(state['rewards']))]
         return state
     
@@ -465,7 +465,7 @@ class ActorCritic(RLToolbox):
 
         return state
     
-    def compute_prediction_error(rewards, state):
+    def compute_prediction_error(self, state):
         state['prediction_errors'] = [state['rewards'][i] - state['v_values'][0] for i in range(len(state['rewards']))]
         return state
 
@@ -579,7 +579,7 @@ class Relative(RLToolbox):
 
         return state
     
-    def compute_prediction_error(rewards, state):
+    def compute_prediction_error(self, state):
         state['prediction_errors'] = [state['rewards'][i] - state['context_value'][0] - state['q_values'][i] for i in range(len(state['rewards']))]
         state['context_prediction_errors'] = state['context_reward'] - state['context_value']
         return state
@@ -710,7 +710,7 @@ class Hybrid2012(RLToolbox):
 
         return state
     
-    def compute_prediction_error(rewards, state):
+    def compute_prediction_error(self, state):
         state['q_prediction_errors'] = [state['rewards'][i] - state['q_values'][i] for i in range(len(state['rewards']))]
         state['v_prediction_errors'] = [state['rewards'][i] - state['v_values'][0] for i in range(len(state['rewards']))]
 
@@ -853,7 +853,7 @@ class Hybrid2021(RLToolbox):
 
         return state
     
-    def compute_prediction_error(rewards, state):
+    def compute_prediction_error(self, state):
         state['q_prediction_errors'] = [state['rewards'][i] - state['q_values'][i] for i in range(len(state['rewards']))]
         state['v_prediction_errors'] = [state['rewards'][i] - state['v_values'][0] for i in range(len(state['rewards']))]
 
@@ -940,6 +940,125 @@ class Hybrid2021(RLToolbox):
         #Return the negative log likelihood of all observed actions
         return -np.sum(logp_actions[1:])
     
+
+class wRelative(RLToolbox):
+
+    """
+    Reinforcement Learning Model: Relative (Palminteri et al., 2015)
+
+    Parameters:
+    ------------
+    factual_lr: float
+        Learning rate for factual Q-value update
+    counterfactual_lr: float
+        Learning rate for counterfactual Q-value update
+    temperature: float
+        Temperature parameter for softmax action selection
+    """
+
+    def __init__(self, factual_lr, counterfactual_lr, contextual_lr, temperature, mixing_factor):
+        super().__init__()
+
+        #Set parameters
+        self.factual_lr = factual_lr
+        self.counterfactual_lr = counterfactual_lr
+        self.contextual_lr = contextual_lr
+        self.temperature = temperature
+        self.mixing_factor = mixing_factor
+        self.parameters = {'factual_lr': self.factual_lr, 
+                           'counterfactual_lr': self.counterfactual_lr, 
+                           'contextual_lr': self.contextual_lr,
+                           'temperature': self.temperature,
+                           'mixing_factor': self.mixing_factor}
+                
+    #RL functions
+    def get_reward(self, state):
+        random_numbers = [rnd.random() for i in range(len(state['stim_id']))]
+        reward = [int(random_numbers[i] < state['probabilities'][i]) for i in range(len(state['stim_id']))]
+        reward = [reward[i] * state['feedback'] for i in range(len(state['stim_id']))]
+
+        state['rewards'] = reward
+        state['context_reward'] = np.average(state['rewards'])
+
+        return state
+    
+    def compute_prediction_error(self, state):
+        state['prediction_errors'] = [state['rewards'][i] - (state['context_value'][0] * self.mixing_factor) - state['q_values'][i] for i in range(len(state['rewards']))]
+        state['context_prediction_errors'] = state['context_reward'] - state['context_value']
+        return state
+    
+    def select_action(self, state):
+
+        transformed_q_values = np.exp(np.divide(state['q_values'], self.temperature))
+        probability_q_values = (transformed_q_values/np.sum(transformed_q_values)).cumsum()
+        state['action'] = np.where(probability_q_values >= rnd.random())[0][0]
+        if 'correct_action' in state.keys():
+            state['accuracy'] = int(state['action'] == state['correct_action'])
+
+        return state          
+
+    #Run trial functions
+    def forward(self, state, phase = 'learning'):
+        if phase == 'learning':
+            state = self.get_reward(state)
+            state = self.get_q_value(state)
+            state = self.get_context_value(state)
+            state = self.select_action(state)
+            state = self.compute_prediction_error(state)
+            self.update_model(state)
+        else:
+            state = self.get_final_q_values(state)
+            state = self.select_action(state)
+        self.update_task_data(state, phase=phase)
+
+    def fit_forward(self, state, phase = 'learning'):
+        if phase == 'learning':
+            state = self.get_q_value(state)
+            state = self.get_context_value(state)
+            state = self.compute_prediction_error(state)
+            self.update_model(state)
+        else:
+            state = self.get_final_q_values(state)
+            state = self.select_action(state)
+        
+        return state
+
+    def fit_func(self, x, *args):
+
+        '''
+        Fit the model to the data
+
+        data: tuple
+            Tuple of data to be fitted: actions, rewards
+        '''
+
+        #Reset indices on succeeding fits
+        self.reset_datalists()
+
+        #Unpack free parameters
+        self.factual_lr, self.counterfactual_lr, self.contextual_lr, self.temperature, self.mixing_factor = x
+        states, actions, rewards = args
+
+        #Initialize values
+        logp_actions = np.zeros((len(actions),1))
+
+        for trial, (state_id, action, reward) in enumerate(zip(states, actions, rewards)):
+            
+            #Populate state
+            state = {'rewards': reward,
+                     'context_reward': np.average(reward),
+                     'action': action,
+                     'state_id': state_id}
+
+            #Forward: TODO: When using functions (e.g., self.compute_PE -> self.update model -> self.get_q_value), it's much slower
+            state = self.fit_forward(state)
+
+            #Compute and store the log probability of the observed action
+            logp_actions[trial] = self.fit_log_likelihood(state['q_values'])[action]
+
+        #Return the negative log likelihood of all observed actions
+        return -np.sum(logp_actions[1:])
+    
 class QRelative(RLToolbox):
 
     """
@@ -984,7 +1103,7 @@ class QRelative(RLToolbox):
 
         return state
     
-    def compute_prediction_error(rewards, state):
+    def compute_prediction_error(self, state):
         state['q_prediction_errors'] = [state['rewards'][i] - state['q_values'][i] for i in range(len(state['rewards']))]
         state['c_prediction_errors'] = [state['rewards'][i] - state['context_value'][0] - state['c_values'][i] for i in range(len(state['rewards']))]
         state['context_prediction_errors'] = state['context_reward'] - state['context_value']
@@ -1166,6 +1285,21 @@ class RLModel:
             mixing_factor = 0.5 if fit_data is None else fit_data['mixing_factor'].values[0]
 
             model = QRelative(factual_lr=factual_lr,
+                            counterfactual_lr=counterfactual_lr,
+                            contextual_lr=contextual_lr,
+                            temperature=temperature,
+                            mixing_factor=mixing_factor)
+            
+            model.bounds = [(0.01, .99), (0.01, .99), (0.01, .99), (0.01, 10), (0, 1)]
+        
+        elif model == 'wRelative':
+            factual_lr = 0.1 if fit_data is None else fit_data['factual_lr'].values[0]
+            counterfactual_lr = 0.05 if fit_data is None else fit_data['counterfactual_lr'].values[0]
+            contextual_lr = 0.1 if fit_data is None else fit_data['contextual_lr'].values[0]
+            temperature = 0.1 if fit_data is None else fit_data['temperature'].values[0]
+            mixing_factor = 0.5 if fit_data is None else fit_data['mixing_factor'].values[0]
+
+            model = wRelative(factual_lr=factual_lr,
                             counterfactual_lr=counterfactual_lr,
                             contextual_lr=contextual_lr,
                             temperature=temperature,
