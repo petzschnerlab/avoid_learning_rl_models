@@ -61,20 +61,25 @@ class RLFit:
         #Extract args
         pipeline, data, columns, participant = args
         model_name = pipeline.task.rl_model.__class__.__name__
+        participant_id = data['learning']['participant'].values[0]
+        pain_group = data['learning']['pain_group'].values[0]
 
         #Extract participant data
-        states = data['state'].values
-        actions = data['action'].values
-        rewards = data[['reward_L', 'reward_R']].values
+        learning_states = data['learning']['state'].values
+        learning_actions = data['learning']['action'].values
+        learning_rewards = data['learning'][['reward_L', 'reward_R']].values
+
+        transfer_states = data['transfer']['state'].values
+        transfer_actions = data['transfer']['action'].values
+
+        data = [(learning_states, learning_actions, learning_rewards), (transfer_states, transfer_actions)]
         
         #Fit models
-        fit_results, fitted_params = pipeline.fit((states, actions, rewards), bounds=pipeline.task.rl_model.bounds)
+        fit_results, fitted_params = pipeline.fit(data, bounds=pipeline.task.rl_model.bounds)
         
         #Store fit results
-        participant_fitted = [data['participant'].values[0], 
-                            data['pain_group'].values[0], 
-                            fit_results.fun]
-        participant_fitted.extend([fitted_params[key] for key in columns[model_name][3:]])
+        participant_fitted = [participant_id, pain_group, fit_results.fun]
+        participant_fitted.extend([fitted_params[key] for key in columns[3:]])
 
         #Save to csv file
         with open(f'SOMA_RL/data/fits/{model_name}_{participant}_fit_results.csv', 'a') as f:
@@ -143,6 +148,10 @@ class RLFit:
 
 if __name__ == "__main__":
 
+    # =========================================== #
+    # ================= SYSTEM ================== #
+    # =========================================== #
+
     rnd.seed(1251)
     multiprocessing = True
 
@@ -151,40 +160,42 @@ if __name__ == "__main__":
     # =========================================== #
 
     #Load data
-    filename = 'SOMA_RL/data/pain_learning_processed.csv'
-    data = pd.read_csv(filename)
+    learning_filename = 'SOMA_RL/data/pain_learning_processed.csv'
+    learning_data = pd.read_csv(learning_filename)
+    transfer_filename = 'SOMA_RL/data/pain_transfer_processed.csv'
+    transfer_data = pd.read_csv(transfer_filename)
 
     #Reorganize data so that left stim is always better
-    data['stim_order'] = data.apply(lambda x: x['symbol_L_value'] > x['symbol_R_value'], axis=1)
-    data['reward_L'] = data.apply(lambda x: x['feedback_L']/10 if x['stim_order'] else x['feedback_R']/10, axis=1)
-    data['reward_R'] = data.apply(lambda x: x['feedback_R']/10 if x['stim_order'] else x['feedback_L']/10, axis=1)
-    data['action'] = data.apply(lambda x: x['choice_made'] if x['stim_order'] else np.abs(x['choice_made']-1), axis=1)
+    learning_data['stim_order'] = learning_data.apply(lambda x: x['symbol_L_value'] > x['symbol_R_value'], axis=1)
+    learning_data['reward_L'] = learning_data.apply(lambda x: x['feedback_L']/10 if x['stim_order'] else x['feedback_R']/10, axis=1)
+    learning_data['reward_R'] = learning_data.apply(lambda x: x['feedback_R']/10 if x['stim_order'] else x['feedback_L']/10, axis=1)
+    learning_data['action'] = learning_data.apply(lambda x: x['choice_made'] if x['stim_order'] else np.abs(x['choice_made']-1), axis=1)
 
-    data = data[['participant_id', 'group_code', 'symbol_names', 'reward_L', 'reward_R', 'action']]
-    data['symbol_names'] = data['symbol_names'].replace({'Reward1': 'State AB', 
-                                                         'Reward2': 'State CD', 
-                                                         'Punish1': 'State EF', 
-                                                         'Punish2': 'State GH'})
-    data.columns = ['participant', 'pain_group', 'state', 'reward_L', 'reward_R', 'action']
+    learning_data = learning_data[['participant_id', 'group_code', 'symbol_names', 'reward_L', 'reward_R', 'action']]
+    learning_data['symbol_names'] = learning_data['symbol_names'].replace({'Reward1': 'State AB', 'Reward2': 'State CD', 'Punish1': 'State EF', 'Punish2': 'State GH'})
+    learning_data.columns = ['participant', 'pain_group', 'state', 'reward_L', 'reward_R', 'action']
+
+    transfer_data['stim_order'] = transfer_data.apply(lambda x: x['symbol_L_value'] > x['symbol_R_value'], axis=1)
+    transfer_data['symbol_L_name'] = transfer_data['symbol_L_name'].replace({'75R1': 'A', '25R1': 'B', '75R2': 'C', '25R2': 'D', '75P1': 'E', '25P1': 'F', '75P2': 'G', '25P2': 'H', 'Zero': 'N'})
+    transfer_data['symbol_R_name'] = transfer_data['symbol_R_name'].replace({'75R1': 'A', '25R1': 'B', '75R2': 'C', '25R2': 'D', '75P1': 'E', '25P1': 'F', '75P2': 'G', '25P2': 'H', 'Zero': 'N'})
+    transfer_data['state'] = transfer_data.apply(lambda x: f"State {x['symbol_L_name']}{x['symbol_R_name']}" if x['stim_order'] else f"State {x['symbol_R_name']}{x['symbol_L_name']}", axis=1)
+    transfer_data['action'] = transfer_data.apply(lambda x: x['choice_made'] if x['stim_order'] else np.abs(x['choice_made']-1), axis=1)
+    
+    transfer_data = transfer_data[['participant_id', 'group_code', 'state', 'action']]
+    transfer_data.columns = ['participant', 'pain_group', 'state', 'action']
 
     #DEBUGGING CLEANUP
     #Cut the dataframe to 50 participants: #TODO:This is for debugging, remove it later
-    #data = data[data['participant'].isin(data['participant'].unique()[:20])]
+    p_indices = learning_data['participant'].unique()[:10]
+    learning_data = learning_data[learning_data['participant'].isin(p_indices)]
+    transfer_data = transfer_data[transfer_data['participant'].isin(p_indices)]
     
     #Setup fit dataframe
-    models = ['QLearning', 'ActorCritic', 'Relative', 'Hybrid2012', 'wRelative']
-
-    columns = {'QLearning': ['participant', 'pain_group', 'fit', 'factual_lr', 'counterfactual_lr', 'temperature'],
-               'ActorCritic': ['participant', 'pain_group', 'fit', 'factual_actor_lr', 'counterfactual_actor_lr', 'critic_lr', 'temperature', 'valence_factor'],
-               'Relative': ['participant', 'pain_group', 'fit', 'factual_lr', 'counterfactual_lr', 'contextual_lr', 'temperature'],
-               'Hybrid2012': ['participant', 'pain_group', 'fit', 'factual_lr', 'counterfactual_lr', 'factual_actor_lr', 'counterfactual_actor_lr', 'critic_lr', 'temperature', 'mixing_factor', 'valence_factor'],
-               'Hybrid2021': ['participant', 'pain_group', 'fit', 'factual_lr', 'counterfactual_lr', 'factual_actor_lr', 'counterfactual_actor_lr', 'critic_lr', 'temperature', 'mixing_factor', 'valence_factor', 'noise_factor', 'decay_factor'],
-               'QRelative': ['participant', 'pain_group', 'fit', 'factual_lr', 'counterfactual_lr', 'contextual_lr', 'temperature', 'mixing_factor'],
-               'wRelative': ['participant', 'pain_group', 'fit', 'factual_lr', 'counterfactual_lr', 'contextual_lr', 'temperature', 'mixing_factor']}
+    models = ['QLearning', 'ActorCritic', 'Relative', 'Hybrid2012', 'wRelative', 'QRelative']
 
     #Task setup
     task_design = {'learning_phase': {'number_of_trials': 24, 'number_of_blocks': 4},
-                           'transfer_phase': {'times_repeated': 4}}
+                   'transfer_phase': {'times_repeated': 4}}
     
     # =========================================== #
     # =================== FIT =================== #
@@ -195,19 +206,23 @@ if __name__ == "__main__":
         os.remove(os.path.join('SOMA_RL','data','fits',f))
 
     #Assign classes to inputs array
-    loop = tqdm.tqdm(range(len(data['participant'].unique())*len(models))) if not multiprocessing else None
+    loop = tqdm.tqdm(range(len(learning_data['participant'].unique())*len(models))) if not multiprocessing else None
     inputs = []
-    for n, participant in enumerate(data['participant'].unique()):
+    columns = {}
+    for n, participant in enumerate(learning_data['participant'].unique()):
         for m in models:                
-            participant_data = data[data['participant'] == participant]
+            participant_learning_data = learning_data[learning_data['participant'] == participant]
+            participant_transfer_data = transfer_data[transfer_data['participant'] == participant]
+            participant_data = {'learning': participant_learning_data.copy(), 'transfer': participant_transfer_data.copy()}
             task = AvoidanceLearningTask(task_design)
             model = RLModel(m).model
             pipeline = RLPipeline(model, task)
+            columns[m] = ['participant', 'pain_group', 'fit'] + list(model.parameters.keys())
             if multiprocessing:
-                inputs.append((pipeline, participant_data.copy(), columns, participant))
+                inputs.append((pipeline, participant_data, columns[m], participant))
             else:
                 loop.update(1)
-                RLFit().run_fit((pipeline, participant_data.copy(), columns, participant))
+                RLFit().run_fit((pipeline, participant_data, columns[m], participant))
 
     #Run all models fits in parallel
     if multiprocessing:
@@ -238,15 +253,54 @@ if __name__ == "__main__":
     for f in files:
         os.remove(os.path.join('SOMA_RL','data','fits',f))
 
+    group_AIC = {m: {} for m in models}
+    group_BIC = {m: {} for m in models}
     for m in models:
+
+        #Compute AIC and BIC
+        for group in learning_data['pain_group'].unique():
+            group_fit = fit_data[m][fit_data[m]['pain_group'] == group]
+            total_NLL = np.sum(group_fit["fit"])
+            number_params = len(group_fit.columns) - 3
+            number_samples_learning = learning_data[learning_data['pain_group'] == group].shape[0]
+            number_samples_transfer = transfer_data[transfer_data['pain_group'] == group].shape[0]
+            number_samples = number_samples_learning + number_samples_transfer
+            group_AIC[m][group] = 2*number_params - 2*total_NLL
+            group_BIC[m][group] = np.log(number_samples)*number_params - 2*total_NLL
+            
+        total_NLL = np.sum(fit_data[m]["fit"])
+        number_params = len(fit_data[m].columns) - 3
+        number_samples = learning_data.shape[0] + transfer_data.shape[0]
+        AIC = 2*number_params - 2*total_NLL
+        BIC = np.log(number_samples)*number_params - 2*total_NLL
+
         print('')
         print(f'FIT REPORT: {m}')
         print('==========')
+        print(f'AIC: {AIC.round(0)}')
+        print(f'BIC: {BIC.round(0)}')
         for col in fit_data[m].columns[2:]:
             print(f'{col}: {fit_data[m][col].mean().round(4)}, {fit_data[m][col].std().round(4)}')
         print('==========')
         print('')
-    
+        
+    #Turn nested dictionary into dataframe
+    group_AIC = pd.DataFrame(group_AIC)
+    group_AIC['best_model'] = group_AIC.idxmin(axis=1)
+    group_BIC = pd.DataFrame(group_BIC)
+    group_BIC['best_model'] = group_BIC.idxmin(axis=1)
+
+    print('AIC REPORT')
+    print('==========')
+    print(group_AIC)
+    print('==========')
+
+    print('')
+    print('BIC REPORT')
+    print('==========')
+    print(group_BIC)
+    print('==========')
+
     # =========================================== #
     # =========== SIMULATE WITH FITS ============ #
     # =========================================== #
@@ -297,10 +351,10 @@ if __name__ == "__main__":
 
     #Load all data in the fit data
     files = os.listdir('SOMA_RL/data/fits')
-    accuracy = {group: {model: pd.DataFrame(columns=accuracy_columns) for model in models} for group in data['pain_group'].unique()}
-    prediction_errors = {group: {model: pd.DataFrame(columns=pe_columns) for model in models} for group in data['pain_group'].unique()}
-    values = {group: {model: pd.DataFrame(columns=values_columns) for model in models} for group in data['pain_group'].unique()}
-    choice_rates = {group: {model: pd.DataFrame(columns=transfer_columns) for model in models} for group in data['pain_group'].unique()}
+    accuracy = {group: {model: pd.DataFrame(columns=accuracy_columns) for model in models} for group in learning_data['pain_group'].unique()}
+    prediction_errors = {group: {model: pd.DataFrame(columns=pe_columns) for model in models} for group in learning_data['pain_group'].unique()}
+    values = {group: {model: pd.DataFrame(columns=values_columns) for model in models} for group in learning_data['pain_group'].unique()}
+    choice_rates = {group: {model: pd.DataFrame(columns=transfer_columns) for model in models} for group in learning_data['pain_group'].unique()}
 
     for f in files:
         model_name, group, participant, value_name = f.split('_')[:4]

@@ -42,14 +42,6 @@ class AvoidanceLearningTask:
             self.rl_model.context_values = {state: [0] for state in states}
             self.rl_model.context_prediction_errors = {state: [0] for state in states}
 
-        if self.rl_model.__class__.__name__ == 'QRelative':
-            self.rl_model.context_values = {state: [0] for state in states}
-            self.rl_model.context_prediction_errors = {state: [0] for state in states}
-            self.rl_model.q_prediction_errors = {state: [0]*learning_dimensions[1] for state in states}
-            self.rl_model.c_prediction_errors = {state: [0]*learning_dimensions[1] for state in states}
-            self.rl_model.c_values = {state: [0]*learning_dimensions[1] for state in states}
-            self.rl_model.m_values = {state:[0]*learning_dimensions[1] for state in states}
-
         if self.rl_model.__class__.__name__ == 'ActorCritic':
             self.rl_model.w_values = {state: [0.01]*learning_dimensions[1] for state in states}
             self.rl_model.v_values = {state: [0] for state in states}
@@ -68,6 +60,14 @@ class AvoidanceLearningTask:
 
             self.rl_model.initial_w_values = pd.DataFrame([self.rl_model.q_values[self.rl_model.states[0]][0]]*9).T
             self.rl_model.initial_w_values.columns = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'N']
+
+        if self.rl_model.__class__.__name__ == 'QRelative':
+            self.rl_model.context_values = {state: [0] for state in states}
+            self.rl_model.context_prediction_errors = {state: [0] for state in states}
+            self.rl_model.q_prediction_errors = {state: [0]*learning_dimensions[1] for state in states}
+            self.rl_model.c_prediction_errors = {state: [0]*learning_dimensions[1] for state in states}
+            self.rl_model.c_values = {state: [0]*learning_dimensions[1] for state in states}
+            self.rl_model.m_values = {state:[0]*learning_dimensions[1] for state in states}
     
     def update_task_data(self, state, phase='learning'):
         
@@ -135,12 +135,12 @@ class AvoidanceLearningTask:
         self.rl_model.final_w_values.columns = stimuli
         self.rl_model.final_w_values['N'] = 0
 
-    def combine_m_values(self):
+    def combine_c_values(self):
 
         stimuli = ['A','B','C','D','E','F','G','H']
-        self.rl_model.final_m_values = pd.DataFrame(np.array([self.rl_model.m_values[state] for state in self.rl_model.m_values.keys()]).flatten()).T
-        self.rl_model.final_m_values.columns = stimuli
-        self.rl_model.final_m_values['N'] = 0
+        self.rl_model.final_c_values = pd.DataFrame(np.array([self.rl_model.c_values[state] for state in self.rl_model.c_values.keys()]).flatten()).T
+        self.rl_model.final_c_values.columns = stimuli
+        self.rl_model.final_c_values['N'] = 0
 
     def initiate_model(self, rl_model):
 
@@ -162,7 +162,7 @@ class AvoidanceLearningTask:
             'combine_q_values': self.combine_q_values,
             'combine_v_values': self.combine_v_values,
             'combine_w_values': self.combine_w_values,
-            'combine_m_values': self.combine_m_values
+            'combine_c_values': self.combine_c_values
         }
         self.rl_model.load_methods(methods)
 
@@ -187,8 +187,6 @@ class AvoidanceLearningTask:
             self.task_transfer_data_columns += ['w_values']
 
         if 'QRelative' == self.rl_model.__class__.__name__:
-            self.task_learning_data_columns += ['context_value']
-            self.task_learning_data_columns += ['context_prediction_errors']
             self.task_learning_data_columns += ['c_values']
             self.task_learning_data_columns += ['m_values']
             self.task_transfer_data_columns += ['m_values']
@@ -259,7 +257,8 @@ class AvoidanceLearningTask:
             self.rl_model.combine_v_values()
             self.rl_model.combine_w_values()
         elif 'QRelative' == self.rl_model.__class__.__name__:
-            self.rl_model.combine_m_values()
+            self.rl_model.combine_q_values()
+            self.rl_model.combine_c_values()
         else:
             self.rl_model.combine_q_values()
 
