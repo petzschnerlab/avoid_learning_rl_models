@@ -9,6 +9,7 @@ import pandas as pd
 import numpy as np
 import tqdm
 
+from helpers.dataloader import DataLoader
 from helpers.rl_models import RLModel
 from helpers.tasks import AvoidanceLearningTask
 from helpers.pipeline import RLPipeline, mp_run_fit, mp_run_simulations, mp_progress
@@ -24,13 +25,17 @@ if __name__ == "__main__":
     rnd.seed(1251)
 
     #Debug parameters
-    n = 0 #Number of participants to keep, 0 = all
+    number_of_participants = 1 #Number of participants to keep, 0 = all
 
     #Parameters
-    multiprocessing = True
+    multiprocessing = False
     fit_transfer_phase = True
     transfer_trials = 2
     number_of_fits = 5
+
+    #File names
+    learning_filename = 'SOMA_RL/data/pain_learning_processed.csv'
+    transfer_filename = 'SOMA_RL/data/pain_transfer_processed.csv'
 
     #Models and simulation task design
     models = ['QLearning', 'ActorCritic', 'Relative', 'Hybrid2012', 'wRelative', 'QRelative']
@@ -41,38 +46,9 @@ if __name__ == "__main__":
     # ================ LOAD DATA ================ #
     # =========================================== #
 
-    #Load data
-    learning_filename = 'SOMA_RL/data/pain_learning_processed.csv'
-    learning_data = pd.read_csv(learning_filename)
-    transfer_filename = 'SOMA_RL/data/pain_transfer_processed.csv'
-    transfer_data = pd.read_csv(transfer_filename)
+    dataloader = DataLoader(learning_filename, transfer_filename, number_of_participants)
+    participant_ids = dataloader.get_participant_ids()
 
-    #Reorganize data so that left stim is always better
-    learning_data['stim_order'] = learning_data.apply(lambda x: x['symbol_L_value'] > x['symbol_R_value'], axis=1)
-    learning_data['reward_L'] = learning_data.apply(lambda x: x['feedback_L']/10 if x['stim_order'] else x['feedback_R']/10, axis=1)
-    learning_data['reward_R'] = learning_data.apply(lambda x: x['feedback_R']/10 if x['stim_order'] else x['feedback_L']/10, axis=1)
-    learning_data['action'] = learning_data.apply(lambda x: x['choice_made'] if x['stim_order'] else np.abs(x['choice_made']-1), axis=1)
-
-    learning_data = learning_data[['participant_id', 'group_code', 'symbol_names', 'reward_L', 'reward_R', 'action']]
-    learning_data['symbol_names'] = learning_data['symbol_names'].replace({'Reward1': 'State AB', 'Reward2': 'State CD', 'Punish1': 'State EF', 'Punish2': 'State GH'})
-    learning_data.columns = ['participant', 'pain_group', 'state', 'reward_L', 'reward_R', 'action']
-
-    transfer_data['stim_order'] = transfer_data.apply(lambda x: x['symbol_L_value'] > x['symbol_R_value'], axis=1)
-    transfer_data['symbol_L_name'] = transfer_data['symbol_L_name'].replace({'75R1': 'A', '25R1': 'B', '75R2': 'C', '25R2': 'D', '75P1': 'E', '25P1': 'F', '75P2': 'G', '25P2': 'H', 'Zero': 'N'})
-    transfer_data['symbol_R_name'] = transfer_data['symbol_R_name'].replace({'75R1': 'A', '25R1': 'B', '75R2': 'C', '25R2': 'D', '75P1': 'E', '25P1': 'F', '75P2': 'G', '25P2': 'H', 'Zero': 'N'})
-    transfer_data['state'] = transfer_data.apply(lambda x: f"State {x['symbol_L_name']}{x['symbol_R_name']}" if x['stim_order'] else f"State {x['symbol_R_name']}{x['symbol_L_name']}", axis=1)
-    transfer_data['action'] = transfer_data.apply(lambda x: x['choice_made'] if x['stim_order'] else np.abs(x['choice_made']-1), axis=1)
-    
-    transfer_data = transfer_data[['participant_id', 'group_code', 'state', 'action']]
-    transfer_data.columns = ['participant', 'pain_group', 'state', 'action']
-
-    #DEBUGGING CLEANUP
-    #Cut the dataframe to n participants: #TODO:This is for debugging, remove it later
-    if n > 0:
-        p_indices = learning_data['participant'].unique()[:n]
-        learning_data = learning_data[learning_data['participant'].isin(p_indices)]
-        transfer_data = transfer_data[transfer_data['participant'].isin(p_indices)]
-    
     # =========================================== #
     # =================== FIT =================== #
     # =========================================== #
@@ -82,28 +58,25 @@ if __name__ == "__main__":
         os.remove(os.path.join('SOMA_RL','data','fits',f))
 
     #Run fits
-    loop = tqdm.tqdm(range(len(learning_data['participant'].unique())*len(models))) if not multiprocessing else None
+    loop = tqdm.tqdm(range(len(participant_ids)*len(models))) if not multiprocessing else None
     inputs = []
     columns = {}
-    for n, participant in enumerate(learning_data['participant'].unique()):
-        for m in models:                
-            participant_learning_data = learning_data[learning_data['participant'] == participant]
-            participant_transfer_data = transfer_data[transfer_data['participant'] == participant]
-            model = RLModel(m)
-            participant_data = {'learning': participant_learning_data.copy(), 'transfer': participant_transfer_data.copy()}
+    for n, participant in enumerate(participant_ids):
+        for model_name in models:                
+            model = RLModel(model_name)
             task = AvoidanceLearningTask(task_design, transfer_trials=transfer_trials)
-            pipeline = RLPipeline(model, task, fit_transfer_phase=fit_transfer_phase, number_of_fits=number_of_fits)
-            columns[m] = ['participant', 'pain_group', 'fit'] + list(model.get_model().parameters.keys())
+            pipeline = RLPipeline(model, dataloader, task, fit_transfer_phase=fit_transfer_phase, number_of_fits=number_of_fits)
+            columns[model_name] = ['participant', 'pain_group', 'fit'] + list(model.get_model().parameters.keys())
             if multiprocessing:
-                inputs.append((pipeline, participant_data, columns[m], participant))
+                inputs.append((pipeline, columns[model_name], participant))
             else:
                 loop.update(1)
-                pipeline.run_fit((participant_data, columns[m], participant))
+                pipeline.run_fit((columns[model_name], participant))
 
     #Run all models fits in parallel
     if multiprocessing:
         print('\nMultiprocessing initiated...')
-        print(f"Number of participants: {len(learning_data['participant'].unique())}, Number of models: {len(models)}, Total fits: {len(learning_data['participant'].unique())*len(models)}")
+        print(f"Number of participants: {len(participant_ids)}, Number of models: {len(models)}, Total fits: {len(participant_ids)*len(models)}")
 
         pool = mp.Pool(mp.cpu_count())
         pool.map_async(mp_run_fit, inputs)

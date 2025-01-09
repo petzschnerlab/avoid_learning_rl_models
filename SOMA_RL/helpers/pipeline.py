@@ -19,9 +19,10 @@ class RLPipeline:
         Dictionary containing task design parameters
     """
 
-    def __init__(self, model, task=None, number_of_fits=1, fit_transfer_phase=True):
+    def __init__(self, model, dataloader=None, task=None, number_of_fits=1, fit_transfer_phase=True):
 
         #Get parameters
+        self.dataloader = dataloader
         self.task_design = task.task_design
         self.task = task
         self.task.initiate_model(model.get_model())
@@ -43,9 +44,9 @@ class RLPipeline:
     def run_fit(self, args):
 
         #Extract args
-        data, columns, participant = args
+        columns, participant_id = args
+        data = self.dataloader.filter_participant_data(participant_id)
         model_name = self.task.rl_model.__class__.__name__
-        participant_id = data['learning']['participant'].values[0]
         pain_group = data['learning']['pain_group'].values[0]
 
         #Extract participant data
@@ -66,7 +67,7 @@ class RLPipeline:
         participant_fitted.extend([fitted_params[key] for key in columns[3:]])
 
         #Save to csv file
-        with open(f'SOMA_RL/data/fits/{model_name}_{participant}_fit_results.csv', 'a') as f:
+        with open(f'SOMA_RL/data/fits/{model_name}_{participant_id}_fit_results.csv', 'a') as f:
             f.write(','.join([str(x) for x in participant_fitted]) + '\n')
 
     def run_simulations(self, args):
