@@ -25,13 +25,13 @@ if __name__ == "__main__":
     rnd.seed(1251)
 
     #Debug parameters
-    number_of_participants = 1 #Number of participants to keep, 0 = all
+    number_of_participants = 0 #Number of participants to keep, 0 = all
 
     #Parameters
     multiprocessing = False
     fit_transfer_phase = True
     transfer_trials = 2
-    number_of_fits = 5
+    number_of_fits = 1
 
     #File names
     learning_filename = 'SOMA_RL/data/pain_learning_processed.csv'
@@ -39,6 +39,7 @@ if __name__ == "__main__":
 
     #Models and simulation task design
     models = ['QLearning', 'ActorCritic', 'Relative', 'Hybrid2012', 'wRelative', 'QRelative']
+    models = ['QLearning', 'ActorCritic']
     task_design = {'learning_phase': {'number_of_trials': 24, 'number_of_blocks': 4},
                    'transfer_phase': {'times_repeated': 4}}
 
@@ -48,6 +49,7 @@ if __name__ == "__main__":
 
     dataloader = DataLoader(learning_filename, transfer_filename, number_of_participants)
     participant_ids = dataloader.get_participant_ids()
+    group_ids = dataloader.get_group_ids()
 
     # =========================================== #
     # =================== FIT =================== #
@@ -66,7 +68,7 @@ if __name__ == "__main__":
             model = RLModel(model_name)
             task = AvoidanceLearningTask(task_design, transfer_trials=transfer_trials)
             pipeline = RLPipeline(model, dataloader, task, fit_transfer_phase=fit_transfer_phase, number_of_fits=number_of_fits)
-            columns[model_name] = ['participant', 'pain_group', 'fit'] + list(model.get_model().parameters.keys())
+            columns[model_name] = ['participant', 'pain_group', 'fit'] + list(model.get_parameters())
             if multiprocessing:
                 inputs.append((pipeline, columns[model_name], participant))
             else:
@@ -109,32 +111,30 @@ if __name__ == "__main__":
 
     group_AIC = {m: {} for m in models}
     group_BIC = {m: {} for m in models}
-    for m in models:
+    for model_name in models:
 
         #Compute AIC and BIC
-        for group in learning_data['pain_group'].unique():
-            group_fit = fit_data[m][fit_data[m]['pain_group'] == group]
+        for group in group_ids:
+            group_fit = fit_data[model_name][fit_data[model_name]['pain_group'] == group]
             total_NLL = np.sum(group_fit["fit"])
             number_params = len(group_fit.columns) - 3
-            number_samples_learning = learning_data[learning_data['pain_group'] == group].shape[0]
-            number_samples_transfer = transfer_data[transfer_data['pain_group'] == group].shape[0]
-            number_samples = number_samples_learning + number_samples_transfer
-            group_AIC[m][group] = 2*number_params - 2*total_NLL
-            group_BIC[m][group] = np.log(number_samples)*number_params - 2*total_NLL
+            number_samples = dataloader.get_num_samples_by_group(group)
+            group_AIC[model_name][group] = 2*number_params - 2*total_NLL
+            group_BIC[model_name][group] = np.log(number_samples)*number_params - 2*total_NLL
             
-        total_NLL = np.sum(fit_data[m]["fit"])
-        number_params = len(fit_data[m].columns) - 3
-        number_samples = learning_data.shape[0] + transfer_data.shape[0]
+        total_NLL = np.sum(fit_data[model_name]["fit"])
+        number_params = len(fit_data[model_name].columns) - 3
+        number_samples = dataloader.get_num_samples()
         AIC = 2*number_params - 2*total_NLL
         BIC = np.log(number_samples)*number_params - 2*total_NLL
 
         print('')
-        print(f'FIT REPORT: {m}')
+        print(f'FIT REPORT: {model_name}')
         print('==========')
         print(f'AIC: {AIC.round(0)}')
         print(f'BIC: {BIC.round(0)}')
-        for col in fit_data[m].columns[2:]:
-            print(f'{col}: {fit_data[m][col].mean().round(4)}, {fit_data[m][col].std().round(4)}')
+        for col in fit_data[model_name].columns[2:]:
+            print(f'{col}: {fit_data[model_name][col].mean().round(4)}, {fit_data[model_name][col].std().round(4)}')
         print('==========')
         print('')
         
@@ -170,20 +170,17 @@ if __name__ == "__main__":
     number_of_metrics = len(columns)
     loop = tqdm.tqdm(range(fit_data[models[0]]['participant'].nunique()*len(models)*number_of_metrics)) if not multiprocessing else None
     inputs = []
-    for n, participant in enumerate(fit_data[models[0]]['participant'].unique()):
-        for m in models:
+    for n, participant in enumerate(participant_ids):
+        for model_name in models:
 
             #Participant data
-            participant_params = fit_data[m][fit_data[m]['participant'] == participant].copy()
+            participant_params = fit_data[model_name][fit_data[model_name]['participant'] == participant].copy()
             group = participant_params['pain_group'].values[0]
-            participant_learning_data = learning_data[learning_data['participant'] == participant]
-            participant_transfer_data = transfer_data[transfer_data['participant'] == participant]
-            participant_data = {'learning': participant_learning_data.copy(), 'transfer': participant_transfer_data.copy()}
-
+            
             #Initialize task, model, and task design
-            model = RLModel(m, participant_params)
+            model = RLModel(model_name, participant_params)
             task = AvoidanceLearningTask(task_design)
-            pipeline = RLPipeline(model, task, number_of_fits=number_of_fits)
+            pipeline = RLPipeline(model, dataloader, task)
             if multiprocessing:
                 inputs.append((pipeline, columns, participant, group, n))
             else:
@@ -205,10 +202,10 @@ if __name__ == "__main__":
 
     #Load all data in the fit data
     files = os.listdir('SOMA_RL/data/fits')
-    accuracy = {group: {model: pd.DataFrame(columns=accuracy_columns) for model in models} for group in learning_data['pain_group'].unique()}
-    prediction_errors = {group: {model: pd.DataFrame(columns=pe_columns) for model in models} for group in learning_data['pain_group'].unique()}
-    values = {group: {model: pd.DataFrame(columns=values_columns) for model in models} for group in learning_data['pain_group'].unique()}
-    choice_rates = {group: {model: pd.DataFrame(columns=transfer_columns) for model in models} for group in learning_data['pain_group'].unique()}
+    accuracy = {group: {model: pd.DataFrame(columns=accuracy_columns) for model in models} for group in group_ids}
+    prediction_errors = {group: {model: pd.DataFrame(columns=pe_columns) for model in models} for group in group_ids}
+    values = {group: {model: pd.DataFrame(columns=values_columns) for model in models} for group in group_ids}
+    choice_rates = {group: {model: pd.DataFrame(columns=transfer_columns) for model in models} for group in group_ids}
 
     for f in files:
         model_name, group, participant, value_name = f.split('_')[:4]

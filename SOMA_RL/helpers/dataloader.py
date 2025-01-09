@@ -57,6 +57,17 @@ class DataLoader:
 
     def get_participant_ids(self):
         return self.learning_data['participant'].unique()
+    
+    def get_group_ids(self):
+        return self.learning_data['pain_group'].unique()
+    
+    def get_num_samples(self):
+        return self.learning_data.shape[0] + self.transfer_data.shape[0]
+    
+    def get_num_samples_by_group(self, group_id):
+        num_learning_samples = self.learning_data[self.learning_data['pain_group'] == group_id].shape[0]
+        num_transfer_samples = self.transfer_data[self.transfer_data['pain_group'] == group_id].shape[0]
+        return num_learning_samples+num_transfer_samples
 
     def get_data(self):
         return self.learning_data, self.transfer_data

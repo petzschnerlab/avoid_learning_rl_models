@@ -1155,7 +1155,10 @@ class RLModel:
 
     def get_model(self):
         return self.model
-
+    
+    def get_parameters(self):
+        return self.model.parameters.keys()
+    
     def define_model(self, model, fit_data=None):
 
         if model == 'QLearning':
