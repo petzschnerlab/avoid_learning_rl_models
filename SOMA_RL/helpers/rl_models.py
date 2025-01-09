@@ -1,4 +1,3 @@
-import time
 import random as rnd
 import pandas as pd
 import numpy as np
@@ -211,9 +210,14 @@ class RLToolbox:
     def fit_transfer_forward(self, transfer_data, value_name):
         #Although more succint and verbose, takes much longer to run
         transfer_data = pd.DataFrame({'state_id': transfer_data[0], 'action': transfer_data[1]})
+
         transfer_data['stim_id'] = transfer_data['state_id'].apply(lambda x: x.split(' ')[-1])
-        transfer_data['values'] = transfer_data.apply(lambda x: self.fit_forward({'stim_id': x['stim_id']}, phase='transfer')[value_name], axis=1)
-        transfer_data['NLL'] = transfer_data.apply(lambda x: self.fit_log_likelihood(x['values'])[x['action']], axis=1)
+        transfer_data['values'] = transfer_data['stim_id'].apply(lambda x: self.fit_forward({'stim_id': x}, phase='transfer')[value_name])
+        transfer_data['NLL'] = transfer_data.apply(lambda x: self.fit_log_likelihood(x['values'])[x['action']][0], axis=1)
+
+        #transfer_data['NLL'] = transfer_data.apply(lambda x: self.fit_log_likelihood(self.fit_forward({'stim_id': x['state_id'].split(' ')[-1]}, 
+        #                                                                                              phase='transfer')[value_name])[x['action']], 
+        #                                                                                              axis=1)
         
         return transfer_data['NLL'].sum()
     
@@ -238,60 +242,74 @@ class RLToolbox:
 
         return fit_results, fitted_params
 
-    def run_fit(self, args, value_type, transform_reward=False, context_reward=False):
+    def fit_task(self, args, value_type, transform_reward=False, context_reward=False):
+        
+        #Unpack data
         learning_data, transfer_data = args[0]
         learning_states, learning_actions, learning_rewards = learning_data
+
+        if self.transfer_trials > 0:
+            #Reduce the transfer data to the first three presentations of each state_id
+            transfer_data = pd.DataFrame({'state_id': transfer_data[0], 'action': transfer_data[1]})
+            transfer_data = transfer_data.groupby('state_id').head(self.transfer_trials)
+            transfer_data = transfer_data.values.T.tolist()
         transfer_states, transfer_actions = transfer_data
 
         #Initialize values
         log_likelihood = 0
 
         #Learning phase
-        for trial, (state_id, action, reward) in enumerate(zip(learning_states, learning_actions, learning_rewards)):
+        for fit_number in range(self.number_of_fits):
+            for trial, (state_id, action, reward) in enumerate(zip(learning_states, learning_actions, learning_rewards)):
 
-            #Populate state
-            if transform_reward:
-                reward = self.reward_valence(reward)
+                #Populate state
+                if transform_reward:
+                    reward = self.reward_valence(reward)
 
-            state = {'rewards': reward, 
-                    'action': action, 
-                    'state_id': state_id}
-            
-            if context_reward:
-                state['context_reward'] = np.average(reward)
-            
-            #Forward: TODO: When using functions (e.g., self.compute_PE -> self.update model -> self.get_q_value), it's much slower 
-            state = self.fit_forward(state)
+                state = {'rewards': reward, 
+                        'action': action, 
+                        'state_id': state_id}
+                
+                if context_reward:
+                    state['context_reward'] = np.average(reward)
+                
+                #Forward
+                state = self.fit_forward(state)
 
-            #Compute and store the log probability of the observed action
-            log_likelihood -= self.fit_log_likelihood(state[value_type])[action]
+                #Compute and store the log probability of the observed action
+                log_likelihood -= self.fit_log_likelihood(state[value_type])[action]
 
-        #Inter-phase processing
-        if self.__class__.__name__ == 'ActorCritic':
-            self.combine_v_values()
-            self.combine_w_values()
-        elif 'Hybrid' in self.__class__.__name__:
-            self.combine_q_values()
-            self.combine_v_values()
-            self.combine_w_values()
-        elif 'QRelative' == self.__class__.__name__:
-            self.combine_q_values()
-            self.combine_c_values()
-        else:
-            self.combine_q_values()
+            if self.fit_transfer_phase:
 
-        #Transfer phase
-        for trial, (state_id, action) in enumerate(zip(transfer_states, transfer_actions)):
-            
-            #Populate state
-            state = {'action': action, 
-                    'stim_id': [stim for stim in state_id.split(' ')[-1]]}
-            
-            #Forward: TODO: When using functions (e.g., self.compute_PE -> self.update model -> self.get_q_value), it's much slower 
-            state = self.fit_forward(state, phase='transfer')
+                #Inter-phase processing
+                if self.__class__.__name__ == 'ActorCritic':
+                    self.combine_v_values()
+                    self.combine_w_values()
+                elif 'Hybrid' in self.__class__.__name__:
+                    self.combine_q_values()
+                    self.combine_v_values()
+                    self.combine_w_values()
+                elif 'QRelative' == self.__class__.__name__:
+                    self.combine_q_values()
+                    self.combine_c_values()
+                else:
+                    self.combine_q_values()
 
-            #Compute and store the log probability of the observed action
-            log_likelihood -= self.fit_log_likelihood(state[value_type])[action]
+                #Transfer phase
+                if False: #Toggle to switch between methods for testing. Function method is slower than loop, so it's avoided
+                    log_likelihood -= self.fit_transfer_forward(transfer_data, value_type, reduced = True)
+                else:
+                    for trial, (state_id, action) in enumerate(zip(transfer_states, transfer_actions)):
+                        
+                        #Populate state
+                        state = {'action': action, 
+                                'stim_id': [stim for stim in state_id.split(' ')[-1]]}
+                        
+                        #Forward: TODO: When using functions (e.g., self.compute_PE -> self.update model -> self.get_q_value), it's much slower 
+                        state = self.fit_forward(state, phase='transfer')
+
+                        #Compute and store the log probability of the observed action
+                        log_likelihood -= self.fit_log_likelihood(state[value_type])[action]
 
         return log_likelihood
 
@@ -391,7 +409,7 @@ class QLearning(RLToolbox):
         #Set parameters
         self.factual_lr = factual_lr
         self.counterfactual_lr = counterfactual_lr
-        self.temperature = temperature  
+        self.temperature = temperature
         self.parameters = {'factual_lr': self.factual_lr, 
                            'counterfactual_lr': self.counterfactual_lr, 
                            'temperature': self.temperature}
@@ -459,7 +477,7 @@ class QLearning(RLToolbox):
         self.factual_lr, self.counterfactual_lr, self.temperature = x
 
         #Return the negative log likelihood of all observed actions
-        return -self.run_fit(args, 'q_values')
+        return -self.fit_task(args, 'q_values')
 
 class ActorCritic(RLToolbox):
 
@@ -567,7 +585,7 @@ class ActorCritic(RLToolbox):
         self.factual_actor_lr, self.counterfactual_actor_lr, self.critic_lr, self.temperature, self.valence_factor = x 
 
         #Return the negative log likelihood of all observed actions
-        return -self.run_fit(args, 'w_values', transform_reward=True)
+        return -self.fit_task(args, 'w_values', transform_reward=True)
     
 class Relative(RLToolbox):
 
@@ -665,7 +683,7 @@ class Relative(RLToolbox):
         self.factual_lr, self.counterfactual_lr, self.contextual_lr, self.temperature = x
 
         #Return the negative log likelihood of all observed actions
-        return -self.run_fit(args, 'q_values', context_reward=True)
+        return -self.fit_task(args, 'q_values', context_reward=True)
     
 class Hybrid2012(RLToolbox):
 
@@ -787,7 +805,7 @@ class Hybrid2012(RLToolbox):
         self.factual_lr, self.counterfactual_lr, self.factual_actor_lr, self.counterfactual_actor_lr, self.critic_lr, self.temperature, self.mixing_factor, self.valence_factor = x
 
         #Return the negative log likelihood of all observed actions
-        return -self.run_fit(args, 'h_values', transform_reward=True)
+        return -self.fit_task(args, 'h_values', transform_reward=True)
 
 class Hybrid2021(RLToolbox):
 
@@ -916,7 +934,7 @@ class Hybrid2021(RLToolbox):
         self.factual_lr, self.counterfactual_lr, self.factual_actor_lr, self.counterfactual_actor_lr, self.critic_lr, self.temperature, self.mixing_factor, self.valence_factor, self.noise_factor, self.decay_factor = x
         
         #Return the negative log likelihood of all observed actions
-        return -self.run_fit(args, 'h_values', transform_reward=True)
+        return -self.fit_task(args, 'h_values', transform_reward=True)
 
 class wRelative(RLToolbox):
 
@@ -1016,7 +1034,7 @@ class wRelative(RLToolbox):
         self.factual_lr, self.counterfactual_lr, self.contextual_lr, self.temperature, self.mixing_factor = x
 
         #Return the negative log likelihood of all observed actions
-        return -self.run_fit(args, 'q_values', context_reward=True)
+        return -self.fit_task(args, 'q_values', context_reward=True)
     
 class QRelative(RLToolbox):
 
@@ -1128,14 +1146,17 @@ class QRelative(RLToolbox):
         self.factual_lr, self.counterfactual_lr, self.contextual_lr, self.temperature, self.mixing_factor = x
 
         #Return the negative log likelihood of all observed actions
-        return -self.run_fit(args, 'm_values', context_reward=True)
+        return -self.fit_task(args, 'm_values', context_reward=True)
     
 class RLModel:
 
     def __init__(self, model, fit_data=None):
-        self.model = self.get_model(model, fit_data)
+        self.model = self.define_model(model, fit_data)
 
-    def get_model(self, model, fit_data=None):
+    def get_model(self):
+        return self.model
+
+    def define_model(self, model, fit_data=None):
 
         if model == 'QLearning':
             factual_lr = 0.1 if fit_data is None else fit_data['factual_lr'].values[0]
@@ -1146,7 +1167,7 @@ class RLModel:
                             counterfactual_lr=counterfactual_lr, 
                             temperature=temperature)
 
-            model.bounds = [(0.01, .99), (0.01, .99), (0.01, 1)]
+            model.bounds = [(0.01, .99), (0.01, .99), (0.01, 10)]
 
         elif model == 'ActorCritic':
             factual_actor_lr = 0.1 if fit_data is None else fit_data['factual_actor_lr'].values[0]
@@ -1161,7 +1182,7 @@ class RLModel:
                                 temperature=temperature,
                                 valence_factor=valence_factor)
             
-            model.bounds = [(0.01, .99), (0.01, .99), (0.01,.99), (0.01, 1), (-1, 1)]
+            model.bounds = [(0.01, .99), (0.01, .99), (0.01,.99), (0.01, 10), (-1, 1)]
 
         elif model == 'Relative':
             factual_lr = 0.1 if fit_data is None else fit_data['factual_lr'].values[0]
@@ -1174,7 +1195,7 @@ class RLModel:
                             contextual_lr=contextual_lr,
                             temperature=temperature)
             
-            model.bounds = [(0.01, .99), (0.01, .99), (0.01,.99), (0.01, 1)]
+            model.bounds = [(0.01, .99), (0.01, .99), (0.01,.99), (0.01, 10)]
 
         elif model == 'Hybrid2012':
             factual_lr = 0.1 if fit_data is None else fit_data['factual_lr'].values[0]
@@ -1195,7 +1216,7 @@ class RLModel:
                         mixing_factor=mixing_factor,
                         valence_factor=valence_factor)
         
-            model.bounds = [(0.01, .99), (0.01, .99), (0.01, .99), (0.01, .99), (0.01, .99), (0.01, 1), (0, 1), (-1, 1)]
+            model.bounds = [(0.01, .99), (0.01, .99), (0.01, .99), (0.01, .99), (0.01, .99), (0.01, 10), (0, 1), (-1, 1)]
 
         elif model == 'Hybrid2021':
             factual_lr = 0.1 if fit_data is None else fit_data['factual_lr'].values[0]
@@ -1220,7 +1241,7 @@ class RLModel:
                         noise_factor=noise_factor,
                         decay_factor=decay_factor)
             
-            model.bounds = [(0.01, .99), (0.01, .99), (0.01, .99), (0.01, .99), (0.01, .99), (0.01, 1), (0, 1), (-1, 1), (0, 1), (0, 1)]
+            model.bounds = [(0.01, .99), (0.01, .99), (0.01, .99), (0.01, .99), (0.01, .99), (0.01, 10), (0, 1), (-1, 1), (0, 1), (0, 1)]
             
         elif model == 'QRelative':
             factual_lr = 0.1 if fit_data is None else fit_data['factual_lr'].values[0]
@@ -1235,7 +1256,7 @@ class RLModel:
                             temperature=temperature,
                             mixing_factor=mixing_factor)
             
-            model.bounds = [(0.01, .99), (0.01, .99), (0.01, .99), (0.01, 1), (0, 1)]
+            model.bounds = [(0.01, .99), (0.01, .99), (0.01, .99), (0.01, 10), (0, 1)]
         
         elif model == 'wRelative':
             factual_lr = 0.1 if fit_data is None else fit_data['factual_lr'].values[0]
@@ -1250,7 +1271,7 @@ class RLModel:
                             temperature=temperature,
                             mixing_factor=mixing_factor)
             
-            model.bounds = [(0.01, .99), (0.01, .99), (0.01, .99), (0.01, 1), (-1, 1)]
+            model.bounds = [(0.01, .99), (0.01, .99), (0.01, .99), (0.01, 10), (-1, 1)]
             
         else:
             raise ValueError('Model not recognized.')

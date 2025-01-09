@@ -4,159 +4,41 @@ import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 import os
 import multiprocessing as mp
-import time
 import random as rnd
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
 import tqdm
-from scipy import stats
 
-from helpers.tasks import AvoidanceLearningTask
 from helpers.rl_models import RLModel
+from helpers.tasks import AvoidanceLearningTask
+from helpers.pipeline import RLPipeline, mp_run_fit, mp_run_simulations, mp_progress
 from helpers.plotting import plot_simulations
-
-class RLPipeline:
-        
-        """
-        Reinforcement Learning Pipeline
-
-        Parameters
-        ----------
-        task : object
-            Task object
-        model : object
-            Reinforcement learning model object
-        task_design : dict
-            Dictionary containing task design parameters
-        """
-
-        def __init__(self, model, task=None):
-
-            #Get parameters
-            self.task_design = task.task_design
-            self.task = task
-            self.task.initiate_model(model)
-
-        def simulate(self):
-
-            #Run simulation and computations
-            self.task.run_experiment()
-            self.task.rl_model.run_computations()
-
-            return self.task.rl_model
-    
-        def fit(self, data, bounds):
-
-            return self.task.rl_model.fit(data, bounds)
-        
-class RLFit:
-
-    """
-    Reinforcement Learning Model Fitting
-
-    """
-    def run_fit(self, args):
-
-        #Extract args
-        pipeline, data, columns, participant = args
-        model_name = pipeline.task.rl_model.__class__.__name__
-        participant_id = data['learning']['participant'].values[0]
-        pain_group = data['learning']['pain_group'].values[0]
-
-        #Extract participant data
-        learning_states = data['learning']['state'].values
-        learning_actions = data['learning']['action'].values
-        learning_rewards = data['learning'][['reward_L', 'reward_R']].values
-
-        transfer_states = data['transfer']['state'].values
-        transfer_actions = data['transfer']['action'].values
-
-        data = [(learning_states, learning_actions, learning_rewards), (transfer_states, transfer_actions)]
-        
-        #Fit models
-        fit_results, fitted_params = pipeline.fit(data, bounds=pipeline.task.rl_model.bounds)
-        
-        #Store fit results
-        participant_fitted = [participant_id, pain_group, fit_results.fun]
-        participant_fitted.extend([fitted_params[key] for key in columns[3:]])
-
-        #Save to csv file
-        with open(f'SOMA_RL/data/fits/{model_name}_{participant}_fit_results.csv', 'a') as f:
-            f.write(','.join([str(x) for x in participant_fitted]) + '\n')
-
-    def run_simulations(self, args):
-
-        #Extract args
-        pipeline, columns, participant, group, n = args
-        
-        #Run simulation and computations
-        model = pipeline.simulate()
-        model_name = model.__class__.__name__
-
-        #Extract model data
-        task_learning_data = model.task_learning_data
-        task_learning_data['trial_total'] = task_learning_data.groupby('state_id').cumcount()+1
-        if 'v_prediction_errors' in task_learning_data.columns:
-            task_learning_data['prediction_errors'] = task_learning_data['v_prediction_errors'] + task_learning_data['q_prediction_errors']
-        task_learning_data['averaged_pe'] = task_learning_data['prediction_errors'].apply(lambda x: sum(x)/len(x))
-        learning_accuracy = task_learning_data.groupby(['context', 'trial_total'])['accuracy'].mean().reset_index()
-        learning_prediction_errors = task_learning_data.groupby(['context', 'trial_total'])['averaged_pe'].mean().reset_index()
-
-        value_labels = {'QLearning': 'q_values', 
-                        'ActorCritic': 'w_values', 
-                        'Relative': 'q_values', 
-                        'Hybrid2012': 'h_values', 
-                        'Hybrid2021': 'h_values', 
-                        'QRelative': 'm_values', 
-                        'wRelative': 'q_values'}
-        value_label = value_labels[model_name]
-
-        task_learning_data[f'{value_label}1'] = task_learning_data[value_label].apply(lambda x: x[0])
-        task_learning_data[f'{value_label}2'] = task_learning_data[value_label].apply(lambda x: x[1])
-        learning_values1 = task_learning_data.groupby(['context', 'trial_total'])[f'{value_label}1'].mean().reset_index()
-        learning_values2 = task_learning_data.groupby(['context', 'trial_total'])[f'{value_label}2'].mean().reset_index()[f'{value_label}2']
-        learning_values = pd.concat([learning_values1, learning_values2], axis=1)
-        learning_values.columns = ['context', 'trial_total', 'values1', 'values2']
-        
-        learning_accuracy['run'] = n
-        learning_prediction_errors['run'] = n
-        learning_values['run'] = n
-
-        #Store data
-        accuracy = pd.DataFrame(learning_accuracy, columns=columns['accuracy'])
-        prediction_errors = pd.DataFrame(learning_prediction_errors, columns=columns['pe'])
-        values = pd.DataFrame(learning_values, columns=columns['values'])
-        choice_rates = pd.DataFrame([model.choice_rate], columns=columns['choice_rate'])
-
-        #Save to csv file
-        accuracy.to_csv(f'SOMA_RL/data/fits/{model_name}_{group}_{participant}_accuracy_sim_results.csv', index=False)
-        prediction_errors.to_csv(f'SOMA_RL/data/fits/{model_name}_{group}_{participant}_pe_sim_results.csv', index=False)
-        values.to_csv(f'SOMA_RL/data/fits/{model_name}_{group}_{participant}_values_sim_results.csv', index=False)
-        choice_rates.to_csv(f'SOMA_RL/data/fits/{model_name}_{group}_{participant}_choice_sim_results.csv', index=False)
-
-    def multiprocessing_progress(self, num_files):
-        last_count = 0
-        loop = tqdm.tqdm(range(num_files))
-        while len(os.listdir('SOMA_RL/data/fits')) < num_files:
-            n_files = len(os.listdir('SOMA_RL/data/fits'))
-            if n_files > last_count:
-                loop.update(n_files-last_count)
-                last_count = n_files
-            time.sleep(1)
-        loop.update(num_files-last_count)
 
 if __name__ == "__main__":
 
     # =========================================== #
-    # ================= SYSTEM ================== #
+    # ================= INPUTS ================== #
     # =========================================== #
 
+    #Seed random number generator
     rnd.seed(1251)
+
+    #Debug parameters
+    n = 0 #Number of participants to keep, 0 = all
+
+    #Parameters
     multiprocessing = True
+    fit_transfer_phase = True
+    transfer_trials = 2
+    number_of_fits = 5
+
+    #Models and simulation task design
+    models = ['QLearning', 'ActorCritic', 'Relative', 'Hybrid2012', 'wRelative', 'QRelative']
+    task_design = {'learning_phase': {'number_of_trials': 24, 'number_of_blocks': 4},
+                   'transfer_phase': {'times_repeated': 4}}
 
     # =========================================== #
-    # ============== MODEL FITTING ============== #
+    # ================ LOAD DATA ================ #
     # =========================================== #
 
     #Load data
@@ -185,17 +67,11 @@ if __name__ == "__main__":
     transfer_data.columns = ['participant', 'pain_group', 'state', 'action']
 
     #DEBUGGING CLEANUP
-    #Cut the dataframe to 50 participants: #TODO:This is for debugging, remove it later
-    p_indices = learning_data['participant'].unique()[:10]
-    learning_data = learning_data[learning_data['participant'].isin(p_indices)]
-    transfer_data = transfer_data[transfer_data['participant'].isin(p_indices)]
-    
-    #Setup fit dataframe
-    models = ['QLearning', 'ActorCritic', 'Relative', 'Hybrid2012', 'wRelative', 'QRelative']
-
-    #Task setup
-    task_design = {'learning_phase': {'number_of_trials': 24, 'number_of_blocks': 4},
-                   'transfer_phase': {'times_repeated': 4}}
+    #Cut the dataframe to n participants: #TODO:This is for debugging, remove it later
+    if n > 0:
+        p_indices = learning_data['participant'].unique()[:n]
+        learning_data = learning_data[learning_data['participant'].isin(p_indices)]
+        transfer_data = transfer_data[transfer_data['participant'].isin(p_indices)]
     
     # =========================================== #
     # =================== FIT =================== #
@@ -205,7 +81,7 @@ if __name__ == "__main__":
     for f in os.listdir('SOMA_RL/data/fits'):
         os.remove(os.path.join('SOMA_RL','data','fits',f))
 
-    #Assign classes to inputs array
+    #Run fits
     loop = tqdm.tqdm(range(len(learning_data['participant'].unique())*len(models))) if not multiprocessing else None
     inputs = []
     columns = {}
@@ -213,27 +89,28 @@ if __name__ == "__main__":
         for m in models:                
             participant_learning_data = learning_data[learning_data['participant'] == participant]
             participant_transfer_data = transfer_data[transfer_data['participant'] == participant]
+            model = RLModel(m)
             participant_data = {'learning': participant_learning_data.copy(), 'transfer': participant_transfer_data.copy()}
-            task = AvoidanceLearningTask(task_design)
-            model = RLModel(m).model
-            pipeline = RLPipeline(model, task)
-            columns[m] = ['participant', 'pain_group', 'fit'] + list(model.parameters.keys())
+            task = AvoidanceLearningTask(task_design, transfer_trials=transfer_trials)
+            pipeline = RLPipeline(model, task, fit_transfer_phase=fit_transfer_phase, number_of_fits=number_of_fits)
+            columns[m] = ['participant', 'pain_group', 'fit'] + list(model.get_model().parameters.keys())
             if multiprocessing:
                 inputs.append((pipeline, participant_data, columns[m], participant))
             else:
                 loop.update(1)
-                RLFit().run_fit((pipeline, participant_data, columns[m], participant))
+                pipeline.run_fit((participant_data, columns[m], participant))
 
     #Run all models fits in parallel
     if multiprocessing:
         print('\nMultiprocessing initiated...')
+        print(f"Number of participants: {len(learning_data['participant'].unique())}, Number of models: {len(models)}, Total fits: {len(learning_data['participant'].unique())*len(models)}")
 
         pool = mp.Pool(mp.cpu_count())
-        pool.map_async(RLFit().run_fit, inputs)
+        pool.map_async(mp_run_fit, inputs)
         pool.close()
 
         #Progress bar checking how many have completed
-        RLFit().multiprocessing_progress(len(inputs))
+        mp_progress(len(inputs))
         print('\nMultiprocessing complete!')
 
     #Load all data in the fit data
@@ -252,6 +129,10 @@ if __name__ == "__main__":
     #Delete all files
     for f in files:
         os.remove(os.path.join('SOMA_RL','data','fits',f))
+
+    # =========================================== #
+    # =============== REPORT FIT ================ #
+    # =========================================== #
 
     group_AIC = {m: {} for m in models}
     group_BIC = {m: {} for m in models}
@@ -312,12 +193,8 @@ if __name__ == "__main__":
     transfer_columns = ['A', 'B', 'E', 'F', 'N']
     columns = {'accuracy': accuracy_columns, 'pe': pe_columns, 'values': values_columns, 'choice_rate': transfer_columns}
 
-    #Set up task
-    task_design = {'learning_phase': {'number_of_trials': 24, 'number_of_blocks': 4},
-                    'transfer_phase': {'times_repeated': 4}}
-
     #Run simulations
-    number_of_metrics = 4
+    number_of_metrics = len(columns)
     loop = tqdm.tqdm(range(fit_data[models[0]]['participant'].nunique()*len(models)*number_of_metrics)) if not multiprocessing else None
     inputs = []
     for n, participant in enumerate(fit_data[models[0]]['participant'].unique()):
@@ -326,27 +203,31 @@ if __name__ == "__main__":
             #Participant data
             participant_params = fit_data[m][fit_data[m]['participant'] == participant].copy()
             group = participant_params['pain_group'].values[0]
+            participant_learning_data = learning_data[learning_data['participant'] == participant]
+            participant_transfer_data = transfer_data[transfer_data['participant'] == participant]
+            participant_data = {'learning': participant_learning_data.copy(), 'transfer': participant_transfer_data.copy()}
 
             #Initialize task, model, and task design
+            model = RLModel(m, participant_params)
             task = AvoidanceLearningTask(task_design)
-            model = RLModel(m, participant_params).model
-            pipeline = RLPipeline(model, task)
+            pipeline = RLPipeline(model, task, number_of_fits=number_of_fits)
             if multiprocessing:
                 inputs.append((pipeline, columns, participant, group, n))
             else:
                 loop.update(1)
-                RLFit().run_simulations((pipeline, columns, participant, group, n))
+                pipeline.run_simulations((columns, participant, group, n))
 
     #Run all models fits in parallel
     if multiprocessing:
         print('\nMultiprocessing initiated...')
+        print(f"Number of participants: {fit_data[models[0]]['participant'].nunique()}, Number of models: {len(models)}, Total simulations: {fit_data[models[0]]['participant'].nunique()*len(models)}")
 
         pool = mp.Pool(mp.cpu_count())
-        pool.map_async(RLFit().run_simulations, inputs)
+        pool.map_async(mp_run_simulations, inputs)
         pool.close()
 
         #Progress bar checking how many have completed
-        RLFit().multiprocessing_progress(len(inputs)*number_of_metrics)
+        mp_progress(len(inputs)*number_of_metrics, divide_by=number_of_metrics)
         print('\nMultiprocessing complete!')
 
     #Load all data in the fit data

@@ -4,9 +4,10 @@ import pandas as pd
 
 class AvoidanceLearningTask:
 
-    def __init__(self, task_design):
+    def __init__(self, task_design, transfer_trials=0):
         self.task = 'Avoidance Learning Task'
         self.task_design = task_design
+        self.transfer_trials = transfer_trials
 
         self.stimuli_ids = [['A', 'B'], 
                             ['C', 'D'],
@@ -148,6 +149,7 @@ class AvoidanceLearningTask:
         states = ['State AB', 'State CD', 'State EF', 'State GH']
         self.rl_model = rl_model     
         self.rl_model.states = states
+        self.rl_model.transfer_trials = self.transfer_trials
         number_of_learning_trials = (self.task_design['learning_phase']['number_of_trials'] * self.task_design['learning_phase']['number_of_blocks'])//len(states)
         num_stim = (len(self.stimuli_ids)*2)+1
         num_pairs = num_stim*(num_stim-1)//2 - len(self.stimuli_ids)
