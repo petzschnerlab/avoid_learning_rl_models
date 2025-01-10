@@ -1,254 +1,247 @@
 import sys
 sys.dont_write_bytecode = True
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
 import os
+import multiprocessing as mp
+import copy
 import random as rnd
 import pandas as pd
-import matplotlib.pyplot as plt
+import numpy as np
 import tqdm
-from scipy import stats
 
-
+from helpers.dataloader import DataLoader
+from helpers.rl_models import RLModel
 from helpers.tasks import AvoidanceLearningTask
-from helpers.rl_models import QLearning, ActorCritic, Relative, Hybrid, Hybrid2
-
-class RLPipeline:
-        
-        """
-        Reinforcement Learning Pipeline
-
-        Parameters
-        ----------
-        task : object
-            Task object
-        model : object
-            Reinforcement learning model object
-        trial_design : dict
-            Dictionary containing trial design parameters
-        """
-
-        def __init__(self, task, model, trial_design):
-
-            #Get parameters
-            self.trial_design = trial_design
-            self.task = task
-            self.task.initiate_model(model)
-
-        def simulate(self):
-
-            #Run simulation and computations
-            self.task.run_experiment(self.trial_design)
-            self.task.rl_model.run_computations()
-
-            return self.task.rl_model
+from helpers.pipeline import RLPipeline, mp_run_fit, mp_run_simulations, mp_progress
+from helpers.plotting import plot_simulations
 
 if __name__ == "__main__":
 
     # =========================================== #
-    # ======= EXAMPLE RUNNING SIMULATIONS ======= #
+    # ================= INPUTS ================== #
     # =========================================== #
 
-    #Metaparameters
+    #Seed random number generator
     rnd.seed(1251)
-    number_of_runs = 100
-    models = ['QLearning', 'ActorCritic', 'Relative', 'Hybrid2012', 'Hybrid2021']
+
+    #Debug parameters
+    number_of_participants = 0 #Number of participants to keep, 0 = all
+
+    #Parameters
+    multiprocessing = True #Whether to run fits and simulations in parallel
+    fit_transfer_phase = False #Whether to fit the transfer phase
+    transfer_trials = 0 #Number of times to present each stimulus pair in the transfer phase for fitting, 0 = all
+    number_of_fits = 1 #Number of times to fit the dataset for each participant
+
+    #File names
+    learning_filename = 'SOMA_RL/data/pain_learning_processed.csv'
+    transfer_filename = 'SOMA_RL/data/pain_transfer_processed.csv'
+
+    #Models
+    models = ['QLearning', 'ActorCritic', 'Relative', 'Hybrid2012', 'wRelative', 'QRelative']
+
+    # =========================================== #
+    # ================ LOAD DATA ================ #
+    # =========================================== #
+
+    dataloader = DataLoader(learning_filename, transfer_filename, number_of_participants)
+    participant_ids = dataloader.get_participant_ids()
+    group_ids = dataloader.get_group_ids()
+
+    # =========================================== #
+    # =================== FIT =================== #
+    # =========================================== #
+
+    #Delete any existing files
+    for f in os.listdir('SOMA_RL/data/fits'):
+        os.remove(os.path.join('SOMA_RL','data','fits',f))
+
+    #Run fits
+    loop = tqdm.tqdm(range(len(participant_ids)*len(models))) if not multiprocessing else None
+    inputs = []
+    columns = {}
+    for n, participant in enumerate(participant_ids):
+        for model_name in models:  
+            p_dataloader = copy.copy(dataloader)
+            p_dataloader.filter_participant_data(participant)  
+            model = RLModel(model_name)
+            task = AvoidanceLearningTask(transfer_trials=transfer_trials)
+            pipeline = RLPipeline(model, p_dataloader, task, fit_transfer_phase=fit_transfer_phase, number_of_fits=number_of_fits)
+            columns[model_name] = ['participant', 'pain_group', 'fit'] + list(model.get_parameters())
+            if multiprocessing:
+                inputs.append((pipeline, columns[model_name], participant))
+            else:
+                loop.update(1)
+                pipeline.run_fit((columns[model_name], participant))
+
+    #Run all models fits in parallel
+    if multiprocessing:
+        print('\nMultiprocessing initiated...')
+        print(f"Number of participants: {len(participant_ids)}, Number of models: {len(models)}, Total fits: {len(participant_ids)*len(models)}")
+
+        pool = mp.Pool(mp.cpu_count())
+        pool.map_async(mp_run_fit, inputs)
+        pool.close()
+
+        #Progress bar checking how many have completed
+        mp_progress(len(inputs))
+        print('\nMultiprocessing complete!')
+
+    #Load all data in the fit data
+    files = os.listdir('SOMA_RL/data/fits')
+    fit_data = {model: pd.DataFrame(columns=columns[model]) for model in models}
+    for f in files:
+        model_name, participant = f.split('_')[:2]
+        if model_name in models:
+            participant_data = pd.read_csv(os.path.join('SOMA_RL','data','fits',f), header=None)
+            participant_data.columns = columns[model_name]
+            if len(fit_data[model_name]) == 0:
+                fit_data[model_name] = participant_data
+            else:
+                fit_data[model_name] = pd.concat((fit_data[model_name], participant_data), ignore_index=True)
+    
+    #Delete all files
+    for f in files:
+        os.remove(os.path.join('SOMA_RL','data','fits',f))
+
+    # =========================================== #
+    # =============== REPORT FIT ================ #
+    # =========================================== #
+
+    group_AIC = {m: {} for m in models}
+    group_BIC = {m: {} for m in models}
+    for model_name in models:
+
+        #Compute AIC and BIC
+        for group in group_ids:
+            group_fit = fit_data[model_name][fit_data[model_name]['pain_group'] == group]
+            total_NLL = np.sum(group_fit["fit"])
+            number_params = len(group_fit.columns) - 3
+            number_samples = dataloader.get_num_samples_by_group(group)
+            group_AIC[model_name][group] = 2*number_params - 2*total_NLL
+            group_BIC[model_name][group] = np.log(number_samples)*number_params - 2*total_NLL
+            
+        total_NLL = np.sum(fit_data[model_name]["fit"])
+        number_params = len(fit_data[model_name].columns) - 3
+        number_samples = dataloader.get_num_samples()
+        AIC = 2*number_params - 2*total_NLL
+        BIC = np.log(number_samples)*number_params - 2*total_NLL
+
+        print('')
+        print(f'FIT REPORT: {model_name}')
+        print('==========')
+        print(f'AIC: {AIC.round(0)}')
+        print(f'BIC: {BIC.round(0)}')
+        for col in fit_data[model_name].columns[2:]:
+            print(f'{col}: {fit_data[model_name][col].mean().round(4)}, {fit_data[model_name][col].std().round(4)}')
+        print('==========')
+        print('')
+        
+    #Turn nested dictionary into dataframe
+    group_AIC = pd.DataFrame(group_AIC)
+    group_AIC['best_model'] = group_AIC.idxmin(axis=1)
+    group_BIC = pd.DataFrame(group_BIC)
+    group_BIC['best_model'] = group_BIC.idxmin(axis=1)
+
+    print('AIC REPORT')
+    print('==========')
+    print(group_AIC)
+    print('==========')
+
+    print('')
+    print('BIC REPORT')
+    print('==========')
+    print(group_BIC)
+    print('==========')
+
+    # =========================================== #
+    # =========== SIMULATE WITH FITS ============ #
+    # =========================================== #
+
+    dataloader = DataLoader(learning_filename, transfer_filename, number_of_participants, reduced=False)
 
     #Set up data columns
     accuracy_columns = ['context', 'trial_total', 'accuracy', 'run']
     pe_columns = ['context', 'trial_total', 'averaged_pe', 'run']
-    values_columns = ['context', 'trial_total', 'values1', 'values2']
+    values_columns = ['context', 'trial_total', 'values1', 'values2', 'run']
     transfer_columns = ['A', 'B', 'E', 'F', 'N']
-
-    #Setup data tracking
-    note = []
-    accuracy = {m: [] for m in models}
-    prediction_errors = {m: [] for m in models}
-    values = {m: [] for m in models}
-    choice_rates = {m: [] for m in models}
+    columns = {'accuracy': accuracy_columns, 'pe': pe_columns, 'values': values_columns, 'choice_rate': transfer_columns}
 
     #Run simulations
-    loop = tqdm.tqdm(range(number_of_runs*len(models)))
-    for n in range(number_of_runs):
-        for m in models:
-            loop.update(1)
-            loop.set_description(f'Run {n+1}/{number_of_runs}')
+    number_of_metrics = len(columns)
+    loop = tqdm.tqdm(range(fit_data[models[0]]['participant'].nunique()*len(models))) if not multiprocessing else None
+    inputs = []
+    for n, participant in enumerate(participant_ids):
+        for model_name in models:
 
-            #Initialize task, model, and task design
-            task = AvoidanceLearningTask()
-            task_design = {'learning_phase': {'number_of_trials': 24, 'number_of_blocks': 4},
-                           'transfer_phase': {'times_repeated': 4}}
-
-            if m == 'QLearning':
-                model = QLearning(factual_lr=0.1, 
-                                  counterfactual_lr=0.05, 
-                                  temperature=0.1)
-
-            elif m == 'ActorCritic':
-                model = ActorCritic(factual_actor_lr=0.1, 
-                                    counterfactual_actor_lr=0.05, 
-                                    critic_lr=0.1, 
-                                    temperature=0.1, 
-                                    valence_factor=0.5)
-
-            elif m == 'Relative':
-                model = Relative(factual_lr=0.1, 
-                                 counterfactual_lr=0.05, 
-                                 contextual_lr=0.1, 
-                                 temperature=0.1)
-
-            elif m == 'Hybrid2012':
-                model = Hybrid(factual_lr=0.1, 
-                               counterfactual_lr=0.05, 
-                               factual_actor_lr=0.1, 
-                               counterfactual_actor_lr=0.05, 
-                               critic_lr=0.1, 
-                               temperature=0.1, 
-                               mixing_factor=0.5, 
-                               valence_factor=0.5)
-
-            elif m == 'Hybrid2021':
-                model = Hybrid2(factual_lr=0.1, 
-                               counterfactual_lr=0.05, 
-                               factual_actor_lr=0.1, 
-                               counterfactual_actor_lr=0.05, 
-                               critic_lr=0.1, 
-                               temperature=0.1, 
-                               mixing_factor=0.5, 
-                               valence_factor=0.5,
-                               noise_factor=0.1,
-                               decay_factor=0.1)
-            else:
-                raise ValueError('Model not recognized.')
-
-            #Initialize pipeline
-            model = RLPipeline(task, model, task_design).simulate()
-
-            #Extract model data
-            params = ', '.join([f'{key}: {model.parameters[key]}'for key in model.parameters])
-            note.append(f'{m} | {params}')
-            task_learning_data = model.task_learning_data
-            task_learning_data['trial_total'] = task_learning_data.groupby('state_id').cumcount()+1
-            if 'v_prediction_errors' in task_learning_data.columns:
-                task_learning_data['prediction_errors'] = task_learning_data['v_prediction_errors'] + task_learning_data['q_prediction_errors']
-            task_learning_data['averaged_pe'] = task_learning_data['prediction_errors'].apply(lambda x: sum(x)/len(x))
-            learning_accuracy = task_learning_data.groupby(['context', 'trial_total'])['accuracy'].mean().reset_index()
-            learning_prediction_errors = task_learning_data.groupby(['context', 'trial_total'])['averaged_pe'].mean().reset_index()
-
-            match m:
-                case 'QLearning':
-                    value_label = 'q_values'
-                case 'ActorCritic':
-                    value_label = 'w_values'
-                case 'Relative':
-                    value_label = 'q_values'
-                case 'Hybrid2012':
-                    value_label = 'h_values'
-                case 'Hybrid2021':
-                    value_label = 'h_values'
-
-            task_learning_data[f'{value_label}1'] = task_learning_data[value_label].apply(lambda x: x[0])
-            task_learning_data[f'{value_label}2'] = task_learning_data[value_label].apply(lambda x: x[1])
-            learning_values1 = task_learning_data.groupby(['context', 'trial_total'])[f'{value_label}1'].mean().reset_index()
-            learning_values2 = task_learning_data.groupby(['context', 'trial_total'])[f'{value_label}2'].mean().reset_index()[f'{value_label}2']
-            learning_values = pd.concat([learning_values1, learning_values2], axis=1)
-            learning_values.columns = ['context', 'trial_total', 'values1', 'values2']
+            #Participant data
+            participant_params = fit_data[model_name][fit_data[model_name]['participant'] == participant].copy()
+            group = participant_params['pain_group'].values[0]
             
-            learning_accuracy['run'] = n
-            learning_prediction_errors['run'] = n
-            learning_values['run'] = n
-
-            #Store data
-            if not type(choice_rates[m]) == pd.DataFrame:
-                accuracy[m] = pd.DataFrame(learning_accuracy, columns=accuracy_columns)
-                prediction_errors[m] = pd.DataFrame(learning_prediction_errors, columns=pe_columns)
-                values[m] = pd.DataFrame(learning_values, columns=values_columns)
-                choice_rates[m] = pd.DataFrame([model.choice_rate], columns=transfer_columns)
+            #Initialize task, model, and task design
+            p_dataloader = copy.copy(dataloader)
+            p_dataloader.filter_participant_data(participant) 
+            model = RLModel(model_name, participant_params)
+            task = AvoidanceLearningTask()
+            pipeline = RLPipeline(model, p_dataloader, task)
+            if multiprocessing:
+                inputs.append((pipeline, columns, participant, group, n))
             else:
-                accuracy[m] = pd.concat([accuracy[m], pd.DataFrame(learning_accuracy)], ignore_index=True)
-                prediction_errors[m] = pd.concat([prediction_errors[m], pd.DataFrame(learning_prediction_errors)], ignore_index=True)
-                values[m] = pd.concat([values[m], pd.DataFrame(learning_values)], ignore_index=True)
-                choice_rates[m] = pd.concat([choice_rates[m], pd.DataFrame([model.choice_rate])], ignore_index=True)
+                loop.update(1)
+                pipeline.run_simulations((columns, participant, group, n))
 
-    #Plot simulations    
-    colors = ['#33A02C', '#B2DF8A', '#FB9A99', '#E31A1C', '#D3D3D3']
-    bi_colors = ['#B2DF8A', '#FB9A99']
-    val_colors = ['#33A02C', '#B2DF8A', '#FB9A99', '#E31A1C']
-    fig, ax = plt.subplots(4, len(models), figsize=(4*len(models), 15))
-    for i, m in enumerate(models):
+    #Run all models fits in parallel
+    if multiprocessing:
+        print('\nMultiprocessing initiated...')
+        print(f"Number of participants: {fit_data[models[0]]['participant'].nunique()}, Number of models: {len(models)}, Total simulations: {fit_data[models[0]]['participant'].nunique()*len(models)}")
 
-        #Plot accuracy
-        model_accuracy = accuracy[m].groupby(['context','trial_total','run']).mean().reset_index()
-        model_accuracy['context'] = pd.Categorical(model_accuracy['context'], categories=['Reward', 'Loss Avoid'], ordered=True)
-        for ci, context in enumerate(['Reward', 'Loss Avoid']):
-            CIs = model_accuracy.groupby(['context','trial_total'])['accuracy'].sem()*stats.t.ppf(0.975, number_of_runs-1)
-            averaged_accuracy = model_accuracy.groupby(['context','trial_total']).mean().reset_index()
-            context_accuracy = averaged_accuracy[averaged_accuracy['context'] == context]['accuracy'].reset_index(drop=True).astype(float)*100
-            context_CIs = CIs[CIs.index.get_level_values('context') == context].reset_index(drop=True)*100
-            ax[0, i].fill_between(context_accuracy.index, context_accuracy - context_CIs, context_accuracy + context_CIs, alpha=0.2, color=bi_colors[ci], edgecolor='none')
-            ax[0, i].plot(context_accuracy, color=bi_colors[ci], alpha = .8, label=context.replace('Loss Avoid', 'Punish'))
-        ax[0, i].set_title(m)
-        ax[0, i].set_ylim([25, 110])
-        if i == 0:
-            ax[0, i].set_ylabel('Accuracy (%)')
-        ax[0, i].set_xlabel('Trial')
-        if i == len(models)-1:
-            ax[0, i].legend(loc='lower right', frameon=False)
-        ax[0, i].spines['top'].set_visible(False)
-        ax[0, i].spines['right'].set_visible(False)
+        pool = mp.Pool(mp.cpu_count())
+        pool.map_async(mp_run_simulations, inputs)
+        pool.close()
 
-        #Plot prediction errors
-        model_pe = prediction_errors[m].groupby(['context','trial_total', 'run']).mean().reset_index()
-        model_pe['context'] = pd.Categorical(model_pe['context'], categories=['Reward', 'Loss Avoid'], ordered=True)
-        for ci, context in enumerate(['Reward', 'Loss Avoid']):
-            CIs = model_pe.groupby(['context','trial_total'])['averaged_pe'].sem()*stats.t.ppf(0.975, number_of_runs-1)
-            averaged_pe = model_pe.groupby(['context','trial_total']).mean().reset_index()
-            context_pe = averaged_pe[averaged_pe['context'] == context]['averaged_pe'].reset_index(drop=True)
-            context_CIs = CIs[CIs.index.get_level_values('context') == context].reset_index(drop=True)
-            ax[1, i].fill_between(context_pe.index, context_pe - context_CIs, context_pe + context_CIs, alpha=0.2, color=bi_colors[ci], edgecolor='none')
-            ax[1, i].plot(context_pe, color=bi_colors[ci], alpha = .8, label=context.replace('Loss Avoid', 'Punish'))
-        ax[1, i].set_ylim([-.75, .75])
-        if i == 0:
-            ax[1, i].set_ylabel('Prediction Error')
-        ax[1, i].set_xlabel('Trial')
-        if i == len(models)-1:
-            ax[1, i].legend(loc='lower right', frameon=False)
-        ax[1, i].spines['top'].set_visible(False)
-        ax[1, i].spines['right'].set_visible(False)
-        ax[1, i].axhline(0, linestyle='--', color='grey', alpha=.5)
+        #Progress bar checking how many have completed
+        mp_progress(len(inputs)*number_of_metrics, divide_by=number_of_metrics)
+        print('\nMultiprocessing complete!')
 
-        #Plot values
-        model_values = values[m].groupby(['context','trial_total', 'run']).mean().reset_index()
-        model_values['context'] = pd.Categorical(model_values['context'], categories=['Reward', 'Loss Avoid'], ordered=True)
-        for ci, context in enumerate(['Reward', 'Loss Avoid']):
-            for vi, val in enumerate(['values1', 'values2']):
-                CIs = model_values.groupby(['context','trial_total'])[val].sem()*stats.t.ppf(0.975, number_of_runs-1)
-                averaged_values = model_values.groupby(['context','trial_total']).mean().reset_index()
-                context_values = averaged_values[averaged_values['context'] == context][val].reset_index(drop=True)
-                context_CIs = CIs[CIs.index.get_level_values('context') == context].reset_index(drop=True)
-                ax[2, i].fill_between(context_values.index, context_values - context_CIs, context_values + context_CIs, alpha=0.2, color=val_colors[ci*2+vi], edgecolor='none')
-                ax[2, i].plot(context_values, color=val_colors[ci*2+vi], alpha = .8, label=['High Reward', 'Low Reward', 'Low Punish', 'High Punish'][ci*2+vi])
-        ax[2, i].set_ylim([-1, 1])
-        if i == 0:
-            ax[2, i].set_ylabel('q/w/h Value')
-        ax[2, i].set_xlabel('Trial')
-        if i == len(models)-1:
-            ax[2, i].legend(loc='lower left', frameon=False, ncol=2)
-        ax[2, i].spines['top'].set_visible(False)
-        ax[2, i].spines['right'].set_visible(False)
-        ax[2, i].axhline(0, linestyle='--', color='grey', alpha=.5)
+    #Load all data in the fit data
+    files = os.listdir('SOMA_RL/data/fits')
+    accuracy = {group: {model: pd.DataFrame(columns=accuracy_columns) for model in models} for group in group_ids}
+    prediction_errors = {group: {model: pd.DataFrame(columns=pe_columns) for model in models} for group in group_ids}
+    values = {group: {model: pd.DataFrame(columns=values_columns) for model in models} for group in group_ids}
+    choice_rates = {group: {model: pd.DataFrame(columns=transfer_columns) for model in models} for group in group_ids}
 
-        #Plot choice rates
-        ax[3, i].bar(['High\nReward', 'Low\nReward', 'Low\nPunish', 'High\nPunish', 'Novel'], choice_rates[m].mean(axis=0), color=colors, alpha = .5)
-        ax[3, i].errorbar(['High\nReward', 'Low\nReward', 'Low\nPunish', 'High\nPunish', 'Novel'], choice_rates[m].mean(axis=0), yerr=choice_rates[m].sem(), fmt='.', color='grey')
-        ax[3, i].set_ylim([0, 100])
-        if i == 0:
-            ax[3, i].set_ylabel('Choice rate (%)')
-        ax[3, i].spines['top'].set_visible(False)
-        ax[3, i].spines['right'].set_visible(False)
+    for f in files:
+        model_name, group, participant, value_name = f.split('_')[:4]
+        participant_data = pd.read_csv(os.path.join('SOMA_RL','data','fits',f))
 
-    #Metaplot settings
-    fig.tight_layout()
-    fig.savefig(os.path.join('SOMA_RL','plots','model_simulations.png'))
-    plt.show()
-    
-    #Debug stop
-    print()
+        if value_name == 'accuracy':
+            if len(accuracy[group][model_name]) == 0:
+                accuracy[group][model_name] = participant_data
+            else:
+                accuracy[group][model_name] = pd.concat((accuracy[group][model_name], participant_data), ignore_index=True)
+        elif value_name == 'pe':
+            if len(prediction_errors[group][model_name]) == 0:
+                prediction_errors[group][model_name] = participant_data
+            else:
+                prediction_errors[group][model_name] = pd.concat((prediction_errors[group][model_name], participant_data), ignore_index=True)
+        elif value_name == 'values':
+            if len(values[group][model_name]) == 0:
+                values[group][model_name] = participant_data
+            else:
+                values[group][model_name] = pd.concat((values[group][model_name], participant_data), ignore_index=True)
+        elif value_name == 'choice':
+            if len(choice_rates[group][model_name]) == 0:
+                choice_rates[group][model_name] = participant_data
+            else:
+                choice_rates[group][model_name] = pd.concat((choice_rates[group][model_name], participant_data), ignore_index=True)
+
+    #Delete all files
+    for f in files:
+        os.remove(os.path.join('SOMA_RL','data','fits',f))
+        
+    #Plot simulations 
+    for group in accuracy:
+        plot_simulations(accuracy[group], prediction_errors[group], values[group], choice_rates[group], models, group)
+
+    print('debug')
