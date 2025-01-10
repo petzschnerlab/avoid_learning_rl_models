@@ -184,7 +184,22 @@ class RLToolbox:
                 
             if 'Hybrid' in self.__class__.__name__:
                 self.h_values[s] = [0]*len(self.h_values[s])
-    
+
+    def combine_values(self):
+        #Inter-phase processing
+        if self.__class__.__name__ == 'ActorCritic':
+            self.combine_v_values()
+            self.combine_w_values()
+        elif 'Hybrid' in self.__class__.__name__:
+            self.combine_q_values()
+            self.combine_v_values()
+            self.combine_w_values()
+        elif 'QRelative' == self.__class__.__name__:
+            self.combine_q_values()
+            self.combine_c_values()
+        else:
+            self.combine_q_values()
+
     def fit_log_likelihood(self, values):
 
         '''
@@ -241,7 +256,7 @@ class RLToolbox:
             fitted_params[key] = fit_results.x[fi]
 
         return fit_results, fitted_params
-
+    
     def fit_task(self, args, value_type, transform_reward=False, context_reward=False):
         
         #Unpack data
@@ -280,20 +295,9 @@ class RLToolbox:
                 log_likelihood -= self.fit_log_likelihood(state[value_type])[action]
 
             if self.fit_transfer_phase:
-
+                
                 #Inter-phase processing
-                if self.__class__.__name__ == 'ActorCritic':
-                    self.combine_v_values()
-                    self.combine_w_values()
-                elif 'Hybrid' in self.__class__.__name__:
-                    self.combine_q_values()
-                    self.combine_v_values()
-                    self.combine_w_values()
-                elif 'QRelative' == self.__class__.__name__:
-                    self.combine_q_values()
-                    self.combine_c_values()
-                else:
-                    self.combine_q_values()
+                self.combine_values()
 
                 #Transfer phase
                 if False: #Toggle to switch between methods for testing. Function method is slower than loop, so it's avoided
@@ -312,7 +316,62 @@ class RLToolbox:
                         log_likelihood -= self.fit_log_likelihood(state[value_type])[action]
 
         return log_likelihood
+    
+    def simulate(self, data):
 
+        '''
+        Simulate the model
+        '''
+        self.sim_func(data)
+
+    def sim_task(self, args, transform_reward=False, context_reward=False):
+
+        #Unpack data
+        learning_data, transfer_data = args[0]['learning'], args[0]['transfer']
+
+        #Learning phase
+        for trial, trial_data in learning_data.iterrows():
+
+            #Populate rewards
+            rewards = [int(trial_data['reward_L']), int(trial_data['reward_R'])]
+            if transform_reward:
+                rewards = self.reward_valence(rewards)
+
+            #Populate state
+            state = {'block_number': 0, 
+                     'trial_number': trial_data['trial_number'], 
+                     'state_index': 0, 
+                     'state_id': trial_data['state'], 
+                     'stim_id': [trial_data['state'].split('State ')[-1][0],trial_data['state'].split('State ')[-1][1]], 
+                     'context': trial_data['context_val_name'], 
+                     'feedback': [trial_data['feedback_L'], trial_data['feedback_R']], 
+                     'probabilities': [trial_data['symbol_L_name'][:2], trial_data['symbol_R_name'][:2]], 
+                     'rewards': rewards,
+                     'correct_action': 0}
+            
+            if context_reward:
+                state['context_reward'] = np.average(state['rewards'])
+            
+            #Forward
+            self.sim_forward(state)
+
+        #Inter-phase processing
+        self.combine_values()
+
+        #Transfer phase
+        for trial, trial_data in transfer_data.iterrows():
+            
+            #Populate state
+            state = {'block_number': 0,
+                     'trial_number': trial,
+                     'state_id': trial_data['state'],
+                     'stim_id': trial_data['state'].split('State ')[-1]}
+            
+            #Forward
+            self.sim_forward(state, phase='transfer')
+        
+        return self.task_learning_data, self.task_transfer_data
+    
     #Plotting functions
     def plot_model(self):
     
@@ -460,6 +519,17 @@ class QLearning(RLToolbox):
             state = self.get_final_q_values(state)
         
         return state
+    
+    def sim_forward(self, state, phase = 'learning'):
+        if phase == 'learning':
+            state = self.get_q_value(state)
+            state = self.select_action(state)
+            state = self.compute_prediction_error(state)
+            self.update_model(state)
+        else:
+            state = self.get_final_q_values(state)
+            state = self.select_action(state)
+        self.update_task_data(state, phase=phase)
 
     def fit_func(self, x, *args):
 
@@ -478,6 +548,14 @@ class QLearning(RLToolbox):
 
         #Return the negative log likelihood of all observed actions
         return -self.fit_task(args, 'q_values')
+
+    def sim_func(self, *args):
+        
+        '''
+        Simulate the model
+        '''
+
+        return self.sim_task(args)
 
 class ActorCritic(RLToolbox):
 
@@ -568,6 +646,18 @@ class ActorCritic(RLToolbox):
             state = self.get_final_w_values(state)
         
         return state
+    
+    def sim_forward(self, state, phase = 'learning'):
+        if phase == 'learning':
+            state = self.get_v_value(state)
+            state = self.get_w_value(state)
+            state = self.select_action(state)
+            state = self.compute_prediction_error(state)
+            self.update_model(state)
+        else:
+            state = self.get_final_w_values(state)
+            state = self.select_action(state)
+        self.update_task_data(state, phase=phase)
 
     def fit_func(self, x, *args):
 
@@ -586,6 +676,14 @@ class ActorCritic(RLToolbox):
 
         #Return the negative log likelihood of all observed actions
         return -self.fit_task(args, 'w_values', transform_reward=True)
+
+    def sim_func(self, *args):
+        
+        '''
+        Simulate the model
+        '''
+
+        return self.sim_task(args, transform_reward=True)
     
 class Relative(RLToolbox):
 
@@ -666,6 +764,18 @@ class Relative(RLToolbox):
             state = self.select_action(state)
         
         return state
+    
+    def sim_forward(self, state, phase = 'learning'):
+        if phase == 'learning':
+            state = self.get_q_value(state)
+            state = self.get_context_value(state)
+            state = self.select_action(state)
+            state = self.compute_prediction_error(state)
+            self.update_model(state)
+        else:
+            state = self.get_final_q_values(state)
+            state = self.select_action(state)
+        self.update_task_data(state, phase=phase)
 
     def fit_func(self, x, *args):
 
@@ -684,6 +794,14 @@ class Relative(RLToolbox):
 
         #Return the negative log likelihood of all observed actions
         return -self.fit_task(args, 'q_values', context_reward=True)
+
+    def sim_func(self, *args):
+        
+        '''
+        Simulate the model
+        '''
+
+        return self.sim_task(args, context_reward=True)
     
 class Hybrid2012(RLToolbox):
 
@@ -788,6 +906,22 @@ class Hybrid2012(RLToolbox):
             state = self.select_action(state)
 
         return state
+    
+    def sim_forward(self, state, phase = 'learning'):
+        if phase == 'learning':
+            state = self.get_q_value(state)
+            state = self.get_v_value(state)
+            state = self.get_w_value(state)
+            state = self.get_h_values(state)
+            state = self.select_action(state)
+            state = self.compute_prediction_error(state)
+            self.update_model(state)
+        else:
+            state = self.get_final_q_values(state)
+            state = self.get_final_w_values(state)
+            state = self.get_h_values(state)
+            state = self.select_action(state)
+        self.update_task_data(state, phase=phase)
 
     def fit_func(self, x, *args):
 
@@ -806,6 +940,15 @@ class Hybrid2012(RLToolbox):
 
         #Return the negative log likelihood of all observed actions
         return -self.fit_task(args, 'h_values', transform_reward=True)
+
+
+    def sim_func(self, *args):
+        
+        '''
+        Simulate the model
+        '''
+
+        return self.sim_task(args, transform_reward=True)
 
 class Hybrid2021(RLToolbox):
 
@@ -917,6 +1060,21 @@ class Hybrid2021(RLToolbox):
             state = self.select_action(state)
 
         return state
+    
+    def sim_forward(self, state, phase = 'learning'):
+        if phase == 'learning':
+            state = self.get_q_value(state)
+            state = self.get_v_value(state)
+            state = self.get_w_value(state)
+            state = self.select_action(state)
+            state = self.compute_prediction_error(state)
+            self.update_model(state)
+        else:
+            state = self.get_decayed_q_values(state)
+            state = self.get_decayed_w_values(state)
+            state = self.get_h_values(state)
+            state = self.select_action(state)
+        self.update_task_data(state, phase=phase)
 
     def fit_func(self, x, *args):
 
@@ -935,6 +1093,15 @@ class Hybrid2021(RLToolbox):
         
         #Return the negative log likelihood of all observed actions
         return -self.fit_task(args, 'h_values', transform_reward=True)
+    
+
+    def sim_func(self, *args):
+        
+        '''
+        Simulate the model
+        '''
+
+        return self.sim_task(args, transform_reward=True)
 
 class wRelative(RLToolbox):
 
@@ -1017,6 +1184,18 @@ class wRelative(RLToolbox):
             state = self.select_action(state)
         
         return state
+    
+    def sim_forward(self, state, phase = 'learning'):
+        if phase == 'learning':
+            state = self.get_q_value(state)
+            state = self.get_context_value(state)
+            state = self.select_action(state)
+            state = self.compute_prediction_error(state)
+            self.update_model(state)
+        else:
+            state = self.get_final_q_values(state)
+            state = self.select_action(state)
+        self.update_task_data(state, phase=phase)
 
     def fit_func(self, x, *args):
 
@@ -1035,6 +1214,15 @@ class wRelative(RLToolbox):
 
         #Return the negative log likelihood of all observed actions
         return -self.fit_task(args, 'q_values', context_reward=True)
+    
+
+    def sim_func(self, *args):
+        
+        '''
+        Simulate the model
+        '''
+
+        return self.sim_task(args, context_reward=True)
     
 class QRelative(RLToolbox):
 
@@ -1129,6 +1317,22 @@ class QRelative(RLToolbox):
             state = self.select_action(state)
 
         return state
+    
+    def sim_forward(self, state, phase = 'learning'):
+        if phase == 'learning':
+            state = self.get_q_value(state)
+            state = self.get_c_value(state)
+            state = self.get_m_value(state)
+            state = self.get_context_value(state)
+            state = self.select_action(state)
+            state = self.compute_prediction_error(state)
+            self.update_model(state)
+        else:
+            state = self.get_final_q_values(state)
+            state = self.get_final_c_values(state)
+            state = self.get_m_value(state)
+            state = self.select_action(state)
+        self.update_task_data(state, phase=phase)
 
     def fit_func(self, x, *args):
 
@@ -1147,6 +1351,15 @@ class QRelative(RLToolbox):
 
         #Return the negative log likelihood of all observed actions
         return -self.fit_task(args, 'm_values', context_reward=True)
+
+
+    def sim_func(self, *args):
+        
+        '''
+        Simulate the model
+        '''
+
+        return self.sim_task(args, context_reward=True)
     
 class RLModel:
 

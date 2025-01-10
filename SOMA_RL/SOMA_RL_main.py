@@ -4,6 +4,7 @@ import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 import os
 import multiprocessing as mp
+import copy
 import random as rnd
 import pandas as pd
 import numpy as np
@@ -28,20 +29,17 @@ if __name__ == "__main__":
     number_of_participants = 0 #Number of participants to keep, 0 = all
 
     #Parameters
-    multiprocessing = False
-    fit_transfer_phase = True
-    transfer_trials = 2
-    number_of_fits = 1
+    multiprocessing = True #Whether to run fits and simulations in parallel
+    fit_transfer_phase = False #Whether to fit the transfer phase
+    transfer_trials = 0 #Number of times to present each stimulus pair in the transfer phase for fitting, 0 = all
+    number_of_fits = 1 #Number of times to fit the dataset for each participant
 
     #File names
     learning_filename = 'SOMA_RL/data/pain_learning_processed.csv'
     transfer_filename = 'SOMA_RL/data/pain_transfer_processed.csv'
 
-    #Models and simulation task design
+    #Models
     models = ['QLearning', 'ActorCritic', 'Relative', 'Hybrid2012', 'wRelative', 'QRelative']
-    models = ['QLearning', 'ActorCritic']
-    task_design = {'learning_phase': {'number_of_trials': 24, 'number_of_blocks': 4},
-                   'transfer_phase': {'times_repeated': 4}}
 
     # =========================================== #
     # ================ LOAD DATA ================ #
@@ -64,10 +62,12 @@ if __name__ == "__main__":
     inputs = []
     columns = {}
     for n, participant in enumerate(participant_ids):
-        for model_name in models:                
+        for model_name in models:  
+            p_dataloader = copy.copy(dataloader)
+            p_dataloader.filter_participant_data(participant)  
             model = RLModel(model_name)
-            task = AvoidanceLearningTask(task_design, transfer_trials=transfer_trials)
-            pipeline = RLPipeline(model, dataloader, task, fit_transfer_phase=fit_transfer_phase, number_of_fits=number_of_fits)
+            task = AvoidanceLearningTask(transfer_trials=transfer_trials)
+            pipeline = RLPipeline(model, p_dataloader, task, fit_transfer_phase=fit_transfer_phase, number_of_fits=number_of_fits)
             columns[model_name] = ['participant', 'pain_group', 'fit'] + list(model.get_parameters())
             if multiprocessing:
                 inputs.append((pipeline, columns[model_name], participant))
@@ -159,6 +159,8 @@ if __name__ == "__main__":
     # =========== SIMULATE WITH FITS ============ #
     # =========================================== #
 
+    dataloader = DataLoader(learning_filename, transfer_filename, number_of_participants, reduced=False)
+
     #Set up data columns
     accuracy_columns = ['context', 'trial_total', 'accuracy', 'run']
     pe_columns = ['context', 'trial_total', 'averaged_pe', 'run']
@@ -168,7 +170,7 @@ if __name__ == "__main__":
 
     #Run simulations
     number_of_metrics = len(columns)
-    loop = tqdm.tqdm(range(fit_data[models[0]]['participant'].nunique()*len(models)*number_of_metrics)) if not multiprocessing else None
+    loop = tqdm.tqdm(range(fit_data[models[0]]['participant'].nunique()*len(models))) if not multiprocessing else None
     inputs = []
     for n, participant in enumerate(participant_ids):
         for model_name in models:
@@ -178,9 +180,11 @@ if __name__ == "__main__":
             group = participant_params['pain_group'].values[0]
             
             #Initialize task, model, and task design
+            p_dataloader = copy.copy(dataloader)
+            p_dataloader.filter_participant_data(participant) 
             model = RLModel(model_name, participant_params)
-            task = AvoidanceLearningTask(task_design)
-            pipeline = RLPipeline(model, dataloader, task)
+            task = AvoidanceLearningTask()
+            pipeline = RLPipeline(model, p_dataloader, task)
             if multiprocessing:
                 inputs.append((pipeline, columns, participant, group, n))
             else:

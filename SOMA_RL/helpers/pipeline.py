@@ -23,16 +23,25 @@ class RLPipeline:
 
         #Get parameters
         self.dataloader = dataloader
-        self.task_design = task.task_design
+        if dataloader is None:
+            self.task_design = task.task_design
+        else:
+            num_learning_trials, num_transfer_trials = self.dataloader.get_num_trials()
+            self.task_design = {'learning_phase': {'number_of_trials': num_learning_trials, 'number_of_blocks': 1}, 
+                           'transfer_phase': {'number_of_trials': num_transfer_trials}}
+            task.task_design = self.task_design
         self.task = task
         self.task.initiate_model(model.get_model())
         self.task.rl_model.fit_transfer_phase = fit_transfer_phase
         self.task.rl_model.number_of_fits = number_of_fits
 
-    def simulate(self):
+    def simulate(self, data):
 
         #Run simulation and computations
-        self.task.run_experiment()
+        if data is None:
+            self.task.run_experiment()
+        else:
+            self.task.rl_model.simulate(data)
         self.task.rl_model.run_computations()
 
         return self.task.rl_model
@@ -45,7 +54,7 @@ class RLPipeline:
 
         #Extract args
         columns, participant_id = args
-        data = self.dataloader.filter_participant_data(participant_id)
+        data = self.dataloader.get_data_dict()
         model_name = self.task.rl_model.__class__.__name__
         pain_group = data['learning']['pain_group'].values[0]
 
@@ -73,11 +82,15 @@ class RLPipeline:
     def run_simulations(self, args):
 
         #Extract args
-        columns, participant, group, n = args
-        
+        columns, participant_id, group, n = args
+        if self.dataloader is not None:
+            data = self.dataloader.get_data_dict()
+        else:
+            data = None
+        model_name = self.task.rl_model.__class__.__name__
+
         #Run simulation and computations
-        model = self.simulate()
-        model_name = model.__class__.__name__
+        model = self.simulate(data)
 
         #Extract model data
         task_learning_data = model.task_learning_data
@@ -115,10 +128,10 @@ class RLPipeline:
         choice_rates = pd.DataFrame([model.choice_rate], columns=columns['choice_rate'])
 
         #Save to csv file
-        accuracy.to_csv(f'SOMA_RL/data/fits/{model_name}_{group}_{participant}_accuracy_sim_results.csv', index=False)
-        prediction_errors.to_csv(f'SOMA_RL/data/fits/{model_name}_{group}_{participant}_pe_sim_results.csv', index=False)
-        values.to_csv(f'SOMA_RL/data/fits/{model_name}_{group}_{participant}_values_sim_results.csv', index=False)
-        choice_rates.to_csv(f'SOMA_RL/data/fits/{model_name}_{group}_{participant}_choice_sim_results.csv', index=False)
+        accuracy.to_csv(f'SOMA_RL/data/fits/{model_name}_{group}_{participant_id}_accuracy_sim_results.csv', index=False)
+        prediction_errors.to_csv(f'SOMA_RL/data/fits/{model_name}_{group}_{participant_id}_pe_sim_results.csv', index=False)
+        values.to_csv(f'SOMA_RL/data/fits/{model_name}_{group}_{participant_id}_values_sim_results.csv', index=False)
+        choice_rates.to_csv(f'SOMA_RL/data/fits/{model_name}_{group}_{participant_id}_choice_sim_results.csv', index=False)
 
 # Functions
 def mp_run_fit(args):
