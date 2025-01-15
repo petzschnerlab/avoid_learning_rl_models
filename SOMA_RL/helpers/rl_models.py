@@ -1387,7 +1387,7 @@ class RLModel:
 
         elif model == 'ActorCritic':
             factual_actor_lr = 0.1 if fit_data is None else fit_data['factual_actor_lr'].values[0]
-            counterfactual_actor_lr = 0.5 if fit_data is None else fit_data['counterfactual_actor_lr'].values[0]
+            counterfactual_actor_lr = 0.05 if fit_data is None else fit_data['counterfactual_actor_lr'].values[0]
             critic_lr = 0.1 if fit_data is None else fit_data['critic_lr'].values[0]
             temperature = 0.1 if fit_data is None else fit_data['temperature'].values[0]
             valence_factor = 0.5 if fit_data is None else fit_data['valence_factor'].values[0]
