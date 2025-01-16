@@ -39,7 +39,7 @@ if __name__ == "__main__":
     transfer_filename = 'SOMA_RL/data/pain_transfer_processed.csv'
 
     #Models
-    models = ['QLearning', 'ActorCritic', 'Relative', 'Hybrid2012']
+    models = ['QLearning', 'ActorCritic', 'Relative', 'Hybrid2012', 'wRelative', 'QRelative']
 
     # =========================================== #
     # ================ LOAD DATA ================ #
@@ -72,8 +72,8 @@ if __name__ == "__main__":
             if multiprocessing:
                 inputs.append((pipeline, columns[model_name], participant))
             else:
-                loop.update(1)
                 pipeline.run_fit((columns[model_name], participant))
+                loop.update(1)
 
     #Run all models fits in parallel
     if multiprocessing:
@@ -119,14 +119,14 @@ if __name__ == "__main__":
             total_NLL = np.sum(group_fit["fit"])
             number_params = len(group_fit.columns) - 3
             number_samples = dataloader.get_num_samples_by_group(group)
-            group_AIC[model_name][group] = 2*number_params - 2*total_NLL
-            group_BIC[model_name][group] = np.log(number_samples)*number_params - 2*total_NLL
+            group_AIC[model_name][group] = 2*number_params + 2*total_NLL
+            group_BIC[model_name][group] = np.log(number_samples)*number_params + 2*total_NLL
             
         total_NLL = np.sum(fit_data[model_name]["fit"])
         number_params = len(fit_data[model_name].columns) - 3
         number_samples = dataloader.get_num_samples()
-        AIC = 2*number_params - 2*total_NLL
-        BIC = np.log(number_samples)*number_params - 2*total_NLL
+        AIC = 2*number_params + 2*total_NLL
+        BIC = np.log(number_samples)*number_params + 2*total_NLL
 
         print('')
         print(f'FIT REPORT: {model_name}')
@@ -244,4 +244,5 @@ if __name__ == "__main__":
     for group in accuracy:
         plot_simulations(accuracy[group], prediction_errors[group], values[group], choice_rates[group], models, group, dataloader)
 
-    print('debug')
+    #Debug print
+    print('')
