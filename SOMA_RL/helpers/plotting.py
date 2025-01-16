@@ -8,6 +8,12 @@ from scipy import stats
 def plot_simulations(accuracy, prediction_errors, values, choice_rates, models, group, dataloader=None):
     
     if dataloader is not None:
+
+        #Get empirical learning curves 
+        empirical_data = copy.copy(dataloader.get_data()[0])
+        empirical_data = empirical_data[empirical_data['pain_group'] == group]
+        emp_accuracy = empirical_data.groupby(['context_val_name','trial_number'], observed=False)['accuracy'].mean().reset_index()
+
         #Get empirical choice rates
         empirical_data = copy.copy(dataloader.get_data()[1])
         empirical_data = empirical_data[empirical_data['pain_group'] == group]
@@ -43,6 +49,9 @@ def plot_simulations(accuracy, prediction_errors, values, choice_rates, models, 
             context_CIs = CIs[CIs.index.get_level_values('context') == context].reset_index(drop=True)*100
             ax[0, i].fill_between(context_accuracy.index, context_accuracy - context_CIs, context_accuracy + context_CIs, alpha=0.2, color=bi_colors[ci], edgecolor='none')
             ax[0, i].plot(context_accuracy, color=bi_colors[ci], alpha = .8, label=context.replace('Loss Avoid', 'Punish'))
+            if dataloader is not None:
+                ax[0, i].plot(emp_accuracy[emp_accuracy['context_val_name'] == context]['trial_number'], emp_accuracy[emp_accuracy['context_val_name'] == context]['accuracy'], color=bi_colors[ci], linestyle='dashed', alpha=.5)
+
         ax[0, i].set_title(m)
         ax[0, i].set_ylim([25, 100])
         if i == 0:
