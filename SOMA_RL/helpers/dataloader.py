@@ -32,8 +32,8 @@ class DataLoader:
         learning_data.columns = [colname.replace('participant_id', 'participant').replace('group_code', 'pain_group').replace('symbol_names', 'state') for colname in learning_data.columns]
 
         transfer_data['stim_order'] = transfer_data.apply(lambda x: x['symbol_L_value'] > x['symbol_R_value'], axis=1)
-        transfer_data['symbol_L_name'] = transfer_data['symbol_L_name'].replace({'75R1': 'A', '25R1': 'B', '75R2': 'C', '25R2': 'D', '75P1': 'E', '25P1': 'F', '75P2': 'G', '25P2': 'H', 'Zero': 'N'})
-        transfer_data['symbol_R_name'] = transfer_data['symbol_R_name'].replace({'75R1': 'A', '25R1': 'B', '75R2': 'C', '25R2': 'D', '75P1': 'E', '25P1': 'F', '75P2': 'G', '25P2': 'H', 'Zero': 'N'})
+        transfer_data['symbol_L_name'] = transfer_data['symbol_L_name'].replace({'75R1': 'A', '25R1': 'B', '75R2': 'C', '25R2': 'D', '25P1': 'E', '75P1': 'F', '25P2': 'G', '75P2': 'H', 'Zero': 'N'})
+        transfer_data['symbol_R_name'] = transfer_data['symbol_R_name'].replace({'75R1': 'A', '25R1': 'B', '75R2': 'C', '25R2': 'D', '25P1': 'E', '75P1': 'F', '25P2': 'G', '75P2': 'H', 'Zero': 'N'})
         transfer_data['state'] = transfer_data.apply(lambda x: f"State {x['symbol_L_name']}{x['symbol_R_name']}" if x['stim_order'] else f"State {x['symbol_R_name']}{x['symbol_L_name']}", axis=1)
         transfer_data['action'] = transfer_data.apply(lambda x: x['choice_made'] if x['stim_order'] else np.abs(x['choice_made']-1), axis=1)
         if reduced:
