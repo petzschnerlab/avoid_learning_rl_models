@@ -1,11 +1,30 @@
 import os
+import copy
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from scipy import stats
 
-def plot_simulations(accuracy, prediction_errors, values, choice_rates, models, group):
+def plot_simulations(accuracy, prediction_errors, values, choice_rates, models, group, dataloader=None):
     
+    if dataloader is not None:
+        #Get empirical choice rates
+        empirical_data = copy.copy(dataloader.get_data()[1])
+        empirical_data = empirical_data[empirical_data['pain_group'] == group]
+        empirical_data['stim_id'] = empirical_data['state'].apply(lambda x: x.split(' ')[1])
+        emp_choice_rate = {}
+        for stimulus in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'N']:
+            stimulus_data = empirical_data.loc[empirical_data['stim_id'].apply(lambda x: stimulus in x)].copy()
+            stimulus_data.loc[:,'stim_index'] = stimulus_data.loc[:,'stim_id'].apply(lambda x: 0 if stimulus == x[0] else 1)
+            stimulus_data['stim_chosen'] = stimulus_data.apply(lambda x: int(x['action'] == x['stim_index']), axis=1)
+            emp_choice_rate[stimulus] = int((stimulus_data['stim_chosen'].sum()/len(stimulus_data))*100)
+
+        pairs = [['A','C'],['B','D'],['E','G'],['F','H']]
+        emp_choice_rates = {}
+        for pair in pairs:
+            emp_choice_rates[pair[0]] = (emp_choice_rate[pair[0]] + emp_choice_rate[pair[1]])/2
+        emp_choice_rates['N'] = emp_choice_rate['N']
+
     colors = ['#33A02C', '#B2DF8A', '#FB9A99', '#E31A1C', '#D3D3D3']
     bi_colors = ['#B2DF8A', '#FB9A99']
     val_colors = ['#33A02C', '#B2DF8A', '#FB9A99', '#E31A1C']
@@ -25,7 +44,7 @@ def plot_simulations(accuracy, prediction_errors, values, choice_rates, models, 
             ax[0, i].fill_between(context_accuracy.index, context_accuracy - context_CIs, context_accuracy + context_CIs, alpha=0.2, color=bi_colors[ci], edgecolor='none')
             ax[0, i].plot(context_accuracy, color=bi_colors[ci], alpha = .8, label=context.replace('Loss Avoid', 'Punish'))
         ax[0, i].set_title(m)
-        ax[0, i].set_ylim([25, 110])
+        ax[0, i].set_ylim([25, 100])
         if i == 0:
             ax[0, i].set_ylabel('Accuracy (%)')
         ax[0, i].set_xlabel('Trial')
@@ -75,9 +94,11 @@ def plot_simulations(accuracy, prediction_errors, values, choice_rates, models, 
         ax[2, i].spines['right'].set_visible(False)
         ax[2, i].axhline(0, linestyle='--', color='grey', alpha=.5)
 
-        #Plot choice rates
+        #Plot choice rates        
         ax[3, i].bar(['High\nReward', 'Low\nReward', 'Low\nPunish', 'High\nPunish', 'Novel'], choice_rates[m].mean(axis=0), color=colors, alpha = .5)
         ax[3, i].errorbar(['High\nReward', 'Low\nReward', 'Low\nPunish', 'High\nPunish', 'Novel'], choice_rates[m].mean(axis=0), yerr=choice_rates[m].sem(), fmt='.', color='grey')
+        if dataloader is not None:
+            ax[3, i].scatter(['High\nReward', 'Low\nReward', 'Low\nPunish', 'High\nPunish', 'Novel'], list(emp_choice_rates.values()), color='grey', marker='D', alpha=.5)
         ax[3, i].set_ylim([0, 100])
         if i == 0:
             ax[3, i].set_ylabel('Choice rate (%)')
@@ -86,6 +107,5 @@ def plot_simulations(accuracy, prediction_errors, values, choice_rates, models, 
 
     #Metaplot settings
     fig.tight_layout()
-    #Add suptitle in top left 
     fig.suptitle(f"{group.title()}", x=0.001, y=.999, ha='left', fontsize=16)
     fig.savefig(os.path.join('SOMA_RL','plots',f"{group.replace(' ','')}_model_simulations.png"))

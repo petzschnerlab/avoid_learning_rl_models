@@ -30,7 +30,7 @@ if __name__ == "__main__":
 
     #Parameters
     multiprocessing = True #Whether to run fits and simulations in parallel
-    fit_transfer_phase = False #Whether to fit the transfer phase
+    fit_transfer_phase = True #Whether to fit the transfer phase
     transfer_trials = 0 #Number of times to present each stimulus pair in the transfer phase for fitting, 0 = all
     number_of_fits = 1 #Number of times to fit the dataset for each participant
 
@@ -39,7 +39,7 @@ if __name__ == "__main__":
     transfer_filename = 'SOMA_RL/data/pain_transfer_processed.csv'
 
     #Models
-    models = ['QLearning', 'ActorCritic', 'Relative', 'Hybrid2012', 'wRelative', 'QRelative']
+    models = ['QLearning', 'ActorCritic', 'Relative', 'Hybrid2012']
 
     # =========================================== #
     # ================ LOAD DATA ================ #
@@ -242,6 +242,6 @@ if __name__ == "__main__":
         
     #Plot simulations 
     for group in accuracy:
-        plot_simulations(accuracy[group], prediction_errors[group], values[group], choice_rates[group], models, group)
+        plot_simulations(accuracy[group], prediction_errors[group], values[group], choice_rates[group], models, group, dataloader)
 
     print('debug')
