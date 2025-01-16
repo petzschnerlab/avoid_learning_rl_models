@@ -677,7 +677,7 @@ class ActorCritic(RLToolbox):
         self.factual_actor_lr, self.counterfactual_actor_lr, self.critic_lr, self.temperature, self.valence_factor = x 
 
         #Return the negative log likelihood of all observed actions
-        return -self.fit_task(args, 'w_values', transform_reward=True)
+        return -self.fit_task(args, 'w_values', transform_reward=False)
 
     def sim_func(self, *args):
         
@@ -685,7 +685,7 @@ class ActorCritic(RLToolbox):
         Simulate the model
         '''
 
-        return self.sim_task(args, transform_reward=True)
+        return self.sim_task(args, transform_reward=False)
     
 class Relative(RLToolbox):
 
@@ -861,7 +861,8 @@ class Hybrid2012(RLToolbox):
     
     def compute_prediction_error(self, state):
         state['q_prediction_errors'] = [state['rewards'][i] - state['q_values'][i] for i in range(len(state['rewards']))]
-        state['v_prediction_errors'] = [state['rewards'][i] - state['v_values'][0] for i in range(len(state['rewards']))]
+        state['v_prediction_errors'] = [state['rewards'][i] - state['v_values'][0] for i in range(len(state['rewards']))] #Uses rewards independently
+        #state['v_prediction_errors'] = [state['rewards'][state['action']] - state['v_values'][0] for i in range(len(state['rewards']))] #Uses selected reward
 
         return state
 
@@ -941,7 +942,7 @@ class Hybrid2012(RLToolbox):
         self.factual_lr, self.counterfactual_lr, self.factual_actor_lr, self.counterfactual_actor_lr, self.critic_lr, self.temperature, self.mixing_factor, self.valence_factor = x
 
         #Return the negative log likelihood of all observed actions
-        return -self.fit_task(args, 'h_values', transform_reward=True)
+        return -self.fit_task(args, 'h_values', transform_reward=False)
 
 
     def sim_func(self, *args):
@@ -950,7 +951,7 @@ class Hybrid2012(RLToolbox):
         Simulate the model
         '''
 
-        return self.sim_task(args, transform_reward=True)
+        return self.sim_task(args, transform_reward=False)
 
 class Hybrid2021(RLToolbox):
 
@@ -1014,6 +1015,7 @@ class Hybrid2021(RLToolbox):
     def compute_prediction_error(self, state):
         state['q_prediction_errors'] = [state['rewards'][i] - state['q_values'][i] for i in range(len(state['rewards']))]
         state['v_prediction_errors'] = [state['rewards'][i] - state['v_values'][0] for i in range(len(state['rewards']))]
+        #state['v_prediction_errors'] = [state['rewards'][state['action']] - state['v_values'][0] for i in range(len(state['rewards']))] #Uses selected reward
 
         return state
 
@@ -1094,7 +1096,7 @@ class Hybrid2021(RLToolbox):
         self.factual_lr, self.counterfactual_lr, self.factual_actor_lr, self.counterfactual_actor_lr, self.critic_lr, self.temperature, self.mixing_factor, self.valence_factor, self.noise_factor, self.decay_factor = x
         
         #Return the negative log likelihood of all observed actions
-        return -self.fit_task(args, 'h_values', transform_reward=True)
+        return -self.fit_task(args, 'h_values', transform_reward=False)
     
 
     def sim_func(self, *args):
@@ -1103,7 +1105,7 @@ class Hybrid2021(RLToolbox):
         Simulate the model
         '''
 
-        return self.sim_task(args, transform_reward=True)
+        return self.sim_task(args, transform_reward=False)
 
 class wRelative(RLToolbox):
 
