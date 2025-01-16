@@ -609,7 +609,9 @@ class ActorCritic(RLToolbox):
         return state
     
     def compute_prediction_error(self, state):
-        state['prediction_errors'] = [state['rewards'][i] - state['v_values'][0] for i in range(len(state['rewards']))]
+        state['prediction_errors'] = [state['rewards'][i] - state['v_values'][0] for i in range(len(state['rewards']))] #Uses rewards independently
+        #state['prediction_errors'] = [np.mean(state['rewards']) - state['v_values'][0] for i in range(len(state['rewards']))] #Uses averaged reward, do not use - values of actions within same state are equal
+        #state['prediction_errors'] = [state['rewards'][state['action']] - state['v_values'][0] for i in range(len(state['rewards']))] #Uses selected reward
         return state
 
     def select_action(self, state):
