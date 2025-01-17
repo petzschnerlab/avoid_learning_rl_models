@@ -33,13 +33,14 @@ if __name__ == "__main__":
     fit_transfer_phase = True #Whether to fit the transfer phase
     transfer_trials = 0 #Number of times to present each stimulus pair in the transfer phase for fitting, 0 = all
     number_of_fits = 1 #Number of times to fit the dataset for each participant
+    novel_value = 0 #Optional parameter for all models. If None, it is ignored. If float value ranging from -1 to 1, used as parameter for all models
 
     #File names
     learning_filename = 'SOMA_RL/data/pain_learning_processed.csv'
     transfer_filename = 'SOMA_RL/data/pain_transfer_processed.csv'
 
     #Models
-    models = ['QLearning', 'ActorCritic', 'Relative', 'Hybrid2012', 'wRelative', 'QRelative']
+    models = ['QLearning', 'ActorCritic', 'Relative', 'Hybrid2012', 'Hybrid2021', 'wRelative', 'QRelative']
 
     # =========================================== #
     # ================ LOAD DATA ================ #
@@ -65,7 +66,7 @@ if __name__ == "__main__":
         for model_name in models:  
             p_dataloader = copy.copy(dataloader)
             p_dataloader.filter_participant_data(participant)  
-            model = RLModel(model_name)
+            model = RLModel(model_name, novel_value=novel_value)
             task = AvoidanceLearningTask(transfer_trials=transfer_trials)
             pipeline = RLPipeline(model, p_dataloader, task, fit_transfer_phase=fit_transfer_phase, number_of_fits=number_of_fits)
             columns[model_name] = ['participant', 'pain_group', 'fit'] + list(model.get_parameters())
@@ -127,6 +128,8 @@ if __name__ == "__main__":
         number_samples = dataloader.get_num_samples()
         AIC = 2*number_params + 2*total_NLL
         BIC = np.log(number_samples)*number_params + 2*total_NLL
+        group_AIC[model_name]['full'] = AIC
+        group_BIC[model_name]['full'] = BIC
 
         print('')
         print(f'FIT REPORT: {model_name}')
@@ -141,8 +144,11 @@ if __name__ == "__main__":
     #Turn nested dictionary into dataframe
     group_AIC = pd.DataFrame(group_AIC)
     group_AIC['best_model'] = group_AIC.idxmin(axis=1)
+    group_AIC.to_csv('SOMA_RL/plots/group_AIC.csv')
+
     group_BIC = pd.DataFrame(group_BIC)
     group_BIC['best_model'] = group_BIC.idxmin(axis=1)
+    group_BIC.to_csv('SOMA_RL/plots/group_BIC.csv')
 
     print('AIC REPORT')
     print('==========')
