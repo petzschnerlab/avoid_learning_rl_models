@@ -121,18 +121,10 @@ class RLToolbox:
         self.context_prediction_errors[state['state_id']] = state['context_prediction_errors']
 
     def reward_valence(self, reward):
-
-        '''
-        r[-1,1]
-        1, d=0.5 = 0.5
-        -1, d=0.5 = -0.5
-        1, d=0.75 = 0.25
-        -1, d=0.75 = -0.75
-        '''
         for ri, r in enumerate(reward):
-            if r > 0: #1, d=0.5 = 0.5
+            if r > 0:
                 reward[ri] = (1-self.valence_factor)*r
-            elif r < 0: #-1, d=0.5 = -0.5
+            elif r < 0:
                 reward[ri] = self.valence_factor*r
             else:
                 reward[ri] = 0
@@ -604,22 +596,15 @@ class ActorCritic(RLToolbox):
         random_numbers = [rnd.random() for i in range(len(state['stim_id']))]
         reward = [int(random_numbers[i] < state['probabilities'][i]) for i in range(len(state['stim_id']))]
         reward = [reward[i] * state['feedback'] for i in range(len(state['stim_id']))]
-        for ri, r in enumerate(reward):
-            if r > 0:
-                reward[ri] = 1-self.valence_factor
-            elif r < 0:
-                reward[ri] = -self.valence_factor
-            else:
-                reward[ri] = 0
+        reward = self.reward_valence(reward)
 
         state['rewards'] = reward
 
         return state
     
     def compute_prediction_error(self, state):
-        state['prediction_errors'] = [state['rewards'][i] - state['v_values'][0] for i in range(len(state['rewards']))] #Uses rewards independently
-        #state['prediction_errors'] = [np.mean(state['rewards']) - state['v_values'][0] for i in range(len(state['rewards']))] #Uses averaged reward, do not use - values of actions within same state are equal
-        #state['prediction_errors'] = [state['rewards'][state['action']] - state['v_values'][0] for i in range(len(state['rewards']))] #Uses selected reward #<-USE THIS!
+        state['prediction_errors'] = [state['rewards'][state['action']] - state['v_values'][0] for i in range(len(state['rewards']))]
+        #state['prediction_errors'] = [state['rewards'][i] - state['v_values'][0] for i in range(len(state['rewards']))] #Uses rewards independently
         return state
 
     def select_action(self, state):
@@ -685,7 +670,7 @@ class ActorCritic(RLToolbox):
         self.factual_actor_lr, self.counterfactual_actor_lr, self.critic_lr, self.temperature, self.valence_factor = x 
 
         #Return the negative log likelihood of all observed actions
-        return -self.fit_task(args, 'w_values', transform_reward=False)
+        return -self.fit_task(args, 'w_values', transform_reward=True)
 
     def sim_func(self, *args):
         
@@ -693,7 +678,7 @@ class ActorCritic(RLToolbox):
         Simulate the model
         '''
 
-        return self.sim_task(args, transform_reward=False)
+        return self.sim_task(args, transform_reward=True)
     
 class Relative(RLToolbox):
 
@@ -855,13 +840,7 @@ class Hybrid2012(RLToolbox):
         random_numbers = [rnd.random() for i in range(len(state['stim_id']))]
         reward = [int(random_numbers[i] < state['probabilities'][i]) for i in range(len(state['stim_id']))]
         reward = [reward[i] * state['feedback'] for i in range(len(state['stim_id']))]
-        for ri, r in enumerate(reward):
-            if r > 0:
-                reward[ri] = 1-self.valence_factor
-            elif r < 0:
-                reward[ri] = -self.valence_factor
-            else:
-                reward[ri] = 0
+        reward = self.reward_valence(reward)
 
         state['rewards'] = reward
 
@@ -869,8 +848,8 @@ class Hybrid2012(RLToolbox):
     
     def compute_prediction_error(self, state):
         state['q_prediction_errors'] = [state['rewards'][i] - state['q_values'][i] for i in range(len(state['rewards']))]
-        state['v_prediction_errors'] = [state['rewards'][i] - state['v_values'][0] for i in range(len(state['rewards']))] #Uses rewards independently
-        #state['v_prediction_errors'] = [state['rewards'][state['action']] - state['v_values'][0] for i in range(len(state['rewards']))] #Uses selected reward
+        #state['v_prediction_errors'] = [state['rewards'][i] - state['v_values'][0] for i in range(len(state['rewards']))]
+        state['v_prediction_errors'] = [state['rewards'][state['action']] - state['v_values'][0] for i in range(len(state['rewards']))] #Uses selected reward
 
         return state
 
@@ -950,7 +929,7 @@ class Hybrid2012(RLToolbox):
         self.factual_lr, self.counterfactual_lr, self.factual_actor_lr, self.counterfactual_actor_lr, self.critic_lr, self.temperature, self.mixing_factor, self.valence_factor = x
 
         #Return the negative log likelihood of all observed actions
-        return -self.fit_task(args, 'h_values', transform_reward=False)
+        return -self.fit_task(args, 'h_values', transform_reward=True)
 
 
     def sim_func(self, *args):
@@ -959,7 +938,7 @@ class Hybrid2012(RLToolbox):
         Simulate the model
         '''
 
-        return self.sim_task(args, transform_reward=False)
+        return self.sim_task(args, transform_reward=True)
 
 class Hybrid2021(RLToolbox):
 
@@ -1008,13 +987,7 @@ class Hybrid2021(RLToolbox):
         random_numbers = [rnd.random() for i in range(len(state['stim_id']))]
         reward = [int(random_numbers[i] < state['probabilities'][i]) for i in range(len(state['stim_id']))]
         reward = [reward[i] * state['feedback'] for i in range(len(state['stim_id']))]
-        for ri, r in enumerate(reward):
-            if r > 0:
-                reward[ri] = 1-self.valence_factor
-            elif r < 0:
-                reward[ri] = -self.valence_factor
-            else:
-                reward[ri] = 0
+        reward = self.reward_valence(reward)
 
         state['rewards'] = reward
 
@@ -1022,8 +995,8 @@ class Hybrid2021(RLToolbox):
     
     def compute_prediction_error(self, state):
         state['q_prediction_errors'] = [state['rewards'][i] - state['q_values'][i] for i in range(len(state['rewards']))]
-        state['v_prediction_errors'] = [state['rewards'][i] - state['v_values'][0] for i in range(len(state['rewards']))]
-        #state['v_prediction_errors'] = [state['rewards'][state['action']] - state['v_values'][0] for i in range(len(state['rewards']))] #Uses selected reward
+        #state['v_prediction_errors'] = [state['rewards'][i] - state['v_values'][0] for i in range(len(state['rewards']))]
+        state['v_prediction_errors'] = [state['rewards'][state['action']] - state['v_values'][0] for i in range(len(state['rewards']))] #Uses selected reward
 
         return state
 
@@ -1104,7 +1077,7 @@ class Hybrid2021(RLToolbox):
         self.factual_lr, self.counterfactual_lr, self.factual_actor_lr, self.counterfactual_actor_lr, self.critic_lr, self.temperature, self.mixing_factor, self.valence_factor, self.noise_factor, self.decay_factor = x
         
         #Return the negative log likelihood of all observed actions
-        return -self.fit_task(args, 'h_values', transform_reward=False)
+        return -self.fit_task(args, 'h_values', transform_reward=True)
     
 
     def sim_func(self, *args):
@@ -1113,7 +1086,7 @@ class Hybrid2021(RLToolbox):
         Simulate the model
         '''
 
-        return self.sim_task(args, transform_reward=False)
+        return self.sim_task(args, transform_reward=True)
 
 class wRelative(RLToolbox):
 
