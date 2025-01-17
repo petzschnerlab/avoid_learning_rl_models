@@ -39,7 +39,7 @@ if __name__ == "__main__":
     transfer_filename = 'SOMA_RL/data/pain_transfer_processed.csv'
 
     #Models
-    models = ['QLearning', 'ActorCritic', 'Relative', 'Hybrid2012', 'wRelative', 'QRelative']
+    models = ['QLearning', 'ActorCritic', 'Relative', 'Hybrid2012', 'Hybrid2021', 'wRelative', 'QRelative']
 
     # =========================================== #
     # ================ LOAD DATA ================ #
@@ -121,12 +121,14 @@ if __name__ == "__main__":
             number_samples = dataloader.get_num_samples_by_group(group)
             group_AIC[model_name][group] = 2*number_params + 2*total_NLL
             group_BIC[model_name][group] = np.log(number_samples)*number_params + 2*total_NLL
-            
+                    
         total_NLL = np.sum(fit_data[model_name]["fit"])
         number_params = len(fit_data[model_name].columns) - 3
         number_samples = dataloader.get_num_samples()
         AIC = 2*number_params + 2*total_NLL
         BIC = np.log(number_samples)*number_params + 2*total_NLL
+        group_AIC[model_name]['full'] = AIC
+        group_BIC[model_name]['full'] = BIC
 
         print('')
         print(f'FIT REPORT: {model_name}')
@@ -141,8 +143,11 @@ if __name__ == "__main__":
     #Turn nested dictionary into dataframe
     group_AIC = pd.DataFrame(group_AIC)
     group_AIC['best_model'] = group_AIC.idxmin(axis=1)
+    group_AIC.to_csv('SOMA_RL/plots/group_AIC.csv')
+
     group_BIC = pd.DataFrame(group_BIC)
     group_BIC['best_model'] = group_BIC.idxmin(axis=1)
+    group_BIC.to_csv('SOMA_RL/plots/group_BIC.csv')
 
     print('AIC REPORT')
     print('==========')
