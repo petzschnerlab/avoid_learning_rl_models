@@ -121,11 +121,19 @@ class RLToolbox:
         self.context_prediction_errors[state['state_id']] = state['context_prediction_errors']
 
     def reward_valence(self, reward):
+
+        '''
+        r[-1,1]
+        1, d=0.5 = 0.5
+        -1, d=0.5 = -0.5
+        1, d=0.75 = 0.25
+        -1, d=0.75 = -0.75
+        '''
         for ri, r in enumerate(reward):
-            if r > 0:
-                reward[ri] = 1-self.valence_factor
-            elif r < 0:
-                reward[ri] = -self.valence_factor
+            if r > 0: #1, d=0.5 = 0.5
+                reward[ri] = (1-self.valence_factor)*r
+            elif r < 0: #-1, d=0.5 = -0.5
+                reward[ri] = self.valence_factor*r
             else:
                 reward[ri] = 0
         return reward
@@ -611,7 +619,7 @@ class ActorCritic(RLToolbox):
     def compute_prediction_error(self, state):
         state['prediction_errors'] = [state['rewards'][i] - state['v_values'][0] for i in range(len(state['rewards']))] #Uses rewards independently
         #state['prediction_errors'] = [np.mean(state['rewards']) - state['v_values'][0] for i in range(len(state['rewards']))] #Uses averaged reward, do not use - values of actions within same state are equal
-        #state['prediction_errors'] = [state['rewards'][state['action']] - state['v_values'][0] for i in range(len(state['rewards']))] #Uses selected reward
+        #state['prediction_errors'] = [state['rewards'][state['action']] - state['v_values'][0] for i in range(len(state['rewards']))] #Uses selected reward #<-USE THIS!
         return state
 
     def select_action(self, state):
