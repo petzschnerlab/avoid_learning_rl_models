@@ -40,19 +40,23 @@ if __name__ == "__main__":
 
     #Models
     '''
-    Supported models: QLearning, ActorCritic, Relative, wRelative, QRelative, Hybrid2012, Hybrid2021
+    Supported models: 
+        QLearning, ActorCritic
+        Relative, wRelative, QRelative
+        Hybrid2012, Hybrid2021
     Optional Parameters: You can add optional parameters to models by adding them to the model name using a + sign
-        bias: Adds a valence bias to the model (e.g. wRelative+bias), only usable with wRelative, QRelative, Hybrid2012, and Hybrid2021
+        +bias: Adds a valence bias to the model (e.g. wRelative+bias), only usable with wRelative, QRelative, Hybrid2012, and Hybrid2021
+        +novel: Adds a free parameter for the novel stimulus (e.g. QLearning+novel), useable with all models
     '''
-    models = ['QLearning', 
-              'ActorCritic', 
-              'Relative', 
-              'wRelative+bias', 
-              'wRelative',
-              'Hybrid2012+bias', 
-              'Hybrid2012', 
-              'Hybrid2021+bias', 
-              'Hybrid2021']
+    models = ['QLearning+novel', 
+              'ActorCritic+novel', 
+              'Relative+novel', 
+              'wRelative+bias+novel', 
+              'wRelative+novel',
+              'Hybrid2012+bias+novel', 
+              'Hybrid2012+novel', 
+              'Hybrid2021+bias+novel', 
+              'Hybrid2021+novel']
     
     # =========================================== #
     # ================ LOAD DATA ================ #
