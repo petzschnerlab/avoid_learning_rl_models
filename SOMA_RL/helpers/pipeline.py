@@ -76,7 +76,7 @@ class RLPipeline:
         participant_fitted.extend([fitted_params[key] for key in columns[3:]])
 
         #Save to csv file
-        with open(f'SOMA_RL/data/fits/{model_name}_{participant_id}_fit_results.csv', 'a') as f:
+        with open(f'SOMA_RL/data/fits/{self.task.rl_model.model_name}_{participant_id}_fit_results.csv', 'a') as f:
             f.write(','.join([str(x) for x in participant_fitted]) + '\n')
 
     def run_simulations(self, args):
@@ -104,10 +104,11 @@ class RLPipeline:
         value_labels = {'QLearning': 'q_values', 
                         'ActorCritic': 'w_values', 
                         'Relative': 'q_values', 
-                        'Hybrid2012': 'h_values', 
-                        'Hybrid2021': 'h_values', 
+                        'Hybrid2012': 'h_values',
+                        'Hybrid2021': 'h_values',
                         'QRelative': 'm_values', 
                         'wRelative': 'q_values'}
+        
         value_label = value_labels[model_name]
 
         task_learning_data[f'{value_label}1'] = task_learning_data[value_label].apply(lambda x: x[0])
@@ -128,10 +129,10 @@ class RLPipeline:
         choice_rates = pd.DataFrame([model.choice_rate], columns=columns['choice_rate'])
 
         #Save to csv file
-        accuracy.to_csv(f'SOMA_RL/data/fits/{model_name}_{group}_{participant_id}_accuracy_sim_results.csv', index=False)
-        prediction_errors.to_csv(f'SOMA_RL/data/fits/{model_name}_{group}_{participant_id}_pe_sim_results.csv', index=False)
-        values.to_csv(f'SOMA_RL/data/fits/{model_name}_{group}_{participant_id}_values_sim_results.csv', index=False)
-        choice_rates.to_csv(f'SOMA_RL/data/fits/{model_name}_{group}_{participant_id}_choice_sim_results.csv', index=False)
+        accuracy.to_csv(f'SOMA_RL/data/fits/{model.model_name}_{group}_{participant_id}_accuracy_sim_results.csv', index=False)
+        prediction_errors.to_csv(f'SOMA_RL/data/fits/{model.model_name}_{group}_{participant_id}_pe_sim_results.csv', index=False)
+        values.to_csv(f'SOMA_RL/data/fits/{model.model_name}_{group}_{participant_id}_values_sim_results.csv', index=False)
+        choice_rates.to_csv(f'SOMA_RL/data/fits/{model.model_name}_{group}_{participant_id}_choice_sim_results.csv', index=False)
 
 # Functions
 def mp_run_fit(args):

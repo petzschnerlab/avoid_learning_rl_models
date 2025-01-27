@@ -26,10 +26,10 @@ if __name__ == "__main__":
     rnd.seed(1251)
 
     #Debug parameters
-    number_of_participants = 0 #Number of participants to keep, 0 = all
+    number_of_participants = 1 #Number of participants to keep, 0 = all
 
     #Parameters
-    multiprocessing = True #Whether to run fits and simulations in parallel
+    multiprocessing = False #Whether to run fits and simulations in parallel
     fit_transfer_phase = True #Whether to fit the transfer phase
     transfer_trials = 0 #Number of times to present each stimulus pair in the transfer phase for fitting, 0 = all
     number_of_fits = 1 #Number of times to fit the dataset for each participant
@@ -39,8 +39,21 @@ if __name__ == "__main__":
     transfer_filename = 'SOMA_RL/data/pain_transfer_processed.csv'
 
     #Models
-    models = ['QLearning', 'ActorCritic', 'Relative', 'Hybrid2012', 'Hybrid2021', 'wRelative', 'QRelative']
-
+    '''
+    Supported models: QLearning, ActorCritic, Relative, wRelative, QRelative, Hybrid2012, Hybrid2021
+    Optional Parameters: You can add optional parameters to models by adding them to the model name using a + sign
+        bias: Adds a valence bias to the model (e.g. wRelative+bias), only usable with wRelative, QRelative, Hybrid2012, and Hybrid2021
+    '''
+    models = ['QLearning', 
+              'ActorCritic', 
+              'Relative', 
+              'wRelative+bias', 
+              'wRelative',
+              'Hybrid2012+bias', 
+              'Hybrid2012', 
+              'Hybrid2021+bias', 
+              'Hybrid2021']
+    
     # =========================================== #
     # ================ LOAD DATA ================ #
     # =========================================== #
@@ -66,8 +79,8 @@ if __name__ == "__main__":
             p_dataloader = copy.copy(dataloader)
             p_dataloader.filter_participant_data(participant)  
             model = RLModel(model_name)
-            task = AvoidanceLearningTask(transfer_trials=transfer_trials)
-            pipeline = RLPipeline(model, p_dataloader, task, fit_transfer_phase=fit_transfer_phase, number_of_fits=number_of_fits)
+            task = AvoidanceLearningTask()
+            pipeline = RLPipeline(model, p_dataloader, task)
             columns[model_name] = ['participant', 'pain_group', 'fit'] + list(model.get_parameters())
             if multiprocessing:
                 inputs.append((pipeline, columns[model_name], participant))
