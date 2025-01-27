@@ -855,9 +855,9 @@ class Hybrid2012(RLToolbox):
 
         self.parameters = {'factual_lr': self.factual_lr, 
                            'counterfactual_lr': self.counterfactual_lr, 
-                            'factual_actor_lr': self.factual_actor_lr,
-                            'counterfactual_actor_lr': self.counterfactual_actor_lr,
-                            'critic_lr': self.critic_lr,
+                           'factual_actor_lr': self.factual_actor_lr,
+                           'counterfactual_actor_lr': self.counterfactual_actor_lr,
+                           'critic_lr': self.critic_lr,
                            'temperature': self.temperature,
                            'mixing_factor': self.mixing_factor,
                            'valence_factor': self.valence_factor,
@@ -1107,7 +1107,7 @@ class Hybrid2021(RLToolbox):
         self.reset_datalists()
 
         #Unpack parameters
-        self.factual_lr, self.counterfactual_lr, self.factual_actor_lr, self.counterfactual_actor_lr, self.critic_lr, self.temperature, self.mixing_factor, self.valence_factor, self.noise_factor, self.decay_factor, self.novel_value = x
+        self.factual_lr, self.counterfactual_lr, self.factual_actor_lr, self.counterfactual_actor_lr, self.critic_lr, self.temperature, self.mixing_factor, self.noise_factor, self.decay_factor, self.valence_factor, self.novel_value = x
         self.valence_factor = None if self.optional_parameters['bias'] == False else self.valence_factor
         self.novel_value = None if self.optional_parameters['novel'] == False else self.novel_value
 
