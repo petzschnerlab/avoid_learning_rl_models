@@ -26,7 +26,7 @@ if __name__ == "__main__":
     rnd.seed(1251)
 
     #Debug parameters
-    number_of_participants = 4 #Number of participants to keep, 0 = all
+    number_of_participants = 0 #Number of participants to keep, 0 = all
 
     #Parameters
     multiprocessing = True #Whether to run fits and simulations in parallel
@@ -45,26 +45,35 @@ if __name__ == "__main__":
         Relative, wRelative, QRelative
         Hybrid2012, Hybrid2021
 
+    Standard models:
+        QLearning: Standard Q-Learning Model
+        ActorCritic: Standard Actor-Critic Model
+        Relative: Standard Relative Model (Palminteri et al., 2015)
+        wRelative: Standard Weighted-Relative Model [Proposed model] (Williams et al., in prep)
+        Hybrid2012+bias: Standard Hybrid 2012 Model (Gold et al., 2012)
+        Hybrid2021+bias: Standard Hybrid 2021 Model (Geana et al., 2021)
+
     Optional Parameters: You can add optional parameters to models by adding them to the model name using a + sign
         +bias: Adds a valence bias to the model (e.g. wRelative+bias), only usable with wRelative, QRelative, Hybrid2012, and Hybrid2021
         +novel: Adds a free parameter for the novel stimulus (e.g. QLearning+novel), useable with all models
     '''
 
-    models = ['QLearning', 
-              'ActorCritic', 
+    models = ['QLearning',
+              'ActorCritic',
 
               'Relative',
-              'Relative+novel', 
-              'wRelative+bias+novel', 
+              'Relative+novel',
+
+              'wRelative',
               'wRelative+novel',
 
               'Hybrid2012',
-              'Hybrid2012+bias+novel', 
-              'Hybrid2012+novel', 
+              'Hybrid2012+novel',
+
               'Hybrid2021',
-              'Hybrid2021+bias+novel', 
-              'Hybrid2021+novel']
-        
+              'Hybrid2021+novel'
+              ] 
+            
     # =========================================== #
     # ================ LOAD DATA ================ #
     # =========================================== #
@@ -92,7 +101,7 @@ if __name__ == "__main__":
             model = RLModel(model_name)
             task = AvoidanceLearningTask()
             pipeline = RLPipeline(model, p_dataloader, task)
-            columns[model_name] = ['participant', 'pain_group', 'fit'] + list(model.get_parameters()) + ['skipped_parameters']
+            columns[model_name] = ['participant', 'pain_group', 'fit'] + list(model.get_parameters())
             if multiprocessing:
                 inputs.append((pipeline, columns[model_name], participant))
             else:
@@ -145,13 +154,13 @@ if __name__ == "__main__":
         for group in group_ids:
             group_fit = fit_data[model_name][fit_data[model_name]['pain_group'] == group]
             total_NLL = np.sum(group_fit["fit"])
-            number_params = len(group_fit.columns) - 4 - group_fit['skipped_parameters'].values[0]
+            number_params = len(group_fit.columns) - 3
             number_samples = dataloader.get_num_samples_by_group(group)
             group_AIC[model_name][group] = 2*number_params + 2*total_NLL
             group_BIC[model_name][group] = np.log(number_samples)*number_params + 2*total_NLL
                     
         total_NLL = np.sum(fit_data[model_name]["fit"])
-        number_params = len(fit_data[model_name].columns) - 4 - fit_data[model_name]['skipped_parameters'][0]
+        number_params = len(fit_data[model_name].columns) - 3
         number_samples = dataloader.get_num_samples()
         AIC = 2*number_params + 2*total_NLL
         BIC = np.log(number_samples)*number_params + 2*total_NLL
@@ -163,7 +172,7 @@ if __name__ == "__main__":
         print('==========')
         print(f'AIC: {AIC.round(0)}')
         print(f'BIC: {BIC.round(0)}')
-        for col in fit_data[model_name].columns[2:-1]:
+        for col in fit_data[model_name].columns[2:]:
             if fit_data[model_name][col][0] is not None:
                 print(f'{col}: {fit_data[model_name][col].mean().round(4)}, {fit_data[model_name][col].std().round(4)}')
         print('==========')

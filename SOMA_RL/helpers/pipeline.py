@@ -70,15 +70,10 @@ class RLPipeline:
         
         #Fit models
         fit_results, fitted_params = self.fit(data, bounds=self.task.rl_model.bounds)
-        for key in self.task.rl_model.parameters:
-            if self.task.rl_model.parameters[key] is None:
-                fitted_params[key] = None
 
         #Store fit results
-        skipped_parameters = sum([1 for i in self.task.rl_model.parameters if self.task.rl_model.parameters[i] is None])      
         participant_fitted = [participant_id, pain_group, fit_results.fun]
-        participant_fitted.extend([fitted_params[key] for key in columns[3:-1]])
-        participant_fitted.extend([skipped_parameters])
+        participant_fitted.extend([fitted_params[key] for key in columns[3:]])
 
         #Save to csv file
         with open(f'SOMA_RL/data/fits/{self.task.rl_model.model_name}_{participant_id}_fit_results.csv', 'a') as f:
