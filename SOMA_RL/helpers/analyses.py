@@ -10,8 +10,8 @@ import numpy as np
 import tqdm
 import pickle
 
+from models.rl_models import RLModel
 from helpers.dataloader import DataLoader
-from helpers.rl_models import RLModel
 from helpers.tasks import AvoidanceLearningTask
 from helpers.pipeline import RLPipeline, mp_run_fit, mp_run_simulations, mp_progress
 from helpers.plotting import plot_simulations

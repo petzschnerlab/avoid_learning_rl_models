@@ -17,7 +17,7 @@ if __name__ == "__main__":
     #Parameters
     multiprocessing = True #Whether to run fits and simulations in parallel
     random_params = True #Whether to use random initial parameters for the models
-    number_of_runs = 1 #Number of times to fit the dataset for each participant and model (this is especially important when random_params=True)
+    number_of_runs = 10 #Number of times to fit the dataset for each participant and model (this is especially important when random_params=True)
 
     #File names
     learning_filename = 'SOMA_RL/data/pain_learning_processed.csv'
