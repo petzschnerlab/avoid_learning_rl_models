@@ -9,6 +9,7 @@ import random as rnd
 import pandas as pd
 import numpy as np
 import tqdm
+import pickle
 
 from helpers.dataloader import DataLoader
 from helpers.rl_models import RLModel
@@ -30,9 +31,13 @@ if __name__ == "__main__":
 
     #Parameters
     multiprocessing = True #Whether to run fits and simulations in parallel
+    random_params = True #Whether to use random initial parameters for the models
+    number_of_runs = 10 #Number of times to fit the dataset for each participant and model
+
+    #Deprecated parameters; TODO: Remove these
+    number_of_fits = 1 #Number of times to fit the dataset for each participant and model
     fit_transfer_phase = True #Whether to fit the transfer phase
     transfer_trials = 0 #Number of times to present each stimulus pair in the transfer phase for fitting, 0 = all
-    number_of_fits = 1 #Number of times to fit the dataset for each participant
 
     #File names
     learning_filename = 'SOMA_RL/data/pain_learning_processed.csv'
@@ -49,7 +54,7 @@ if __name__ == "__main__":
         QLearning: Standard Q-Learning Model
         ActorCritic: Standard Actor-Critic Model
         Relative: Standard Relative Model (Palminteri et al., 2015)
-        wRelative: Standard Weighted-Relative Model [Proposed model] (Williams et al., in prep)
+        wRelative+decay: Standard Weighted-Relative Model [Proposed model] (Williams et al., in prep)
         Hybrid2012+bias: Standard Hybrid 2012 Model (Gold et al., 2012)
         Hybrid2021+bias+decay: Standard Hybrid 2021 Model (Geana et al., 2021)
 
@@ -59,37 +64,21 @@ if __name__ == "__main__":
         +decay: Adds a decay parameter to the model (e.g. QLearning+decay), useable with all models
     '''
 
-    models = ['QLearning',
-              'QLearning+novel',
-              'QLearning+decay',
-              'QLearning+novel+decay',
+    models = ['QLearning', #Standard
+              'QLearning+novel', #Standard + novel
+              'ActorCritic', #Standard
+              'ActorCritic+novel', #Standard + novel
 
-              'ActorCritic',
-              'ActorCritic+novel',
-              'ActorCritic+decay',
-              'ActorCritic+novel+decay',
+              'Relative', #Standard
+              'Relative+novel', #Standard + novel
+              'wRelative+decay', #Standard
+              'wRelative+decay+novel', #Standard + novel
 
-              'Relative',
-              'Relative+novel',
-              'Relative+decay',
-              'Relative+novel+decay',
-
-              'wRelative',
-              'wRelative+novel',
-              'wRelative+decay',
-              'wRelative+novel+decay',
-
-              'Hybrid2012',
-              'Hybrid2012+novel',
-              'Hybrid2012+decay',
-              'Hybrid2012+novel+decay',
-
-              'Hybrid2021',
-              'Hybrid2021+novel',
-              'Hybrid2021+decay',
-              'Hybrid2021+novel+decay',
-              ] 
-
+              'Hybrid2012+bias', #Standard
+              'Hybrid2012+bias+novel', #Standard + novel
+              'Hybrid2021+bias+decay', #Standard
+              'Hybrid2021+bias+decay+novel'] #Standard + novel
+            
     # =========================================== #
     # ================ LOAD DATA ================ #
     # =========================================== #
@@ -103,48 +92,51 @@ if __name__ == "__main__":
     # =========================================== #
 
     #Delete any existing files
-    for f in os.listdir('SOMA_RL/data/fits'):
-        os.remove(os.path.join('SOMA_RL','data','fits',f))
+    for f in os.listdir('SOMA_RL/fits/temp'):
+        os.remove(os.path.join('SOMA_RL','fits','temp',f))
 
     #Run fits
-    loop = tqdm.tqdm(range(len(participant_ids)*len(models))) if not multiprocessing else None
+    print('\n')
+    print(f"Number of participants: {len(participant_ids)}, Number of models: {len(models)}, Number of runs: {number_of_runs}, Total fits: {len(participant_ids)*len(models)*number_of_runs}")
+    loop = tqdm.tqdm(range(len(participant_ids)*len(models)*number_of_runs)) if not multiprocessing else None
     inputs = []
     columns = {}
     for n, participant in enumerate(participant_ids):
         for model_name in models:  
             p_dataloader = copy.copy(dataloader)
             p_dataloader.filter_participant_data(participant)  
-            model = RLModel(model_name)
-            task = AvoidanceLearningTask()
-            pipeline = RLPipeline(model, p_dataloader, task)
-            columns[model_name] = ['participant', 'pain_group', 'fit'] + list(model.get_parameters())
-            if multiprocessing:
-                inputs.append((pipeline, columns[model_name], participant))
-            else:
-                pipeline.run_fit((columns[model_name], participant))
-                loop.update(1)
+            for run in range(number_of_runs):
+                model = RLModel(model_name, random_params=random_params)
+                task = AvoidanceLearningTask()
+                pipeline = RLPipeline(model, p_dataloader, task)
+                columns[model_name] = ['participant', 'pain_group', 'run', 'fit',] + list(model.get_parameters())
+                if multiprocessing:
+                    inputs.append((pipeline, columns[model_name], participant, run))
+                else:
+                    pipeline.run_fit((columns[model_name], participant, run))
+                    loop.update(1)
 
     #Run all models fits in parallel
     if multiprocessing:
         print('\nMultiprocessing initiated...')
-        print(f"Number of participants: {len(participant_ids)}, Number of models: {len(models)}, Total fits: {len(participant_ids)*len(models)}")
 
         pool = mp.Pool(mp.cpu_count())
         pool.map_async(mp_run_fit, inputs)
         pool.close()
 
         #Progress bar checking how many have completed
-        mp_progress(len(inputs))
+        mp_progress(len(inputs), multiply_by=number_of_runs)
         print('\nMultiprocessing complete!')
 
     #Load all data in the fit data
-    files = os.listdir('SOMA_RL/data/fits')
+    files = os.listdir('SOMA_RL/fits/temp')
     fit_data = {model: pd.DataFrame(columns=columns[model]) for model in models}
     for f in files:
         model_name, participant = f.split('_')[:2]
         if model_name in models:
-            participant_data = pd.read_csv(os.path.join('SOMA_RL','data','fits',f), header=None)
+            participant_data = pd.read_csv(os.path.join('SOMA_RL','fits','temp',f), header=None)
             participant_data.columns = columns[model_name]
+            participant_data = participant_data.iloc[[participant_data['fit'].idxmin()]]
             nan_keys = [key for key in participant_data if participant_data[key].isnull().any()]
             for key in nan_keys:
                 participant_data[key] = None
@@ -153,10 +145,14 @@ if __name__ == "__main__":
                 fit_data[model_name] = participant_data
             else:
                 fit_data[model_name] = pd.concat((fit_data[model_name], participant_data), ignore_index=True)
-    
+
+    #Save fit data as a pickle file
+    with open('SOMA_RL/fits/fit_data.pkl', 'wb') as f:
+        pickle.dump(fit_data, f)
+
     #Delete all files
     for f in files:
-        os.remove(os.path.join('SOMA_RL','data','fits',f))
+        os.remove(os.path.join('SOMA_RL','fits','temp',f))
 
     # =========================================== #
     # =============== REPORT FIT ================ #
@@ -188,7 +184,7 @@ if __name__ == "__main__":
         print('==========')
         print(f'AIC: {AIC.round(0)}')
         print(f'BIC: {BIC.round(0)}')
-        for col in fit_data[model_name].columns[2:]:
+        for col in fit_data[model_name].columns[3:]:
             if fit_data[model_name][col][0] is not None:
                 print(f'{col}: {fit_data[model_name][col].mean().round(4)}, {fit_data[model_name][col].std().round(4)}')
         print('==========')
@@ -229,6 +225,7 @@ if __name__ == "__main__":
 
     #Run simulations
     number_of_metrics = len(columns)
+    print(f"\nNumber of participants: {len(participant_ids)}, Number of models: {len(models)}, Total simulations: {len(participant_ids)*len(models)}")
     loop = tqdm.tqdm(range(fit_data[models[0]]['participant'].nunique()*len(models))) if not multiprocessing else None
     inputs = []
     for n, participant in enumerate(participant_ids):
@@ -253,7 +250,6 @@ if __name__ == "__main__":
     #Run all models fits in parallel
     if multiprocessing:
         print('\nMultiprocessing initiated...')
-        print(f"Number of participants: {fit_data[models[0]]['participant'].nunique()}, Number of models: {len(models)}, Total simulations: {fit_data[models[0]]['participant'].nunique()*len(models)}")
 
         pool = mp.Pool(mp.cpu_count())
         pool.map_async(mp_run_simulations, inputs)
@@ -264,7 +260,7 @@ if __name__ == "__main__":
         print('\nMultiprocessing complete!')
 
     #Load all data in the fit data
-    files = os.listdir('SOMA_RL/data/fits')
+    files = os.listdir('SOMA_RL/fits/temp')
     accuracy = {group: {model: pd.DataFrame(columns=accuracy_columns) for model in models} for group in group_ids}
     prediction_errors = {group: {model: pd.DataFrame(columns=pe_columns) for model in models} for group in group_ids}
     values = {group: {model: pd.DataFrame(columns=values_columns) for model in models} for group in group_ids}
@@ -272,7 +268,7 @@ if __name__ == "__main__":
 
     for f in files:
         model_name, group, participant, value_name = f.split('_')[:4]
-        participant_data = pd.read_csv(os.path.join('SOMA_RL','data','fits',f))
+        participant_data = pd.read_csv(os.path.join('SOMA_RL','fits','temp',f))
 
         if value_name == 'accuracy':
             if len(accuracy[group][model_name]) == 0:
@@ -297,7 +293,7 @@ if __name__ == "__main__":
 
     #Delete all files
     for f in files:
-        os.remove(os.path.join('SOMA_RL','data','fits',f))
+        os.remove(os.path.join('SOMA_RL','fits','temp',f))
         
     #Plot simulations 
     for group in accuracy:
