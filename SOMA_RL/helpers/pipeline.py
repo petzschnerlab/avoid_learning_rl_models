@@ -53,7 +53,7 @@ class RLPipeline:
     def run_fit(self, args):
 
         #Extract args
-        columns, participant_id = args
+        columns, participant_id, run = args
         data = self.dataloader.get_data_dict()
         model_name = self.task.rl_model.__class__.__name__
         pain_group = data['learning']['pain_group'].values[0]
@@ -72,11 +72,11 @@ class RLPipeline:
         fit_results, fitted_params = self.fit(data, bounds=self.task.rl_model.bounds)
 
         #Store fit results
-        participant_fitted = [participant_id, pain_group, fit_results.fun]
-        participant_fitted.extend([fitted_params[key] for key in columns[3:]])
+        participant_fitted = [participant_id, pain_group, run, float(fit_results.fun)]
+        participant_fitted.extend([float(fitted_params[key]) for key in columns[4:]])
 
         #Save to csv file
-        with open(f'SOMA_RL/data/fits/{self.task.rl_model.model_name}_{participant_id}_fit_results.csv', 'a') as f:
+        with open(f'SOMA_RL/fits/temp/{self.task.rl_model.model_name}_{participant_id}_fit_results.csv', 'a') as f:
             f.write(','.join([str(x) for x in participant_fitted]) + '\n')
 
     def run_simulations(self, args):
@@ -129,10 +129,10 @@ class RLPipeline:
         choice_rates = pd.DataFrame([model.choice_rate], columns=columns['choice_rate'])
 
         #Save to csv file
-        accuracy.to_csv(f'SOMA_RL/data/fits/{model.model_name}_{group}_{participant_id}_accuracy_sim_results.csv', index=False)
-        prediction_errors.to_csv(f'SOMA_RL/data/fits/{model.model_name}_{group}_{participant_id}_pe_sim_results.csv', index=False)
-        values.to_csv(f'SOMA_RL/data/fits/{model.model_name}_{group}_{participant_id}_values_sim_results.csv', index=False)
-        choice_rates.to_csv(f'SOMA_RL/data/fits/{model.model_name}_{group}_{participant_id}_choice_sim_results.csv', index=False)
+        accuracy.to_csv(f'SOMA_RL/fits/temp/{model.model_name}_{group}_{participant_id}_accuracy_sim_results.csv', index=False)
+        prediction_errors.to_csv(f'SOMA_RL/fits/temp/{model.model_name}_{group}_{participant_id}_pe_sim_results.csv', index=False)
+        values.to_csv(f'SOMA_RL/fits/temp/{model.model_name}_{group}_{participant_id}_values_sim_results.csv', index=False)
+        choice_rates.to_csv(f'SOMA_RL/fits/temp/{model.model_name}_{group}_{participant_id}_choice_sim_results.csv', index=False)
 
 # Functions
 def mp_run_fit(args):
@@ -143,13 +143,13 @@ def mp_run_simulations(args):
     pipeline = args[0]
     pipeline.run_simulations(args[1:])
 
-def mp_progress(num_files, divide_by=1):
+def mp_progress(num_files, divide_by=1, multiply_by=1):
     last_count = 0
     loop = tqdm.tqdm(range(int(num_files/divide_by)))
-    while len(os.listdir('SOMA_RL/data/fits')) < num_files:
-        n_files = np.floor(len(os.listdir('SOMA_RL/data/fits'))/divide_by)
+    while len(os.listdir('SOMA_RL/fits/temp'))*multiply_by < num_files:
+        n_files = np.floor(len(os.listdir('SOMA_RL/fits/temp'))/divide_by)*multiply_by
         if n_files > last_count:
             loop.update(int(n_files-last_count))
             last_count = n_files
         time.sleep(1)
-    loop.update(int(num_files/divide_by-last_count))
+    loop.update(int((num_files/divide_by)-last_count))
