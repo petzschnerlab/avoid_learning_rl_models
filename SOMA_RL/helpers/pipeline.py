@@ -19,7 +19,7 @@ class RLPipeline:
         Dictionary containing task design parameters
     """
 
-    def __init__(self, model, dataloader=None, task=None, number_of_fits=1, fit_transfer_phase=True):
+    def __init__(self, model, dataloader=None, task=None):
 
         #Get parameters
         self.dataloader = dataloader
@@ -32,8 +32,6 @@ class RLPipeline:
             task.task_design = self.task_design
         self.task = task
         self.task.initiate_model(model.get_model())
-        self.task.rl_model.fit_transfer_phase = fit_transfer_phase
-        self.task.rl_model.number_of_fits = number_of_fits
 
     def simulate(self, data):
 

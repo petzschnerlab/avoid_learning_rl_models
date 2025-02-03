@@ -303,58 +303,49 @@ class RLToolbox:
         #Unpack data
         learning_data, transfer_data = args[0]
         learning_states, learning_actions, learning_rewards = learning_data
-
-        if self.transfer_trials > 0:
-            #Reduce the transfer data to the first three presentations of each state_id
-            transfer_data = pd.DataFrame({'state_id': transfer_data[0], 'action': transfer_data[1]})
-            transfer_data = transfer_data.groupby('state_id').head(self.transfer_trials)
-            transfer_data = transfer_data.values.T.tolist()
         transfer_states, transfer_actions = transfer_data
 
         #Initialize values
         log_likelihood = 0
 
         #Learning phase
-        for fit_number in range(self.number_of_fits):
-            for trial, (state_id, action, reward) in enumerate(zip(learning_states, learning_actions, learning_rewards)):
+        for trial, (state_id, action, reward) in enumerate(zip(learning_states, learning_actions, learning_rewards)):
 
+            #Populate state
+            if transform_reward:
+                reward = self.reward_valence(reward)
+
+            state = {'rewards': reward, 
+                    'action': action, 
+                    'state_id': state_id}
+            
+            if context_reward:
+                state['context_reward'] = np.average(reward)
+            
+            #Forward
+            state = self.fit_forward(state)
+
+            #Compute and store the log probability of the observed action
+            log_likelihood -= self.fit_log_likelihood(state[value_type])[action]
+  
+        #Inter-phase processing
+        self.combine_values()
+
+        #Transfer phase
+        if False: #Toggle to switch between methods for testing. Function method is slower than loop, so it's avoided
+            log_likelihood -= self.fit_transfer_forward(transfer_data, value_type, reduced = True)
+        else:
+            for trial, (state_id, action) in enumerate(zip(transfer_states, transfer_actions)):
+                
                 #Populate state
-                if transform_reward:
-                    reward = self.reward_valence(reward)
-
-                state = {'rewards': reward, 
-                        'action': action, 
-                        'state_id': state_id}
+                state = {'action': action, 
+                        'stim_id': [stim for stim in state_id.split(' ')[-1]]}
                 
-                if context_reward:
-                    state['context_reward'] = np.average(reward)
-                
-                #Forward
-                state = self.fit_forward(state)
+                #Forward: TODO: When using functions (e.g., self.compute_PE -> self.update model -> self.get_q_value), it's much slower 
+                state = self.fit_forward(state, phase='transfer')
 
                 #Compute and store the log probability of the observed action
                 log_likelihood -= self.fit_log_likelihood(state[value_type])[action]
-
-            if self.fit_transfer_phase:
-                
-                #Inter-phase processing
-                self.combine_values()
-
-                #Transfer phase
-                if False: #Toggle to switch between methods for testing. Function method is slower than loop, so it's avoided
-                    log_likelihood -= self.fit_transfer_forward(transfer_data, value_type, reduced = True)
-                else:
-                    for trial, (state_id, action) in enumerate(zip(transfer_states, transfer_actions)):
-                        
-                        #Populate state
-                        state = {'action': action, 
-                                'stim_id': [stim for stim in state_id.split(' ')[-1]]}
-                        
-                        #Forward: TODO: When using functions (e.g., self.compute_PE -> self.update model -> self.get_q_value), it's much slower 
-                        state = self.fit_forward(state, phase='transfer')
-
-                        #Compute and store the log probability of the observed action
-                        log_likelihood -= self.fit_log_likelihood(state[value_type])[action]
 
         return log_likelihood
     
