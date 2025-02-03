@@ -17,6 +17,22 @@ class RLToolbox:
         for key in methods:
             setattr(self, key, methods[key])
 
+    def unpack_parameters(self, x):
+        #TODO: Implement this
+        if self.__class__.__name__ == 'QLearning':
+            self.factual_lr, self.counterfactual_lr, self.temperature, *optionals = x
+
+    def unpack_optionals(self, optionals):
+        if self.optional_parameters['bias'] == True and 'valence_factor' in self.parameters:
+            self.valence_factor = optionals[0]
+            optionals = optionals[1:]
+        if self.optional_parameters['novel'] == True and 'novel_value' in self.parameters:
+            self.novel_value = optionals[0]
+            optionals = optionals[1:]
+        if self.optional_parameters['decay'] == True and 'decay_factor' in self.parameters:
+            self.decay_factor = optionals[0]
+            optionals = optionals[1:]
+
     #Extraction functions
     def get_q_value(self, state):
         state['q_values'] = self.q_values[state['state_id']]
@@ -43,15 +59,25 @@ class RLToolbox:
         return state
 
     def get_final_q_values(self, state):
-        state['q_values'] = [self.final_q_values[stim].values for stim in state['stim_id']]
+        if self.optional_parameters['decay']:
+            state['q_values'] = self.get_decayed_q_values(state)
+        else:
+            state['q_values'] = [self.final_q_values[stim].values[0] for stim in state['stim_id']]
         return state
 
     def get_final_c_values(self, state):
-        state['c_values'] = [self.final_c_values[stim].values for stim in state['stim_id']]
+        state['c_values'] = [self.final_c_values[stim].values[0] for stim in state['stim_id']]
         return state
 
     def get_context_value(self, state):
         state['context_value'] = self.context_values[state['state_id']]
+        return state
+    
+    def get_final_w_values(self, state):
+        if self.optional_parameters['decay']:
+            state['w_values'] = self.get_decayed_w_values(state)
+        else:
+            state['w_values'] = [self.final_w_values[stim].values[0] for stim in state['stim_id']]
         return state
     
     def get_decayed_q_values(self, state):
@@ -59,20 +85,16 @@ class RLToolbox:
         q_initial = [self.initial_q_values[stim] for stim in state['stim_id']]
         q_final_decayed = [q*(1-self.decay_factor) for q in q_final]
         q_initial_decayed = [q*(self.decay_factor) for q in q_initial]
-        state['q_values'] = [q_final_decayed[i].values[0] + q_initial_decayed[i].values[0] for i in range(len(q_final))]
-        return state
-    
-    def get_final_w_values(self, state):
-        state['w_values'] = [self.final_w_values[stim] for stim in state['stim_id']]
-        return state
+        q_values = [q_final_decayed[i].values[0] + q_initial_decayed[i].values[0] for i in range(len(q_final))]
+        return q_values
     
     def get_decayed_w_values(self, state):
         w_final = [self.final_w_values[stim] for stim in state['stim_id']]
         w_initial = [self.initial_w_values[stim] for stim in state['stim_id']]
         w_final_decayed = [w*(1-self.decay_factor) for w in w_final]
         w_initial_decayed = [w*(self.decay_factor) for w in w_initial]
-        state['w_values'] = [w_final_decayed[i].values[0] + w_initial_decayed[i].values[0] for i in range(len(w_final))]
-        return state
+        w_values = [w_final_decayed[i].values[0] + w_initial_decayed[i].values[0] for i in range(len(w_final))]
+        return w_values
 
     #Update functions
     def update_prediction_errors(self, state):
@@ -190,15 +212,27 @@ class RLToolbox:
         if self.__class__.__name__ == 'ActorCritic':
             self.combine_v_values()
             self.combine_w_values()
+            if self.novel_value is not None:
+                self.final_v_values['N'] = self.novel_value
+                self.final_w_values['N'] = self.novel_value
         elif 'Hybrid' in self.__class__.__name__:
             self.combine_q_values()
             self.combine_v_values()
             self.combine_w_values()
+            if self.novel_value is not None:
+                self.final_q_values['N'] = self.novel_value
+                self.final_v_values['N'] = self.novel_value
+                self.final_w_values['N'] = self.novel_value
         elif 'QRelative' == self.__class__.__name__:
             self.combine_q_values()
             self.combine_c_values()
+            if self.novel_value is not None:
+                self.final_q_values['N'] = self.novel_value
+                self.final_c_values['N'] = self.novel_value
         else:
             self.combine_q_values()
+            if self.novel_value is not None:
+                self.final_q_values['N'] = self.novel_value
 
     def fit_log_likelihood(self, values):
 
@@ -217,8 +251,8 @@ class RLToolbox:
         probability_values = (transformed_values/np.sum(transformed_values))
 
         if self.__class__.__name__ == 'Hybrid2021':
-            uniform_dist = np.ones(len(probability_values))/len(probability_values)
-            probability_values = (((1-self.noise_factor)*probability_values) + (self.noise_factor*uniform_dist))
+            uniform_dist = np.ones((len(probability_values)))/len(probability_values)
+            probability_values = (((1-self.noise_factor)*probability_values).T + (self.noise_factor*uniform_dist)).T
 
         return -np.log(probability_values)
 
@@ -242,12 +276,15 @@ class RLToolbox:
         Fit the model to the data
         '''
 
+        #Extract the values from dict
+        free_params = list(self.parameters.values())
+        param_bounds = list(bounds.values())
+
         #Fit the model
-        free_params = [self.parameters[key] for key in self.parameters]
         fit_results = scipy.optimize.minimize(self.fit_func, 
                                               free_params, 
                                               args=data,
-                                              bounds=bounds, 
+                                              bounds=param_bounds, 
                                               method='L-BFGS-B')
         
         #Unpack the fitted params
@@ -462,16 +499,20 @@ class QLearning(RLToolbox):
         Temperature parameter for softmax action selection
     """
 
-    def __init__(self, factual_lr, counterfactual_lr, temperature):
+    def __init__(self, factual_lr, counterfactual_lr, temperature, novel_value, decay_factor):
         super().__init__()
 
         #Set parameters
         self.factual_lr = factual_lr
         self.counterfactual_lr = counterfactual_lr
         self.temperature = temperature
+        self.novel_value = novel_value
+        self.decay_factor = decay_factor
         self.parameters = {'factual_lr': self.factual_lr, 
                            'counterfactual_lr': self.counterfactual_lr, 
-                           'temperature': self.temperature}
+                           'temperature': self.temperature,
+                           'novel_value': self.novel_value,
+                           'decay_factor': self.decay_factor}
     
     #RL functions
     def get_reward(self, state):
@@ -544,7 +585,8 @@ class QLearning(RLToolbox):
         self.reset_datalists()
         
         #Unpack free parameters
-        self.factual_lr, self.counterfactual_lr, self.temperature = x
+        self.factual_lr, self.counterfactual_lr, self.temperature, *optionals = x
+        self.unpack_optionals(optionals)
 
         #Return the negative log likelihood of all observed actions
         return -self.fit_task(args, 'q_values')
@@ -576,7 +618,7 @@ class ActorCritic(RLToolbox):
         Temperature parameter for softmax action selection
     """
 
-    def __init__(self, factual_actor_lr, counterfactual_actor_lr, critic_lr, temperature, valence_factor):
+    def __init__(self, factual_actor_lr, counterfactual_actor_lr, critic_lr, temperature, valence_factor, novel_value, decay_factor):
         super().__init__()
 
         #Set parameters
@@ -585,11 +627,16 @@ class ActorCritic(RLToolbox):
         self.critic_lr = critic_lr
         self.temperature = temperature
         self.valence_factor = valence_factor
+        self.novel_value = novel_value
+        self.decay_factor = decay_factor
+
         self.parameters = {'factual_actor_lr': self.factual_actor_lr, 
                            'counterfactual_actor_lr': self.counterfactual_actor_lr, 
                            'critic_lr': self.critic_lr,
                            'temperature': self.temperature,
-                           'valence_factor': self.valence_factor}
+                           'valence_factor': self.valence_factor,
+                           'novel_value': self.novel_value,
+                           'decay_factor': self.decay_factor}
         
     #RL functions
     def get_reward(self, state):
@@ -667,10 +714,11 @@ class ActorCritic(RLToolbox):
         self.reset_datalists()
             
         #Unpack free parameters
-        self.factual_actor_lr, self.counterfactual_actor_lr, self.critic_lr, self.temperature, self.valence_factor = x 
+        self.factual_actor_lr, self.counterfactual_actor_lr, self.critic_lr, self.temperature, *optionals = x
+        self.unpack_optionals(optionals)
 
         #Return the negative log likelihood of all observed actions
-        return -self.fit_task(args, 'w_values', transform_reward=True)
+        return -self.fit_task(args, 'w_values', transform_reward=self.optional_parameters['bias'])
 
     def sim_func(self, *args):
         
@@ -678,7 +726,7 @@ class ActorCritic(RLToolbox):
         Simulate the model
         '''
 
-        return self.sim_task(args, transform_reward=True)
+        return self.sim_task(args, transform_reward=self.optional_parameters['bias'])
     
 class Relative(RLToolbox):
 
@@ -695,7 +743,7 @@ class Relative(RLToolbox):
         Temperature parameter for softmax action selection
     """
 
-    def __init__(self, factual_lr, counterfactual_lr, contextual_lr, temperature):
+    def __init__(self, factual_lr, counterfactual_lr, contextual_lr, temperature, novel_value, decay_factor):
         super().__init__()
 
         #Set parameters
@@ -703,11 +751,15 @@ class Relative(RLToolbox):
         self.counterfactual_lr = counterfactual_lr
         self.contextual_lr = contextual_lr
         self.temperature = temperature
+        self.novel_value = novel_value
+        self.decay_factor = decay_factor
         self.parameters = {'factual_lr': self.factual_lr, 
                            'counterfactual_lr': self.counterfactual_lr, 
                            'contextual_lr': self.contextual_lr,
-                           'temperature': self.temperature}
-                
+                           'temperature': self.temperature,
+                           'novel_value': self.novel_value,
+                           'decay_factor': self.decay_factor}
+
     #RL functions
     def get_reward(self, state):
         random_numbers = [rnd.random() for i in range(len(state['stim_id']))]
@@ -785,7 +837,8 @@ class Relative(RLToolbox):
         self.reset_datalists()
 
         #Unpack free parameters
-        self.factual_lr, self.counterfactual_lr, self.contextual_lr, self.temperature = x
+        self.factual_lr, self.counterfactual_lr, self.contextual_lr, self.temperature, *optionals = x
+        self.unpack_optionals(optionals)
 
         #Return the negative log likelihood of all observed actions
         return -self.fit_task(args, 'q_values', context_reward=True)
@@ -814,7 +867,7 @@ class Hybrid2012(RLToolbox):
     """
 
     def __init__(self, factual_lr, counterfactual_lr, factual_actor_lr, counterfactual_actor_lr, 
-                 critic_lr, temperature, mixing_factor, valence_factor):
+                 critic_lr, temperature, mixing_factor, valence_factor, novel_value, decay_factor):
         super().__init__()
 
         #Set parameters
@@ -826,14 +879,19 @@ class Hybrid2012(RLToolbox):
         self.temperature = temperature
         self.mixing_factor = mixing_factor
         self.valence_factor = valence_factor
+        self.novel_value = novel_value
+        self.decay_factor = decay_factor
+
         self.parameters = {'factual_lr': self.factual_lr, 
                            'counterfactual_lr': self.counterfactual_lr, 
-                            'factual_actor_lr': self.factual_actor_lr,
-                            'counterfactual_actor_lr': self.counterfactual_actor_lr,
-                            'critic_lr': self.critic_lr,
+                           'factual_actor_lr': self.factual_actor_lr,
+                           'counterfactual_actor_lr': self.counterfactual_actor_lr,
+                           'critic_lr': self.critic_lr,
                            'temperature': self.temperature,
                            'mixing_factor': self.mixing_factor,
-                           'valence_factor': self.valence_factor}
+                           'valence_factor': self.valence_factor,
+                           'novel_value': self.novel_value,
+                           'decay_factor': self.decay_factor}
 
     #RL functions    
     def get_reward(self, state):
@@ -926,11 +984,11 @@ class Hybrid2012(RLToolbox):
         self.reset_datalists()
 
         #Unpack parameters
-        self.factual_lr, self.counterfactual_lr, self.factual_actor_lr, self.counterfactual_actor_lr, self.critic_lr, self.temperature, self.mixing_factor, self.valence_factor = x
+        self.factual_lr, self.counterfactual_lr, self.factual_actor_lr, self.counterfactual_actor_lr, self.critic_lr, self.temperature, self.mixing_factor, *optionals = x
+        self.unpack_optionals(optionals)
 
         #Return the negative log likelihood of all observed actions
-        return -self.fit_task(args, 'h_values', transform_reward=True)
-
+        return -self.fit_task(args, 'h_values', transform_reward=self.optional_parameters['bias'])
 
     def sim_func(self, *args):
         
@@ -938,7 +996,7 @@ class Hybrid2012(RLToolbox):
         Simulate the model
         '''
 
-        return self.sim_task(args, transform_reward=True)
+        return self.sim_task(args, transform_reward=self.optional_parameters['bias'])
 
 class Hybrid2021(RLToolbox):
 
@@ -957,7 +1015,7 @@ class Hybrid2021(RLToolbox):
     """
 
     def __init__(self, factual_lr, counterfactual_lr, factual_actor_lr, counterfactual_actor_lr, 
-                 critic_lr, temperature, mixing_factor, valence_factor, noise_factor, decay_factor):
+                 critic_lr, temperature, mixing_factor, valence_factor, noise_factor, novel_value, decay_factor):
         super().__init__()
 
         #Set parameters
@@ -968,18 +1026,21 @@ class Hybrid2021(RLToolbox):
         self.critic_lr = critic_lr
         self.temperature = temperature
         self.mixing_factor = mixing_factor
-        self.valence_factor = valence_factor
         self.noise_factor = noise_factor
+        self.valence_factor = valence_factor
+        self.novel_value = novel_value
         self.decay_factor = decay_factor
+
         self.parameters = {'factual_lr': self.factual_lr, 
                            'counterfactual_lr': self.counterfactual_lr, 
-                            'factual_actor_lr': self.factual_actor_lr,
-                            'counterfactual_actor_lr': self.counterfactual_actor_lr,
-                            'critic_lr': self.critic_lr,
+                           'factual_actor_lr': self.factual_actor_lr,
+                           'counterfactual_actor_lr': self.counterfactual_actor_lr,
+                           'critic_lr': self.critic_lr,
                            'temperature': self.temperature,
                            'mixing_factor': self.mixing_factor,
-                           'valence_factor': self.valence_factor,
                            'noise_factor': self.noise_factor,
+                           'valence_factor': self.valence_factor,
+                           'novel_value': self.novel_value,
                            'decay_factor': self.decay_factor}
 
     #RL functions    
@@ -1024,8 +1085,8 @@ class Hybrid2021(RLToolbox):
             state = self.compute_prediction_error(state)
             self.update_model(state)
         else:
-            state = self.get_decayed_q_values(state)
-            state = self.get_decayed_w_values(state)
+            state = self.get_final_q_values(state)
+            state = self.get_final_w_values(state)
             state = self.get_h_values(state)
             state = self.select_action(state)
         self.update_task_data(state, phase=phase)
@@ -1039,8 +1100,8 @@ class Hybrid2021(RLToolbox):
             state = self.compute_prediction_error(state)
             self.update_model(state)
         else:
-            state = self.get_decayed_q_values(state)
-            state = self.get_decayed_w_values(state)
+            state = self.get_final_q_values(state)
+            state = self.get_final_w_values(state)
             state = self.get_h_values(state)
             state = self.select_action(state)
 
@@ -1055,8 +1116,8 @@ class Hybrid2021(RLToolbox):
             state = self.compute_prediction_error(state)
             self.update_model(state)
         else:
-            state = self.get_decayed_q_values(state)
-            state = self.get_decayed_w_values(state)
+            state = self.get_final_q_values(state)
+            state = self.get_final_w_values(state)
             state = self.get_h_values(state)
             state = self.select_action(state)
         self.update_task_data(state, phase=phase)
@@ -1074,11 +1135,11 @@ class Hybrid2021(RLToolbox):
         self.reset_datalists()
 
         #Unpack parameters
-        self.factual_lr, self.counterfactual_lr, self.factual_actor_lr, self.counterfactual_actor_lr, self.critic_lr, self.temperature, self.mixing_factor, self.valence_factor, self.noise_factor, self.decay_factor = x
-        
+        self.factual_lr, self.counterfactual_lr, self.factual_actor_lr, self.counterfactual_actor_lr, self.critic_lr, self.temperature, self.mixing_factor, self.noise_factor, *optionals = x
+        self.unpack_optionals(optionals)
+
         #Return the negative log likelihood of all observed actions
-        return -self.fit_task(args, 'h_values', transform_reward=True)
-    
+        return -self.fit_task(args, 'h_values', transform_reward=self.optional_parameters['bias'])
 
     def sim_func(self, *args):
         
@@ -1086,7 +1147,7 @@ class Hybrid2021(RLToolbox):
         Simulate the model
         '''
 
-        return self.sim_task(args, transform_reward=True)
+        return self.sim_task(args, transform_reward=self.optional_parameters['bias'])
 
 class wRelative(RLToolbox):
 
@@ -1103,7 +1164,7 @@ class wRelative(RLToolbox):
         Temperature parameter for softmax action selection
     """
 
-    def __init__(self, factual_lr, counterfactual_lr, contextual_lr, temperature, mixing_factor):
+    def __init__(self, factual_lr, counterfactual_lr, contextual_lr, temperature, mixing_factor, valence_factor, novel_value, decay_factor):
         super().__init__()
 
         #Set parameters
@@ -1112,11 +1173,18 @@ class wRelative(RLToolbox):
         self.contextual_lr = contextual_lr
         self.temperature = temperature
         self.mixing_factor = mixing_factor
+        self.valence_factor = valence_factor
+        self.novel_value = novel_value
+        self.decay_factor = decay_factor
+
         self.parameters = {'factual_lr': self.factual_lr, 
                            'counterfactual_lr': self.counterfactual_lr, 
                            'contextual_lr': self.contextual_lr,
                            'temperature': self.temperature,
-                           'mixing_factor': self.mixing_factor}
+                           'mixing_factor': self.mixing_factor,
+                           'valence_factor': self.valence_factor,
+                           'novel_value': self.novel_value,
+                           'decay_factor': self.decay_factor}
                 
     #RL functions
     def get_reward(self, state):
@@ -1195,11 +1263,11 @@ class wRelative(RLToolbox):
         self.reset_datalists()
 
         #Unpack free parameters
-        self.factual_lr, self.counterfactual_lr, self.contextual_lr, self.temperature, self.mixing_factor = x
+        self.factual_lr, self.counterfactual_lr, self.contextual_lr, self.temperature, self.mixing_factor, *optionals = x
+        self.unpack_optionals(optionals)
 
         #Return the negative log likelihood of all observed actions
-        return -self.fit_task(args, 'q_values', context_reward=True)
-    
+        return -self.fit_task(args, 'q_values', context_reward=True, transform_reward=self.optional_parameters['bias'])
 
     def sim_func(self, *args):
         
@@ -1207,7 +1275,7 @@ class wRelative(RLToolbox):
         Simulate the model
         '''
 
-        return self.sim_task(args, context_reward=True)
+        return self.sim_task(args, context_reward=True, transform_reward=self.optional_parameters['bias'])
     
 class QRelative(RLToolbox):
 
@@ -1227,7 +1295,7 @@ class QRelative(RLToolbox):
         Mixing factor for the Q-values
     """
 
-    def __init__(self, factual_lr, counterfactual_lr, contextual_lr, temperature, mixing_factor):
+    def __init__(self, factual_lr, counterfactual_lr, contextual_lr, temperature, mixing_factor, valence_reward, novel_value, decay_factor):
         super().__init__()
 
         #Set parameters
@@ -1236,11 +1304,18 @@ class QRelative(RLToolbox):
         self.contextual_lr =  contextual_lr
         self.temperature = temperature  
         self.mixing_factor = mixing_factor
+        self.valence_reward = valence_reward
+        self.novel_value = novel_value
+        self.decay_factor = decay_factor
+
         self.parameters = {'factual_lr': self.factual_lr, 
                            'counterfactual_lr': self.counterfactual_lr, 
                            'contextual_lr': self.contextual_lr,
                            'temperature': self.temperature,
-                           'mixing_factor': self.mixing_factor}
+                           'mixing_factor': self.mixing_factor,
+                           'valence_reward': self.valence_reward,
+                           'novel_value': self.novel_value,
+                           'decay_factor': self.decay_factor}
     
     #RL functions    
     def get_reward(self, state):
@@ -1332,11 +1407,11 @@ class QRelative(RLToolbox):
         self.reset_datalists()
 
         #Unpack free parameters
-        self.factual_lr, self.counterfactual_lr, self.contextual_lr, self.temperature, self.mixing_factor = x
+        self.factual_lr, self.counterfactual_lr, self.contextual_lr, self.temperature, self.mixing_factor, *optionals = x
+        self.unpack_optionals(optionals)
 
         #Return the negative log likelihood of all observed actions
-        return -self.fit_task(args, 'm_values', context_reward=True)
-
+        return -self.fit_task(args, 'm_values', context_reward=True, transform_reward=self.optional_parameters['bias'])
 
     def sim_func(self, *args):
         
@@ -1344,12 +1419,42 @@ class QRelative(RLToolbox):
         Simulate the model
         '''
 
-        return self.sim_task(args, context_reward=True)
+        return self.sim_task(args, context_reward=True, transform_reward=self.optional_parameters['bias'])
     
 class RLModel:
 
     def __init__(self, model, fit_data=None):
-        self.model = self.define_model(model, fit_data)
+        
+        model_name = model
+        fit_bias = True if '+bias' in model else False
+        fit_novel = True if '+novel' in model else False
+        fit_decay = True if '+decay' in model else False
+
+        model = model.replace('+bias', '')
+        model = model.replace('+novel', '')
+        model = model.replace('+decay', '')
+
+        self.model = self.define_model(model, fit_data, fit_bias, fit_novel, fit_decay)
+        self.model.model_name = model_name
+        self.model.optional_parameters = {'bias': fit_bias, 'novel': fit_novel, 'decay': fit_decay}
+
+        #Remove any optional parameters that are not being used
+        linked_keys = {'bias': 'valence_factor', 'novel': 'novel_value', 'decay': 'decay_factor'}
+        for opt_key, param_key in linked_keys.items():
+            if not self.model.optional_parameters.get(opt_key, True) and param_key in self.model.parameters:
+                self.model.parameters.pop(param_key)
+                self.model.bounds.pop(param_key)
+
+        #Reorder optional parameters so that they are always in same order
+        parameter_keys = [key for key in self.model.parameters.keys() if key not in linked_keys.values()]
+        if self.model.optional_parameters['bias']:
+            parameter_keys.append('valence_factor')
+        if self.model.optional_parameters['novel']:
+            parameter_keys.append('novel_value')
+        if self.model.optional_parameters['decay']:
+            parameter_keys.append('decay_factor')
+        self.model.parameters = {key: self.model.parameters[key] for key in parameter_keys}
+        self.model.bounds = {key: self.model.bounds[key] for key in parameter_keys}
 
     def get_model(self):
         return self.model
@@ -1357,46 +1462,73 @@ class RLModel:
     def get_parameters(self):
         return self.model.parameters.keys()
     
-    def define_model(self, model, fit_data=None):
+    def define_model(self, model, fit_data=None, fit_bias=False, fit_novel=False, fit_decay=False):
 
         if model == 'QLearning':
             factual_lr = 0.1 if fit_data is None else fit_data['factual_lr'].values[0]
             counterfactual_lr = 0.5 if fit_data is None else fit_data['counterfactual_lr'].values[0]
             temperature = 0.1 if fit_data is None else fit_data['temperature'].values[0]
+            novel_value = 0 if not fit_novel or fit_data is None else fit_data['novel_value'].values[0]
+            decay_factor = 0 if not fit_decay or fit_data is None else fit_data['decay_factor'].values[0]
 
             model = QLearning(factual_lr=factual_lr, 
                             counterfactual_lr=counterfactual_lr, 
-                            temperature=temperature)
+                            temperature=temperature,
+                            novel_value=novel_value,
+                            decay_factor=decay_factor)
 
-            model.bounds = [(0.01, .99), (0.01, .99), (0.01, 10)]
-
+            model.bounds = {'factual_lr': (0.01, .99), 
+                            'counterfactual_lr': (0.01, .99), 
+                            'temperature': (0.01, 10), 
+                            'novel_value': (-1, 1),
+                            'decay_factor': (0, 1)}
+            
         elif model == 'ActorCritic':
             factual_actor_lr = 0.1 if fit_data is None else fit_data['factual_actor_lr'].values[0]
             counterfactual_actor_lr = 0.05 if fit_data is None else fit_data['counterfactual_actor_lr'].values[0]
             critic_lr = 0.1 if fit_data is None else fit_data['critic_lr'].values[0]
             temperature = 0.1 if fit_data is None else fit_data['temperature'].values[0]
-            valence_factor = 0.5 if fit_data is None else fit_data['valence_factor'].values[0]
+            valence_factor = 0.5 if not fit_bias or fit_data is None else fit_data['valence_factor'].values[0]
+            novel_value = 0 if not fit_novel or fit_data is None else fit_data['novel_value'].values[0]
+            decay_factor = 0 if not fit_decay or fit_data is None else fit_data['decay_factor'].values[0]
             
             model = ActorCritic(factual_actor_lr=factual_actor_lr,
                                 counterfactual_actor_lr=counterfactual_actor_lr,
                                 critic_lr=critic_lr,
                                 temperature=temperature,
-                                valence_factor=valence_factor)
+                                valence_factor=valence_factor,
+                                novel_value=novel_value,
+                                decay_factor=decay_factor)
             
-            model.bounds = [(0.01, .99), (0.01, .99), (0.01,.99), (0.01, 10), (-1, 1)]
+            model.bounds = {'factual_actor_lr': (0.01, .99),
+                            'counterfactual_actor_lr': (0.01, .99),
+                            'critic_lr': (0.01, .99),
+                            'temperature': (0.01, 10),
+                            'valence_factor': (-1, 1),
+                            'novel_value': (-1, 1),
+                            'decay_factor': (0, 1)}
 
         elif model == 'Relative':
             factual_lr = 0.1 if fit_data is None else fit_data['factual_lr'].values[0]
             counterfactual_lr = 0.05 if fit_data is None else fit_data['counterfactual_lr'].values[0]
             contextual_lr = 0.1 if fit_data is None else fit_data['contextual_lr'].values[0]
             temperature = 0.1 if fit_data is None else fit_data['temperature'].values[0]
+            novel_value = 0 if not fit_novel or fit_data is None else fit_data['novel_value'].values[0]
+            decay_factor = 0 if not fit_decay or fit_data is None else fit_data['decay_factor'].values[0]
 
             model = Relative(factual_lr=factual_lr,
                             counterfactual_lr=counterfactual_lr,
                             contextual_lr=contextual_lr,
-                            temperature=temperature)
+                            temperature=temperature,
+                            novel_value=novel_value,
+                            decay_factor=decay_factor)
             
-            model.bounds = [(0.01, .99), (0.01, .99), (0.01,.99), (0.01, 10)]
+            model.bounds = {'factual_lr': (0.01, .99),
+                            'counterfactual_lr': (0.01, .99),
+                            'contextual_lr': (0.01, .99),
+                            'temperature': (0.01, 10),
+                            'novel_value': (-1, 1),
+                            'decay_factor': (0, 1)}
 
         elif model == 'Hybrid2012':
             factual_lr = 0.1 if fit_data is None else fit_data['factual_lr'].values[0]
@@ -1406,7 +1538,9 @@ class RLModel:
             critic_lr = 0.1 if fit_data is None else fit_data['critic_lr'].values[0]
             temperature = 0.1 if fit_data is None else fit_data['temperature'].values[0]
             mixing_factor = 0.5 if fit_data is None else fit_data['mixing_factor'].values[0]
-            valence_factor = 0.5 if fit_data is None else fit_data['valence_factor'].values[0]
+            valence_factor = 0.5 if not fit_bias or fit_data is None else fit_data['valence_factor'].values[0]
+            novel_value = 0 if not fit_novel or fit_data is None else fit_data['novel_value'].values[0]
+            decay_factor = 0 if not fit_decay or fit_data is None else fit_data['decay_factor'].values[0]
 
             model = Hybrid2012(factual_lr=factual_lr,
                         counterfactual_lr=counterfactual_lr,
@@ -1415,9 +1549,20 @@ class RLModel:
                         critic_lr=critic_lr,
                         temperature=temperature,
                         mixing_factor=mixing_factor,
-                        valence_factor=valence_factor)
+                        valence_factor=valence_factor,
+                        novel_value=novel_value,
+                        decay_factor=decay_factor)
         
-            model.bounds = [(0.01, .99), (0.01, .99), (0.01, .99), (0.01, .99), (0.01, .99), (0.01, 10), (0, 1), (-1, 1)]
+            model.bounds = {'factual_lr': (0.01, .99),
+                            'counterfactual_lr': (0.01, .99),
+                            'factual_actor_lr': (0.01, .99),
+                            'counterfactual_actor_lr': (0.01, .99),
+                            'critic_lr': (0.01, .99),
+                            'temperature': (0.01, 10),
+                            'mixing_factor': (0, 1),
+                            'valence_factor': (-1, 1),
+                            'novel_value': (-1, 1),
+                            'decay_factor': (0, 1)}
 
         elif model == 'Hybrid2021':
             factual_lr = 0.1 if fit_data is None else fit_data['factual_lr'].values[0]
@@ -1427,9 +1572,10 @@ class RLModel:
             critic_lr = 0.1 if fit_data is None else fit_data['critic_lr'].values[0]
             temperature = 0.1 if fit_data is None else fit_data['temperature'].values[0]
             mixing_factor = 0.5 if fit_data is None else fit_data['mixing_factor'].values[0]
-            valence_factor = 0.5 if fit_data is None else fit_data['valence_factor'].values[0]
             noise_factor = 0.1 if fit_data is None else fit_data['noise_factor'].values[0]
-            decay_factor = 0.1 if fit_data is None else fit_data['decay_factor'].values[0]
+            valence_factor = 0.5 if not fit_bias or fit_data is None else fit_data['valence_factor'].values[0]
+            novel_value = 0 if not fit_novel or fit_data is None else fit_data['novel_value'].values[0]
+            decay_factor = 0 if not fit_decay or fit_data is None else fit_data['decay_factor'].values[0]
 
             model = Hybrid2021(factual_lr=factual_lr,
                         counterfactual_lr=counterfactual_lr,
@@ -1438,11 +1584,22 @@ class RLModel:
                         critic_lr=critic_lr,
                         temperature=temperature,
                         mixing_factor=mixing_factor,
-                        valence_factor=valence_factor,
                         noise_factor=noise_factor,
+                        valence_factor=valence_factor,
+                        novel_value=novel_value,
                         decay_factor=decay_factor)
             
-            model.bounds = [(0.01, .99), (0.01, .99), (0.01, .99), (0.01, .99), (0.01, .99), (0.01, 10), (0, 1), (-1, 1), (0, 1), (0, 1)]
+            model.bounds = {'factual_lr': (0.01, .99),
+                            'counterfactual_lr': (0.01, .99),
+                            'factual_actor_lr': (0.01, .99),
+                            'counterfactual_actor_lr': (0.01, .99),
+                            'critic_lr': (0.01, .99),
+                            'temperature': (0.01, 10),
+                            'mixing_factor': (0, 1),
+                            'noise_factor': (0, 1),
+                            'valence_factor': (-1, 1),
+                            'novel_value': (-1, 1),
+                            'decay_factor': (0, 1)}
             
         elif model == 'QRelative':
             factual_lr = 0.1 if fit_data is None else fit_data['factual_lr'].values[0]
@@ -1450,31 +1607,57 @@ class RLModel:
             contextual_lr = 0.1 if fit_data is None else fit_data['contextual_lr'].values[0]
             temperature = 0.1 if fit_data is None else fit_data['temperature'].values[0]
             mixing_factor = 0.5 if fit_data is None else fit_data['mixing_factor'].values[0]
+            valence_factor = 0.5 if not fit_bias or fit_data is None else fit_data['valence_factor'].values[0]
+            novel_value = 0 if not fit_novel or fit_data is None else fit_data['novel_value'].values[0]
+            decay_factor = 0 if not fit_decay or fit_data is None else fit_data['decay_factor'].values[0]
 
             model = QRelative(factual_lr=factual_lr,
                             counterfactual_lr=counterfactual_lr,
                             contextual_lr=contextual_lr,
                             temperature=temperature,
-                            mixing_factor=mixing_factor)
+                            mixing_factor=mixing_factor,
+                            valence_reward=valence_factor,
+                            novel_value=novel_value,
+                            decay_factor=decay_factor)
             
-            model.bounds = [(0.01, .99), (0.01, .99), (0.01, .99), (0.01, 10), (0, 1)]
-        
+            model.bounds = {'factual_lr': (0.01, .99),
+                            'counterfactual_lr': (0.01, .99),
+                            'contextual_lr': (0.01, .99),
+                            'temperature': (0.01, 10),
+                            'mixing_factor': (0, 1),
+                            'valence_reward': (-1, 1),
+                            'novel_value': (-1, 1),
+                            'decay_factor': (0, 1)}
+
         elif model == 'wRelative':
             factual_lr = 0.1 if fit_data is None else fit_data['factual_lr'].values[0]
             counterfactual_lr = 0.05 if fit_data is None else fit_data['counterfactual_lr'].values[0]
             contextual_lr = 0.1 if fit_data is None else fit_data['contextual_lr'].values[0]
             temperature = 0.1 if fit_data is None else fit_data['temperature'].values[0]
             mixing_factor = 0.5 if fit_data is None else fit_data['mixing_factor'].values[0]
-
+            valence_factor = 0.5 if not fit_bias or fit_data is None else fit_data['valence_factor'].values[0]
+            novel_value = 0 if not fit_novel or fit_data is None else fit_data['novel_value'].values[0]
+            decay_factor = 0 if not fit_decay or fit_data is None else fit_data['decay_factor'].values[0]
+            
             model = wRelative(factual_lr=factual_lr,
                             counterfactual_lr=counterfactual_lr,
                             contextual_lr=contextual_lr,
                             temperature=temperature,
-                            mixing_factor=mixing_factor)
+                            mixing_factor=mixing_factor,
+                            valence_factor=valence_factor,
+                            novel_value=novel_value,
+                            decay_factor=decay_factor)
             
-            model.bounds = [(0.01, .99), (0.01, .99), (0.01, .99), (0.01, 10), (-1, 1)]
+            model.bounds = {'factual_lr': (0.01, .99),
+                            'counterfactual_lr': (0.01, .99),
+                            'contextual_lr': (0.01, .99),
+                            'temperature': (0.01, 10),
+                            'mixing_factor': (0, 1),
+                            'valence_factor': (-1, 1),
+                            'novel_value': (-1, 1),
+                            'decay_factor': (0, 1)}
             
         else:
             raise ValueError('Model not recognized.')
-        
+                
         return model

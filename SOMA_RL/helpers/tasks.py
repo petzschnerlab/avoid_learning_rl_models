@@ -39,6 +39,9 @@ class AvoidanceLearningTask:
         self.rl_model.task_learning_data = pd.DataFrame(np.zeros((learning_dimensions[0]*len(states), len(self.task_learning_data_columns))), columns=self.task_learning_data_columns)
         self.rl_model.task_transfer_data = pd.DataFrame(np.zeros((transfer_dimensions[0], len(self.task_transfer_data_columns))), columns=self.task_transfer_data_columns)
 
+        self.rl_model.initial_q_values = pd.DataFrame([self.rl_model.q_values[self.rl_model.states[0]][0]]*9).T
+        self.rl_model.initial_q_values.columns = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'N']
+        
         if 'Relative' in self.rl_model.__class__.__name__:
             self.rl_model.context_values = {state: [0] for state in states}
             self.rl_model.context_prediction_errors = {state: [0] for state in states}
@@ -47,6 +50,10 @@ class AvoidanceLearningTask:
             self.rl_model.w_values = {state: [0.01]*learning_dimensions[1] for state in states}
             self.rl_model.v_values = {state: [0] for state in states}
             delattr(self.rl_model, 'q_values')
+            delattr(self.rl_model, 'initial_q_values')
+
+            self.rl_model.initial_w_values = pd.DataFrame([self.rl_model.w_values[self.rl_model.states[0]][0]]*9).T
+            self.rl_model.initial_w_values.columns = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'N']
         
         if 'Hybrid' in self.rl_model.__class__.__name__:
             self.rl_model.w_values = {state: [0.01]*learning_dimensions[1] for state in states}
@@ -56,10 +63,7 @@ class AvoidanceLearningTask:
             self.rl_model.v_prediction_errors = {state: [0]*learning_dimensions[1] for state in states}
             delattr(self.rl_model, 'prediction_errors')
 
-            self.rl_model.initial_q_values = pd.DataFrame([self.rl_model.q_values[self.rl_model.states[0]][0]]*9).T
-            self.rl_model.initial_q_values.columns = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'N']
-
-            self.rl_model.initial_w_values = pd.DataFrame([self.rl_model.q_values[self.rl_model.states[0]][0]]*9).T
+            self.rl_model.initial_w_values = pd.DataFrame([self.rl_model.w_values[self.rl_model.states[0]][0]]*9).T
             self.rl_model.initial_w_values.columns = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'N']
 
         if self.rl_model.__class__.__name__ == 'QRelative':

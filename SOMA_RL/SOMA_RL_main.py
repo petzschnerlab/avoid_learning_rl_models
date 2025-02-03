@@ -39,7 +39,56 @@ if __name__ == "__main__":
     transfer_filename = 'SOMA_RL/data/pain_transfer_processed.csv'
 
     #Models
-    models = ['QLearning', 'ActorCritic', 'Relative', 'Hybrid2012', 'Hybrid2021', 'wRelative', 'QRelative']
+    '''
+    Supported models: 
+        QLearning, ActorCritic
+        Relative, wRelative, QRelative
+        Hybrid2012, Hybrid2021
+
+    Standard models:
+        QLearning: Standard Q-Learning Model
+        ActorCritic: Standard Actor-Critic Model
+        Relative: Standard Relative Model (Palminteri et al., 2015)
+        wRelative: Standard Weighted-Relative Model [Proposed model] (Williams et al., in prep)
+        Hybrid2012+bias: Standard Hybrid 2012 Model (Gold et al., 2012)
+        Hybrid2021+bias+decay: Standard Hybrid 2021 Model (Geana et al., 2021)
+
+    Optional Parameters: You can add optional parameters to models by adding them to the model name using a + sign
+        +bias: Adds a valence bias to the model (e.g. wRelative+bias), only usable with wRelative, QRelative, Hybrid2012, and Hybrid2021
+        +novel: Adds a free parameter for the novel stimulus (e.g. QLearning+novel), useable with all models
+        +decay: Adds a decay parameter to the model (e.g. QLearning+decay), useable with all models
+    '''
+
+    models = ['QLearning',
+              'QLearning+novel',
+              'QLearning+decay',
+              'QLearning+novel+decay',
+
+              'ActorCritic',
+              'ActorCritic+novel',
+              'ActorCritic+decay',
+              'ActorCritic+novel+decay',
+
+              'Relative',
+              'Relative+novel',
+              'Relative+decay',
+              'Relative+novel+decay',
+
+              'wRelative',
+              'wRelative+novel',
+              'wRelative+decay',
+              'wRelative+novel+decay',
+
+              'Hybrid2012',
+              'Hybrid2012+novel',
+              'Hybrid2012+decay',
+              'Hybrid2012+novel+decay',
+
+              'Hybrid2021',
+              'Hybrid2021+novel',
+              'Hybrid2021+decay',
+              'Hybrid2021+novel+decay',
+              ] 
 
     # =========================================== #
     # ================ LOAD DATA ================ #
@@ -66,8 +115,8 @@ if __name__ == "__main__":
             p_dataloader = copy.copy(dataloader)
             p_dataloader.filter_participant_data(participant)  
             model = RLModel(model_name)
-            task = AvoidanceLearningTask(transfer_trials=transfer_trials)
-            pipeline = RLPipeline(model, p_dataloader, task, fit_transfer_phase=fit_transfer_phase, number_of_fits=number_of_fits)
+            task = AvoidanceLearningTask()
+            pipeline = RLPipeline(model, p_dataloader, task)
             columns[model_name] = ['participant', 'pain_group', 'fit'] + list(model.get_parameters())
             if multiprocessing:
                 inputs.append((pipeline, columns[model_name], participant))
@@ -96,6 +145,10 @@ if __name__ == "__main__":
         if model_name in models:
             participant_data = pd.read_csv(os.path.join('SOMA_RL','data','fits',f), header=None)
             participant_data.columns = columns[model_name]
+            nan_keys = [key for key in participant_data if participant_data[key].isnull().any()]
+            for key in nan_keys:
+                participant_data[key] = None
+
             if len(fit_data[model_name]) == 0:
                 fit_data[model_name] = participant_data
             else:
@@ -136,7 +189,8 @@ if __name__ == "__main__":
         print(f'AIC: {AIC.round(0)}')
         print(f'BIC: {BIC.round(0)}')
         for col in fit_data[model_name].columns[2:]:
-            print(f'{col}: {fit_data[model_name][col].mean().round(4)}, {fit_data[model_name][col].std().round(4)}')
+            if fit_data[model_name][col][0] is not None:
+                print(f'{col}: {fit_data[model_name][col].mean().round(4)}, {fit_data[model_name][col].std().round(4)}')
         print('==========')
         print('')
         
