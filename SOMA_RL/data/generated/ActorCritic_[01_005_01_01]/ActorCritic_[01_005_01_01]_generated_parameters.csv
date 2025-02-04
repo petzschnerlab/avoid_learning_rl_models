@@ -1,0 +1,2 @@
+factual_actor_lr,counterfactual_actor_lr,critic_lr,temperature
+0.1,0.05,0.1,0.1
