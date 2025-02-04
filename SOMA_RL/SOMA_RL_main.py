@@ -39,7 +39,7 @@ if __name__ == "__main__":
         Hybrid2021+bias+decay: Standard Hybrid 2021 Model (Geana et al., 2021)
 
     Optional Parameters: You can add optional parameters to models by adding them to the model name using a + sign
-        +bias: Adds a valence bias to the model (e.g. wRelative+bias), only usable with wRelative, QRelative, Hybrid2012, and Hybrid2021
+        +bias: Adds a valence bias to the model (e.g. wRelative+bias), only usable with wRelative, QRelative, Hybrid2012, and Hybrid2021. Note: the bias factor does very poorly in the current dataset
         +novel: Adds a free parameter for the novel stimulus (e.g. QLearning+novel), useable with all models
         +decay: Adds a decay parameter to the model (e.g. QLearning+decay), useable with all models
     '''
@@ -54,11 +54,11 @@ if __name__ == "__main__":
               'wRelative+decay', #Standard
               'wRelative+decay+novel', #Standard + novel
 
-              'Hybrid2012+bias', #Standard
-              'Hybrid2012+bias+novel', #Standard + novel
-              'Hybrid2021+bias+decay', #Standard
-              'Hybrid2021+bias+decay+novel'] #Standard + novel
-    
+              'Hybrid2012', #Standard w/o bias
+              'Hybrid2012+novel', #Standard + novel
+              'Hybrid2021', #Standard w/o bias
+              'Hybrid2021+decay+novel'] #Standard + novel
+        
     # =========================================== #
     # ============== RUN ANALYSES =============== #
     # =========================================== #
