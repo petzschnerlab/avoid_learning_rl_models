@@ -59,7 +59,7 @@ if __name__ == "__main__":
 
               'Hybrid2012+bias', #Standard w/o bias
               'Hybrid2012+bias+novel', #Standard + novel
-              'Hybrid2021+bias', #Standard w/o bias
+              'Hybrid2021+bias+decay', #Standard w/o bias
               'Hybrid2021+bias+decay+novel'] #Standard + novel
             
     # =========================================== #
