@@ -52,9 +52,8 @@ if __name__ == "__main__":
 
               'Relative', #Standard
               'Relative+novel', #Standard + novel
-              'wRelative+bias+novel', #wRelative is all exploratory
-              'wRelative+decay+novel',
-              'wRelative+bias+decay+novel',
+              'wRelative+bias+decay', #Standard
+              'wRelative+bias+decay+novel', #Standard + novel
 
               'Hybrid2012+bias', #Standard w/o bias
               'Hybrid2012+bias+novel', #Standard + novel
