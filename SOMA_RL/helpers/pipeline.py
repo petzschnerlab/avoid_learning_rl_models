@@ -77,10 +77,10 @@ class RLPipeline:
         with open(f'SOMA_RL/fits/temp/{self.task.rl_model.model_name}_{participant_id}_fit_results.csv', 'a') as f:
             f.write(','.join([str(x) for x in participant_fitted]) + '\n')
 
-    def run_simulations(self, args):
+    def run_simulations(self, args, generate_data=False):
 
         #Extract args
-        columns, participant_id, group, n = args
+        columns, participant_id, group, run_number = args
         if self.dataloader is not None:
             data = self.dataloader.get_data_dict().copy()
         else:
@@ -92,6 +92,9 @@ class RLPipeline:
 
         #Extract model data
         task_learning_data = model.task_learning_data
+        task_transfer_data = model.task_transfer_data
+        model_parameters = pd.DataFrame(model.parameters, index=[0])
+
         task_learning_data['trial_total'] = task_learning_data.groupby('state_id').cumcount()+1
         if 'v_prediction_errors' in task_learning_data.columns:
             task_learning_data['prediction_errors'] = task_learning_data['v_prediction_errors'] + task_learning_data['q_prediction_errors']
@@ -116,21 +119,30 @@ class RLPipeline:
         learning_values = pd.concat([learning_values1, learning_values2], axis=1)
         learning_values.columns = ['context', 'trial_total', 'values1', 'values2']
         
-        learning_accuracy['run'] = n
-        learning_prediction_errors['run'] = n
-        learning_values['run'] = n
+        learning_accuracy['run'] = run_number
+        learning_prediction_errors['run'] = run_number
+        learning_values['run'] = run_number
 
-        #Store data
-        accuracy = pd.DataFrame(learning_accuracy, columns=columns['accuracy'])
-        prediction_errors = pd.DataFrame(learning_prediction_errors, columns=columns['pe'])
-        values = pd.DataFrame(learning_values, columns=columns['values'])
-        choice_rates = pd.DataFrame([model.choice_rate], columns=columns['choice_rate'])
+        #Save task data
+        if generate_data:
+            model_parameters_string = f"[{'_'.join([str(model_param).replace('.','') for model_param in model.parameters.values()])}]"
+            simulation_name = f'{model.model_name}_{model_parameters_string}'
+            os.makedirs(f'SOMA_RL/data/generated/{simulation_name}', exist_ok=True)
+            model_parameters.to_csv(f'SOMA_RL/data/generated/{simulation_name}/{simulation_name}_generated_parameters.csv', header=True, index=False)
+            task_learning_data.to_csv(f'SOMA_RL/data/generated/{simulation_name}/{simulation_name}_generated_learning.csv', header=True, index=False)
+            task_transfer_data.to_csv(f'SOMA_RL/data/generated/{simulation_name}/{simulation_name}_generated_transfer.csv', header=True, index=False)
+        else:
+            #Store data
+            accuracy = pd.DataFrame(learning_accuracy, columns=columns['accuracy'])
+            prediction_errors = pd.DataFrame(learning_prediction_errors, columns=columns['pe'])
+            values = pd.DataFrame(learning_values, columns=columns['values'])
+            choice_rates = pd.DataFrame([model.choice_rate], columns=columns['choice_rate'])
 
-        #Save to csv file
-        accuracy.to_csv(f'SOMA_RL/fits/temp/{model.model_name}_{group}_{participant_id}_accuracy_sim_results.csv', index=False)
-        prediction_errors.to_csv(f'SOMA_RL/fits/temp/{model.model_name}_{group}_{participant_id}_pe_sim_results.csv', index=False)
-        values.to_csv(f'SOMA_RL/fits/temp/{model.model_name}_{group}_{participant_id}_values_sim_results.csv', index=False)
-        choice_rates.to_csv(f'SOMA_RL/fits/temp/{model.model_name}_{group}_{participant_id}_choice_sim_results.csv', index=False)
+            #Save to csv file
+            accuracy.to_csv(f'SOMA_RL/fits/temp/{model.model_name}_{group}_{participant_id}_accuracy_sim_results.csv', index=False)
+            prediction_errors.to_csv(f'SOMA_RL/fits/temp/{model.model_name}_{group}_{participant_id}_pe_sim_results.csv', index=False)
+            values.to_csv(f'SOMA_RL/fits/temp/{model.model_name}_{group}_{participant_id}_values_sim_results.csv', index=False)
+            choice_rates.to_csv(f'SOMA_RL/fits/temp/{model.model_name}_{group}_{participant_id}_choice_sim_results.csv', index=False)
 
 # Functions
 def mp_run_fit(args):

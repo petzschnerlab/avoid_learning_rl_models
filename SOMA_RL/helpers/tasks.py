@@ -257,18 +257,7 @@ class AvoidanceLearningTask:
         rnd.shuffle(self.transfer_pairs)
 
         #Setup q-values & w-values
-        if self.rl_model.__class__.__name__ == 'ActorCritic':
-            self.rl_model.combine_v_values()
-            self.rl_model.combine_w_values()
-        elif 'Hybrid' in self.rl_model.__class__.__name__:
-            self.rl_model.combine_q_values()
-            self.rl_model.combine_v_values()
-            self.rl_model.combine_w_values()
-        elif 'QRelative' == self.rl_model.__class__.__name__:
-            self.rl_model.combine_q_values()
-            self.rl_model.combine_c_values()
-        else:
-            self.rl_model.combine_q_values()
+        self.rl_model.combine_values()
 
         #Run transfer phase
         for trial, pair in enumerate(self.transfer_pairs):

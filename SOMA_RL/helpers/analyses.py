@@ -248,3 +248,18 @@ def run_fit_analysis(learning_filename, transfer_filename, models, number_of_par
 
     #Debug print
     print('')
+
+    return None
+
+def generate_simulated_data(models, parameters, task_design):
+    columns = {}
+    print('\nData generation initiated...')
+    loop = tqdm.tqdm(models)
+    for model_name in loop:
+        model_parameters = parameters[model_name]
+        model = RLModel(model_name, model_parameters)
+        task = AvoidanceLearningTask(task_design)
+        pipeline = RLPipeline(model, task=task)
+        columns[model_name] = ['participant', 'pain_group', 'run', 'fit',] + list(model.get_parameters())
+        pipeline.run_simulations((columns, 'simulation', 'simulation', 0), generate_data=True)
+    print('Data generation complete!')
