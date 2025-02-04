@@ -69,22 +69,31 @@ def run_fit_analysis(learning_filename, transfer_filename, models, number_of_par
     #Load all data in the fit data
     files = os.listdir('SOMA_RL/fits/temp')
     fit_data = {model: pd.DataFrame(columns=columns[model]) for model in models}
+    full_fit_data = {model: pd.DataFrame(columns=columns[model]) for model in models}
     for f in files:
         model_name, participant = f.split('_')[:2]
         if model_name in models:
             participant_data = pd.read_csv(os.path.join('SOMA_RL','fits','temp',f), header=None)
             participant_data.columns = columns[model_name]
-            participant_data = participant_data.iloc[[participant_data['fit'].idxmin()]]
-            nan_keys = [key for key in participant_data if participant_data[key].isnull().any()]
+            best_participant_data = participant_data.iloc[[participant_data['fit'].idxmin()]]
+            nan_keys = [key for key in best_participant_data if best_participant_data[key].isnull().any()]
+            full_nan_keys = [key for key in participant_data if participant_data[key].isnull().any()]
             for key in nan_keys:
+                best_participant_data[key] = None
+            for key in full_nan_keys:
                 participant_data[key] = None
 
             if len(fit_data[model_name]) == 0:
-                fit_data[model_name] = participant_data
+                fit_data[model_name] = best_participant_data
+                full_fit_data[model_name] = participant_data
             else:
-                fit_data[model_name] = pd.concat((fit_data[model_name], participant_data), ignore_index=True)
+                fit_data[model_name] = pd.concat((fit_data[model_name], best_participant_data), ignore_index=True)
+                full_fit_data[model_name] = pd.concat((full_fit_data[model_name], participant_data), ignore_index=True)
 
     #Save fit data as a pickle file
+    with open('SOMA_RL/fits/full_fit_data.pkl', 'wb') as f:
+        pickle.dump(full_fit_data, f)
+
     with open('SOMA_RL/fits/fit_data.pkl', 'wb') as f:
         pickle.dump(fit_data, f)
 
