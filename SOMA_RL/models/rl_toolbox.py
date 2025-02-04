@@ -306,7 +306,7 @@ class RLToolbox:
         log_likelihood = 0
 
         #Learning phase
-        for trial, (state_id, action, reward) in enumerate(zip(learning_states, learning_actions, learning_rewards)):
+        for trial, (state_id, action, reward) in enumerate(zip(learning_states.copy(), learning_actions.copy(), learning_rewards.copy())):
 
             #Populate state
             if transform_reward:
@@ -332,7 +332,7 @@ class RLToolbox:
         if False: #Toggle to switch between methods for testing. Function method is slower than loop, so it's avoided
             log_likelihood -= self.fit_transfer_forward(transfer_data, value_type, reduced = True)
         else:
-            for trial, (state_id, action) in enumerate(zip(transfer_states, transfer_actions)):
+            for trial, (state_id, action) in enumerate(zip(transfer_states.copy(), transfer_actions.copy())):
                 
                 #Populate state
                 state = {'action': action, 
@@ -359,7 +359,7 @@ class RLToolbox:
         learning_data, transfer_data = args[0]['learning'], args[0]['transfer']
 
         #Learning phase
-        for trial, trial_data in learning_data.iterrows():
+        for trial, trial_data in learning_data.copy().iterrows():
 
             #Populate rewards
             rewards = [int(trial_data['reward_L']), int(trial_data['reward_R'])]
@@ -388,7 +388,7 @@ class RLToolbox:
         self.combine_values()
 
         #Transfer phase
-        for trial, trial_data in transfer_data.iterrows():
+        for trial, trial_data in transfer_data.copy().iterrows():
             
             #Populate state
             state = {'block_number': 0,

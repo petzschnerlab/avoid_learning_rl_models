@@ -82,7 +82,7 @@ class RLPipeline:
         #Extract args
         columns, participant_id, group, n = args
         if self.dataloader is not None:
-            data = self.dataloader.get_data_dict()
+            data = self.dataloader.get_data_dict().copy()
         else:
             data = None
         model_name = self.task.rl_model.__class__.__name__
