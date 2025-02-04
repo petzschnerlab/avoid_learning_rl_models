@@ -263,6 +263,6 @@ class RLModel:
             model.bounds = bounds
             
         else:
-            raise ValueError('Model not recognized.')
+            raise ValueError(f'Model {model} not recognized.')
                 
         return model
