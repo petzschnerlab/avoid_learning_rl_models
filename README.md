@@ -1,11 +1,7 @@
 - **[COMPLETE] Model Fitting**: I know you are currently using fixed starting points. I think to make sure that our parameter estimates are really reliable we need to see hwo stable the are across different starting points: “A key limitation of optimizers like fmincon is that they are only guaranteed to find local minima which are not guaranteed to be the global minima corresponding to the best fitting parameters. One way to mitigate this issue is to run the fitting procedure multiple times with random initial conditions, recording the best fitting log-likelihood for each run. The best fitting parameters are then the parameters corresponding to the run with the highest log-likelihood. There is no hard-and-fast rule for knowing how many starting points to use in a given situation, besides the fact that more complex models will require more starting points. Thus, it must be determined empirically in each case. One way to validate the number of starting points is by plotting the best likelihood score as a function of the number of starting points. As the number of initial conditions increases, the best fitting likelihood (and corresponding parameters) will improve up to an asymptote close to the true maximum of the function.
 
-![alt text](.\SOMA_RL\model%20results\Standard%20Models%20+%20Novel%20for%2010%20Runs\full_fit_data.png)
-
-<p>
-<center>
+<p align="center">
     <img src=".\SOMA_RL\model%20results\Standard%20Models%20+%20Novel%20for%2010%20Runs\full_fit_data.png" width="600" height="400" />
-</center>
 </p>
 
 - **Parameter Recovery**: Can we recover the parameters for each model. First, simulate fake data with known parameter values. Next, fit the model to this fake data to try to ‘recover’ the parameters. Finally, compare the recovered parameters to their true values. In a perfect world the simulated and recovered parameters will be tightly correlated, with no bias. If there is only a weak correlation between simulated and recovered parameters and/or a significant bias, then this is an indication that there is either a bug in your code (which from our own experience we suggest is fairly likely) or the experiment is underpowered to assess this model. Read the tips on page 14/ 15 of the Collins paper
