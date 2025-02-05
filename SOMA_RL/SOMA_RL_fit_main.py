@@ -34,7 +34,7 @@ if __name__ == "__main__":
         QLearning: Standard Q-Learning Model
         ActorCritic: Standard Actor-Critic Model
         Relative: Standard Relative Model (Palminteri et al., 2015)
-        wRelative+decay: Standard Weighted-Relative Model [Proposed model] (Williams et al., in prep)
+        wRelative+bias+decay: Standard Weighted-Relative Model [Proposed model] (Williams et al., in prep)
         Hybrid2012+bias: Standard Hybrid 2012 Model (Gold et al., 2012)
         Hybrid2021+bias+decay: Standard Hybrid 2021 Model (Geana et al., 2021)
 

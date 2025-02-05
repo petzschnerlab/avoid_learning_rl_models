@@ -3,6 +3,7 @@ sys.dont_write_bytecode = True
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 import os
+import shutil
 import multiprocessing as mp
 import copy
 import pandas as pd
@@ -251,15 +252,41 @@ def run_fit_analysis(learning_filename, transfer_filename, models, number_of_par
 
     return None
 
-def generate_simulated_data(models, parameters, task_design):
+def generate_simulated_data(models, parameters, task_design, number_of_runs=1, clear_data=True):
+
+    '''
+    Parameters
+    ----------
+    models : list
+        List of models to simulate.
+    parameters : dict | str
+        Dictionary of model parameters or 'random'
+    task_design : dict
+        Dictionary of task design parameters
+    number_of_runs : int
+        Number of times to run the simulation for each model (only applicable when parameters='random')
+    '''
+
+    #Delete all folders with generated data from previous run, if desired
+    if clear_data:
+        for f in os.listdir('SOMA_RL/data/generated'):
+            shutil.rmtree(os.path.join('SOMA_RL','data','generated',f))
+
+    #Set up parameters
+    random_params = True if parameters == 'random' else False
+    number_of_runs = number_of_runs if random_params else 1
     columns = {}
-    print('\nData generation initiated...')
-    loop = tqdm.tqdm(models)
-    for model_name in loop:
-        model_parameters = parameters[model_name]
-        model = RLModel(model_name, model_parameters)
-        task = AvoidanceLearningTask(task_design)
-        pipeline = RLPipeline(model, task=task)
-        columns[model_name] = ['participant', 'pain_group', 'run', 'fit',] + list(model.get_parameters())
-        pipeline.run_simulations((columns, 'simulation', 'simulation', 0), generate_data=True)
+
+    #Run simulations
+    print(f'\nNumber of Models:{len(models)}, Number of Runs: {number_of_runs}, Total Simulations: {len(models)*number_of_runs}')
+    loop = tqdm.tqdm(range(len(models)*number_of_runs))
+    for model_name in models:
+        for run in range(number_of_runs):
+            model_parameters = parameters[model_name] if not random_params else None
+            model = RLModel(model_name, model_parameters, random_params=random_params)
+            task = AvoidanceLearningTask(task_design)
+            pipeline = RLPipeline(model, task=task)
+            columns[model_name] = ['participant', 'pain_group', 'run', 'fit',] + list(model.get_parameters())
+            pipeline.run_simulations((columns, 'simulation', 'simulation', run), generate_data=True)
+            loop.update(1)
     print('Data generation complete!')

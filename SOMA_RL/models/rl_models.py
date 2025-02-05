@@ -1,4 +1,5 @@
 import random as rnd
+import numpy as np
 
 from models.standard import QLearning, ActorCritic
 from models.relative import Relative, wRelative, QRelative
@@ -50,7 +51,7 @@ class RLModel:
     def starting_param(self, fixed_param=None, bounds=None):
 
         if self.random_params:
-            return rnd.uniform(bounds[0], bounds[1])
+            return np.round(rnd.uniform(bounds[0], bounds[1]),2)
         else:
             return fixed_param
     
