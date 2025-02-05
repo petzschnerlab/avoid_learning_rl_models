@@ -1,5 +1,5 @@
 
-from helpers.analyses import plot_fits_by_run_number
+from helpers.plotting import plot_fits_by_run_number
 
 if __name__ == "__main__":
 

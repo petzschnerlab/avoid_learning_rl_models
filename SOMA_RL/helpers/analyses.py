@@ -252,7 +252,7 @@ def run_fit_analysis(learning_filename, transfer_filename, models, number_of_par
 
     return None
 
-def generate_simulated_data(models, parameters, task_design, number_of_runs=1, clear_data=True):
+def generate_simulated_data(models, parameters, task_design, number_of_runs=1, multiprocessing=False, clear_data=True):
 
     '''
     Parameters
