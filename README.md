@@ -2,6 +2,12 @@
 
 ![alt text](.\SOMA_RL\model%20results\Standard%20Models%20+%20Novel%20for%2010%20Runs\full_fit_data.png)
 
+<p>
+<center>
+    <img src=".\SOMA_RL\model%20results\Standard%20Models%20+%20Novel%20for%2010%20Runs\full_fit_data.png" width="600" height="400" />
+</center>
+</p>
+
 - **Parameter Recovery**: Can we recover the parameters for each model. First, simulate fake data with known parameter values. Next, fit the model to this fake data to try to ‘recover’ the parameters. Finally, compare the recovered parameters to their true values. In a perfect world the simulated and recovered parameters will be tightly correlated, with no bias. If there is only a weak correlation between simulated and recovered parameters and/or a significant bias, then this is an indication that there is either a bug in your code (which from our own experience we suggest is fairly likely) or the experiment is underpowered to assess this model. Read the tips on page 14/ 15 of the Collins paper
     - **STATUS**:
         - Completed data generation (maybe expand to run random parameters so that each model generated multiple parameters)
