@@ -45,6 +45,9 @@ class RLModel:
     def get_model(self):
         return self.model
     
+    def get_bounds(self):
+        return self.model.bounds
+    
     def get_parameters(self):
         return self.model.parameters.keys()
     

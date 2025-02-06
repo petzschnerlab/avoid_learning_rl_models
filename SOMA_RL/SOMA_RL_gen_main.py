@@ -5,6 +5,7 @@ import tqdm
 import matplotlib.pyplot as plt
 
 from helpers.analyses import generate_simulated_data, run_fit, run_fit_comparison
+from models.rl_models import RLModel
 
 if __name__ == "__main__":
 
@@ -63,11 +64,11 @@ if __name__ == "__main__":
     # ============== RUN ANALYSES =============== #
     # =========================================== #
 
-    generate_params = {'models':            models,
-                       'task_design':       task_design,
-                       'parameters':        'random',
-                       'number_of_runs':    100,
-                       'multiprocessing':   True
+    generate_params = {'models':                models,
+                       'task_design':           task_design,
+                       'parameters':            'random',
+                       'datasets_to_generate':  100,
+                       'multiprocessing':       True
                        }
 
     generate_simulated_data(**generate_params)
@@ -75,11 +76,6 @@ if __name__ == "__main__":
     # =========================================== #
     # ================ RUN FITS ================= #
     # =========================================== #
-
-    #Parameters
-    random_params = True
-    number_of_runs = 5
-    multiprocessing = True
 
     #Find all files in SOMA_RL/data/generated
     generated_filenames = os.listdir('SOMA_RL/data/generated')
@@ -94,22 +90,29 @@ if __name__ == "__main__":
         for di, data_name in enumerate(data_names):
 
             #Create param dictionary
+            number_of_runs = 5
             fit_params = {'learning_filename':  f'SOMA_RL/data/generated/{data_name}/{data_name}_generated_learning.csv',
                           'transfer_filename':  f'SOMA_RL/data/generated/{data_name}/{data_name}_generated_transfer.csv',
-                          'models':              model,
-                          'random_params':      random_params,
+                          'models':             [model],
+                          'random_params':      True,
                           'number_of_runs':     number_of_runs,
                           'generated':          True,
                           'clear_data':         False,
                           'progress_bar':       False,
                           'number_of_files':    mi*len(data_names) + di + number_of_runs,
-                          'multiprocessing':    multiprocessing}
+                          'multiprocessing':    True}
 
             dataloader, cols = run_fit(**fit_params)
             columns[model] = cols[model]
             loop.update(1)
+        
+    #Run comparisons
+    comparison_params = {'dataloader': dataloader,
+                         'models': models,
+                         'group_ids': ['simulated'],
+                         'columns': columns}
 
-    fit_data = run_fit_comparison(dataloader, [models], ['simulated'], columns)
+    fit_data = run_fit_comparison(**comparison_params)
 
     # =========================================== #
     # ======= CREATE CORRELATIONAL PLOTS ======== #
@@ -139,16 +142,19 @@ if __name__ == "__main__":
 
     for model in models:
         #Plot correlation plots, new figure for each model, subplot for each parameter
+
+        bounds = RLModel(model).get_bounds()
         fig, axs = plt.subplots(1, len(fit_results[model].columns)-2, figsize=(5*len(fit_results[model].columns)-2, 5))
         for i, parameter in enumerate(fit_results[model].columns[2:]):
             axs[i].scatter(fit_results[model][fit_results[model]['fit_type']=='True'][parameter], 
                            fit_results[model][fit_results[model]['fit_type']=='Fit'][parameter])
-            axs[i].plot([fit_results[model][parameter].min(), fit_results[model][parameter].max()], 
-                        [fit_results[model][parameter].min(), fit_results[model][parameter].max()], 
-                        color='grey', alpha=0.5, linestyle='--')
+            axs[i].plot(bounds[parameter], bounds[parameter], '--', color='grey', alpha=0.5)
             axs[i].set_title(parameter)
             axs[i].set_xlabel('True')
             axs[i].set_ylabel('Fit')
+            #Add x and y bounds
+            axs[i].set_xlim(bounds[parameter])
+            axs[i].set_ylim(bounds[parameter])
 
         fig.suptitle(f'{model} Correlation Plot')
         plt.tight_layout()
