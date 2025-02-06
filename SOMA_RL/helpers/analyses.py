@@ -284,7 +284,7 @@ def run_fit_simulations(learning_filename, transfer_filename, fit_data, models, 
 
     return None
 
-def generate_simulated_data(models, parameters, task_design, number_of_runs=1, multiprocessing=False, clear_data=True):
+def generate_simulated_data(models, parameters, task_design, datasets_to_generate=1, multiprocessing=False, clear_data=True):
 
     '''
     Parameters
@@ -306,15 +306,15 @@ def generate_simulated_data(models, parameters, task_design, number_of_runs=1, m
 
     #Set up parameters
     random_params = True if parameters == 'random' else False
-    number_of_runs = number_of_runs if random_params else 1
+    datasets_to_generate = datasets_to_generate if random_params else 1
 
     #Run simulations
-    print(f'\nNumber of Models: {len(models)}, Number of Runs: {number_of_runs}, Total Simulations: {len(models)*number_of_runs}')
-    loop = tqdm.tqdm(range(len(models)*number_of_runs)) if not multiprocessing else None
+    print(f'\nNumber of Models: {len(models)}, Number of Runs: {datasets_to_generate}, Total Simulations: {len(models)*datasets_to_generate}')
+    loop = tqdm.tqdm(range(len(models)*datasets_to_generate)) if not multiprocessing else None
     inputs = []
     columns = {}
     for model_name in models:
-        for run in range(number_of_runs):
+        for run in range(datasets_to_generate):
             model_parameters = parameters[model_name] if not random_params else None
             model = RLModel(model_name, model_parameters, random_params=random_params)
             task = AvoidanceLearningTask(task_design)

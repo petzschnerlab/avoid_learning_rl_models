@@ -15,14 +15,15 @@ class RLModel:
         fit_bias = True if '+bias' in model else False
         fit_novel = True if '+novel' in model else False
         fit_decay = True if '+decay' in model else False
+        self.optional_parameters = {'bias': fit_bias, 'novel': fit_novel, 'decay': fit_decay}
 
         model = model.replace('+bias', '')
         model = model.replace('+novel', '')
         model = model.replace('+decay', '')
 
-        self.model = self.define_model(model, parameters, fit_bias, fit_novel, fit_decay)
+        self.model = self.define_model(model, parameters)
         self.model.model_name = model_name
-        self.model.optional_parameters = {'bias': fit_bias, 'novel': fit_novel, 'decay': fit_decay}
+        self.model.optional_parameters = self.optional_parameters
 
         #Remove any optional parameters that are not being used
         linked_keys = {'bias': 'valence_factor', 'novel': 'novel_value', 'decay': 'decay_factor'}
@@ -57,213 +58,184 @@ class RLModel:
             return np.round(rnd.uniform(bounds[0], bounds[1]),2)
         else:
             return fixed_param
+        
+    def define_params(self, fixed, bounds, parameters=None):
+        
+        model_params = {}
+        for param in fixed:
+            if parameters is None or param == 'valence_factor' and not self.optional_parameters['bias'] or param == 'novel_value' and not self.optional_parameters['novel'] or param == 'decay_factor' and not self.optional_parameters['decay']:
+                model_params[param] = self.starting_param(fixed[param], bounds[param]) 
+            else:
+                model_params[param] = parameters[param].values[0]
+
+        return model_params
     
-    def define_model(self, model, parameters=None, fit_bias=False, fit_novel=False, fit_decay=False):
+    def define_model(self, model, parameters=None):
 
         if model == 'QLearning':
-            bounds = {'factual_lr': (0.01, .99), 
-                      'counterfactual_lr': (0.01, .99), 
-                      'temperature': (0.01, 10), 
-                      'novel_value': (-1, 1),
-                      'decay_factor': (0, 1)}
-                        
-            factual_lr = self.starting_param(0.1, bounds['factual_lr'])                     if parameters is None else parameters['factual_lr'].values[0]
-            counterfactual_lr = self.starting_param(0.5, bounds['counterfactual_lr'])       if parameters is None else parameters['counterfactual_lr'].values[0]
-            temperature = self.starting_param(0.1, bounds['temperature'])                   if parameters is None else parameters['temperature'].values[0]
-            novel_value = self.starting_param(0, bounds['novel_value'])                     if not fit_novel or parameters is None else parameters['novel_value'].values[0]
-            decay_factor = self.starting_param(0, bounds['decay_factor'])                   if not fit_decay or parameters is None else parameters['decay_factor'].values[0]
 
-            model = QLearning(factual_lr=factual_lr, 
-                            counterfactual_lr=counterfactual_lr, 
-                            temperature=temperature,
-                            novel_value=novel_value,
-                            decay_factor=decay_factor)
+            fixed =  {'factual_lr':             0.1,
+                      'counterfactual_lr':      0.05,
+                      'temperature':            0.1,
+                      'novel_value':            0,
+                      'decay_factor':           0}
+             
+            bounds = {'factual_lr':             (0.01, .99), 
+                      'counterfactual_lr':      (0.01, .99), 
+                      'temperature':            (0.01, 10), 
+                      'novel_value':            (-1, 1),
+                      'decay_factor':           (0, 1)}
+            
+            model_params = self.define_params(fixed, bounds, parameters)
+            model = QLearning(**model_params)
             model.bounds = bounds
             
         elif model == 'ActorCritic':
 
-            bounds = {'factual_actor_lr': (0.01, .99),
-                      'counterfactual_actor_lr': (0.01, .99),
-                      'critic_lr': (0.01, .99),
-                      'temperature': (0.01, 10),
-                      'valence_factor': (0, 1),
-                      'novel_value': (-1, 1),
-                      'decay_factor': (0, 1)}
+            fixed =  {'factual_actor_lr':           0.1,
+                      'counterfactual_actor_lr':    0.05,
+                      'critic_lr':                  0.1,
+                      'temperature':                0.1,
+                      'valence_factor':             0.5,
+                      'novel_value':                0,
+                      'decay_factor':               0}
+
+            bounds = {'factual_actor_lr':           (0.01, .99),
+                      'counterfactual_actor_lr':    (0.01, .99),
+                      'critic_lr':                  (0.01, .99),
+                      'temperature':                (0.01, 10),
+                      'valence_factor':             (0, 1),
+                      'novel_value':                (-1, 1),
+                      'decay_factor':               (0, 1)}
             
-            factual_actor_lr = self.starting_param(0.1, bounds['factual_actor_lr'])                     if parameters is None else parameters['factual_actor_lr'].values[0]
-            counterfactual_actor_lr = self.starting_param(0.05, bounds['counterfactual_actor_lr'])      if parameters is None else parameters['counterfactual_actor_lr'].values[0]
-            critic_lr = self.starting_param(0.1, bounds['critic_lr'])                                   if parameters is None else parameters['critic_lr'].values[0]
-            temperature = self.starting_param(0.1, bounds['temperature'])                               if parameters is None else parameters['temperature'].values[0]
-            valence_factor = self.starting_param(0.5, bounds['valence_factor'])                         if not fit_bias or parameters is None else parameters['valence_factor'].values[0]
-            novel_value = self.starting_param(0, bounds['novel_value'])                                 if not fit_novel or parameters is None else parameters['novel_value'].values[0]
-            decay_factor = self.starting_param(0, bounds['decay_factor'])                               if not fit_decay or parameters is None else parameters['decay_factor'].values[0]
-            
-            model = ActorCritic(factual_actor_lr=factual_actor_lr,
-                                counterfactual_actor_lr=counterfactual_actor_lr,
-                                critic_lr=critic_lr,
-                                temperature=temperature,
-                                valence_factor=valence_factor,
-                                novel_value=novel_value,
-                                decay_factor=decay_factor)
+            model_params = self.define_params(fixed, bounds, parameters)
+            model = ActorCritic(**model_params)
             model.bounds = bounds
 
         elif model == 'Relative':
 
-            bounds = {'factual_lr': (0.01, .99),
-                      'counterfactual_lr': (0.01, .99),
-                      'contextual_lr': (0.01, .99),
-                      'temperature': (0.01, 10),
-                      'novel_value': (-1, 1),
-                      'decay_factor': (0, 1)}
-            
-            factual_lr = self.starting_param(0.1, bounds['factual_lr'])                     if parameters is None else parameters['factual_lr'].values[0]
-            counterfactual_lr = self.starting_param(0.05, bounds['counterfactual_lr'])      if parameters is None else parameters['counterfactual_lr'].values[0]
-            contextual_lr = self.starting_param(0.1, bounds['contextual_lr'])               if parameters is None else parameters['contextual_lr'].values[0]
-            temperature = self.starting_param(0.1, bounds['temperature'])                   if parameters is None else parameters['temperature'].values[0]
-            novel_value = self.starting_param(0, bounds['novel_value'])                     if not fit_novel or parameters is None else parameters['novel_value'].values[0]
-            decay_factor = self.starting_param(0, bounds['decay_factor'])                   if not fit_decay or parameters is None else parameters['decay_factor'].values[0]
+            fixed =  {'factual_lr':             0.1,
+                      'counterfactual_lr':      0.05,
+                      'contextual_lr':          0.1,
+                      'temperature':            0.1,
+                      'novel_value':            0,
+                      'decay_factor':           0}
 
-            model = Relative(factual_lr=factual_lr,
-                            counterfactual_lr=counterfactual_lr,
-                            contextual_lr=contextual_lr,
-                            temperature=temperature,
-                            novel_value=novel_value,
-                            decay_factor=decay_factor)
+            bounds = {'factual_lr':             (0.01, .99),
+                      'counterfactual_lr':      (0.01, .99),
+                      'contextual_lr':          (0.01, .99),
+                      'temperature':            (0.01, 10),
+                      'novel_value':            (-1, 1),
+                      'decay_factor':           (0, 1)}
+            
+            model_params = self.define_params(fixed, bounds, parameters)
+            model = Relative(**model_params)
             model.bounds = bounds
 
         elif model == 'Hybrid2012':
 
-            bounds = {'factual_lr': (0.01, .99),
-                      'counterfactual_lr': (0.01, .99),
-                      'factual_actor_lr': (0.01, .99),
-                      'counterfactual_actor_lr': (0.01, .99),
-                      'critic_lr': (0.01, .99),
-                      'temperature': (0.01, 10),
-                      'mixing_factor': (0, 1),
-                      'valence_factor': (0, 1),
-                      'novel_value': (-1, 1),
-                      'decay_factor': (0, 1)}
+            fixed =  {'factual_lr':                 0.1,
+                      'counterfactual_lr':          0.05,
+                      'factual_actor_lr':           0.1,
+                      'counterfactual_actor_lr':    0.05,
+                      'critic_lr':                  0.1,
+                      'temperature':                0.1,
+                      'mixing_factor':              0.5,
+                      'valence_factor':             0.5,
+                      'novel_value':                0,
+                      'decay_factor':               0}
             
-            factual_lr = self.starting_param(0.1, bounds['factual_lr'])                                 if parameters is None else parameters['factual_lr'].values[0]
-            counterfactual_lr = self.starting_param(0.05, bounds['counterfactual_lr'])                  if parameters is None else parameters['counterfactual_lr'].values[0]
-            factual_actor_lr = self.starting_param(0.1, bounds['factual_actor_lr'])                     if parameters is None else parameters['factual_actor_lr'].values[0]
-            counterfactual_actor_lr = self.starting_param(0.05, bounds['counterfactual_actor_lr'])      if parameters is None else parameters['counterfactual_actor_lr'].values[0]
-            critic_lr = self.starting_param(0.1, bounds['critic_lr'])                                   if parameters is None else parameters['critic_lr'].values[0]
-            temperature = self.starting_param(0.1, bounds['temperature'])                               if parameters is None else parameters['temperature'].values[0]
-            mixing_factor = self.starting_param(0.5, bounds['mixing_factor'])                           if parameters is None else parameters['mixing_factor'].values[0]
-            valence_factor = self.starting_param(0.5, bounds['valence_factor'])                         if not fit_bias or parameters is None else parameters['valence_factor'].values[0]
-            novel_value = self.starting_param(0, bounds['novel_value'])                                 if not fit_novel or parameters is None else parameters['novel_value'].values[0]
-            decay_factor = self.starting_param(0, bounds['decay_factor'])                               if not fit_decay or parameters is None else parameters['decay_factor'].values[0]
-
-            model = Hybrid2012(factual_lr=factual_lr,
-                        counterfactual_lr=counterfactual_lr,
-                        factual_actor_lr=factual_actor_lr,
-                        counterfactual_actor_lr=counterfactual_actor_lr,
-                        critic_lr=critic_lr,
-                        temperature=temperature,
-                        mixing_factor=mixing_factor,
-                        valence_factor=valence_factor,
-                        novel_value=novel_value,
-                        decay_factor=decay_factor)
+            bounds = {'factual_lr':                 (0.01, .99),
+                      'counterfactual_lr':          (0.01, .99),
+                      'factual_actor_lr':           (0.01, .99),
+                      'counterfactual_actor_lr':    (0.01, .99),
+                      'critic_lr':                  (0.01, .99),
+                      'temperature':                (0.01, 10),
+                      'mixing_factor':              (0, 1),
+                      'valence_factor':             (0, 1),
+                      'novel_value':                (-1, 1),
+                      'decay_factor':               (0, 1)}
+            
+            model_params = self.define_params(fixed, bounds, parameters)
+            model = Hybrid2012(**model_params)
             model.bounds = bounds
 
         elif model == 'Hybrid2021':
 
-            bounds = {'factual_lr': (0.01, .99),
-                      'counterfactual_lr': (0.01, .99),
-                      'factual_actor_lr': (0.01, .99),
-                      'counterfactual_actor_lr': (0.01, .99),
-                      'critic_lr': (0.01, .99),
-                      'temperature': (0.01, 10),
-                      'mixing_factor': (0, 1),
-                      'noise_factor': (0, 1),
-                      'valence_factor': (0, 1),
-                      'novel_value': (-1, 1),
-                      'decay_factor': (0, 1)}
+            fixed =  {'factual_lr':                 0.1,
+                      'counterfactual_lr':          0.05,
+                      'factual_actor_lr':           0.1,
+                      'counterfactual_actor_lr':    0.05,
+                      'critic_lr':                  0.1,
+                      'temperature':                0.1,
+                      'mixing_factor':              0.5,
+                      'noise_factor':               0.1,
+                      'valence_factor':             0.5,
+                      'novel_value':                0,
+                      'decay_factor':               0}
             
-            factual_lr = self.starting_param(0.1, bounds['factual_lr'])                             if parameters is None else parameters['factual_lr'].values[0]
-            counterfactual_lr = self.starting_param(0.05, bounds['counterfactual_lr'])              if parameters is None else parameters['counterfactual_lr'].values[0]
-            factual_actor_lr = self.starting_param(0.1, bounds['factual_actor_lr'])                 if parameters is None else parameters['factual_actor_lr'].values[0]
-            counterfactual_actor_lr = self.starting_param(0.05, bounds['counterfactual_actor_lr'])  if parameters is None else parameters['counterfactual_actor_lr'].values[0]
-            critic_lr = self.starting_param(0.1, bounds['critic_lr'])                               if parameters is None else parameters['critic_lr'].values[0]
-            temperature = self.starting_param(0.1, bounds['temperature'])                           if parameters is None else parameters['temperature'].values[0]
-            mixing_factor = self.starting_param(0.5, bounds['mixing_factor'])                       if parameters is None else parameters['mixing_factor'].values[0]
-            noise_factor = self.starting_param(0.1, bounds['noise_factor'])                         if parameters is None else parameters['noise_factor'].values[0]
-            valence_factor = self.starting_param(0.5, bounds['valence_factor'])                     if not fit_bias or parameters is None else parameters['valence_factor'].values[0]
-            novel_value = self.starting_param(0, bounds['novel_value'])                             if not fit_novel or parameters is None else parameters['novel_value'].values[0]
-            decay_factor = self.starting_param(0, bounds['decay_factor'])                           if not fit_decay or parameters is None else parameters['decay_factor'].values[0]
-
-            model = Hybrid2021(factual_lr=factual_lr,
-                        counterfactual_lr=counterfactual_lr,
-                        factual_actor_lr=factual_actor_lr,
-                        counterfactual_actor_lr=counterfactual_actor_lr,
-                        critic_lr=critic_lr,
-                        temperature=temperature,
-                        mixing_factor=mixing_factor,
-                        noise_factor=noise_factor,
-                        valence_factor=valence_factor,
-                        novel_value=novel_value,
-                        decay_factor=decay_factor)
+            bounds = {'factual_lr':                 (0.01, .99),
+                      'counterfactual_lr':          (0.01, .99),
+                      'factual_actor_lr':           (0.01, .99),
+                      'counterfactual_actor_lr':    (0.01, .99),
+                      'critic_lr':                  (0.01, .99),
+                      'temperature':                (0.01, 10),
+                      'mixing_factor':              (0, 1),
+                      'noise_factor':               (0, 1),
+                      'valence_factor':             (0, 1),
+                      'novel_value':                (-1, 1),
+                      'decay_factor':               (0, 1)}
+            
+            model_params = self.define_params(fixed, bounds, parameters)
+            model = Hybrid2021(**model_params)
             model.bounds = bounds
             
         elif model == 'QRelative':
+ 
+            fixed =  {'factual_lr':             0.1,
+                      'counterfactual_lr':      0.05,
+                      'contextual_lr':          0.1,
+                      'temperature':            0.1,
+                      'mixing_factor':          0.5,
+                      'valence_reward':         0.5,
+                      'novel_value':            0,
+                      'decay_factor':           0}
 
-            bounds = {'factual_lr': (0.01, .99),
-                      'counterfactual_lr': (0.01, .99),
-                      'contextual_lr': (0.01, .99),
-                      'temperature': (0.01, 10),
-                      'mixing_factor': (0, 1),
-                      'valence_reward': (0, 1),
-                      'novel_value': (-1, 1),
-                      'decay_factor': (0, 1)}
+            bounds = {'factual_lr':             (0.01, .99),
+                      'counterfactual_lr':      (0.01, .99),
+                      'contextual_lr':          (0.01, .99),
+                      'temperature':            (0.01, 10),
+                      'mixing_factor':          (0, 1),
+                      'valence_reward':         (0, 1),
+                      'novel_value':            (-1, 1),
+                      'decay_factor':           (0, 1)}
             
-            factual_lr = self.starting_param(0.1, bounds['factual_lr'])                 if parameters is None else parameters['factual_lr'].values[0]
-            counterfactual_lr = self.starting_param(0.05, bounds['counterfactual_lr'])  if parameters is None else parameters['counterfactual_lr'].values[0]
-            contextual_lr = self.starting_param(0.1, bounds['contextual_lr'])           if parameters is None else parameters['contextual_lr'].values[0]
-            temperature = self.starting_param(0.1, bounds['temperature'])               if parameters is None else parameters['temperature'].values[0]
-            mixing_factor = self.starting_param(0.5, bounds['mixing_factor'])           if parameters is None else parameters['mixing_factor'].values[0]
-            valence_factor = self.starting_param(0.5, bounds['valence_reward'])         if not fit_bias or parameters is None else parameters['valence_factor'].values[0]
-            novel_value = self.starting_param(0, bounds['novel_value'])                 if not fit_novel or parameters is None else parameters['novel_value'].values[0]
-            decay_factor = self.starting_param(0, bounds['decay_factor'])               if not fit_decay or parameters is None else parameters['decay_factor'].values[0]
-
-            model = QRelative(factual_lr=factual_lr,
-                            counterfactual_lr=counterfactual_lr,
-                            contextual_lr=contextual_lr,
-                            temperature=temperature,
-                            mixing_factor=mixing_factor,
-                            valence_reward=valence_factor,
-                            novel_value=novel_value,
-                            decay_factor=decay_factor)
+            model_params = self.define_params(fixed, bounds, parameters)
+            model = QRelative(**model_params)
             model.bounds = bounds
 
         elif model == 'wRelative':
 
-            bounds = {'factual_lr': (0.01, .99),
-                      'counterfactual_lr': (0.01, .99),
-                      'contextual_lr': (0.01, .99),
-                      'temperature': (0.01, 10),
-                      'mixing_factor': (0, 1),
-                      'valence_factor': (0, 1),
-                      'novel_value': (-1, 1),
-                      'decay_factor': (0, 1)}
+            fixed =  {'factual_lr':             0.1,
+                      'counterfactual_lr':      0.05,
+                      'contextual_lr':          0.1,
+                      'temperature':            0.1,
+                      'mixing_factor':          0.5,
+                      'valence_factor':         0.5,
+                      'novel_value':            0,
+                      'decay_factor':           0}
             
-            factual_lr = self.starting_param(0.1, bounds['factual_lr'])                 if parameters is None else parameters['factual_lr'].values[0]
-            counterfactual_lr = self.starting_param(0.05, bounds['counterfactual_lr'])  if parameters is None else parameters['counterfactual_lr'].values[0]
-            contextual_lr = self.starting_param(0.1, bounds['contextual_lr'])           if parameters is None else parameters['contextual_lr'].values[0]
-            temperature = self.starting_param(0.1, bounds['temperature'])               if parameters is None else parameters['temperature'].values[0]
-            mixing_factor = self.starting_param(0.5, bounds['mixing_factor'])           if parameters is None else parameters['mixing_factor'].values[0]
-            valence_factor = self.starting_param(0.5, bounds['valence_factor'])         if not fit_bias or parameters is None else parameters['valence_factor'].values[0]
-            novel_value = self.starting_param(0, bounds['novel_value'])                 if not fit_novel or parameters is None else parameters['novel_value'].values[0]
-            decay_factor = self.starting_param(0, bounds['decay_factor'])               if not fit_decay or parameters is None else parameters['decay_factor'].values[0]
+            bounds = {'factual_lr':             (0.01, .99),
+                      'counterfactual_lr':      (0.01, .99),
+                      'contextual_lr':          (0.01, .99),
+                      'temperature':            (0.01, 10),
+                      'mixing_factor':          (0, 1),
+                      'valence_factor':         (0, 1),
+                      'novel_value':            (-1, 1),
+                      'decay_factor':           (0, 1)}
             
-            model = wRelative(factual_lr=factual_lr,
-                            counterfactual_lr=counterfactual_lr,
-                            contextual_lr=contextual_lr,
-                            temperature=temperature,
-                            mixing_factor=mixing_factor,
-                            valence_factor=valence_factor,
-                            novel_value=novel_value,
-                            decay_factor=decay_factor)
+            model_params = self.define_params(fixed, bounds, parameters)
+            model = wRelative(**model_params)
             model.bounds = bounds
             
         else:

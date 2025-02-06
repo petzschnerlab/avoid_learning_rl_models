@@ -53,7 +53,7 @@ if __name__ == "__main__":
                   'models':                     models,
                   'number_of_participants':     0,
                   'random_params':              True,
-                  'number_of_runs':             5,
+                  'number_of_runs':             10,
                   'multiprocessing':            True
                  }
 
