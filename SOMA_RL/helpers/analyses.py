@@ -15,13 +15,20 @@ from models.rl_models import RLModel
 from helpers.dataloader import DataLoader
 from helpers.tasks import AvoidanceLearningTask
 from helpers.pipeline import RLPipeline, mp_run_fit, mp_run_simulations, mp_progress
-from helpers.plotting import plot_simulations
+from helpers.plotting import plot_simulations, plot_generative_fits
 
 def run_fit_empirical(learning_filename, transfer_filename, models, number_of_participants=0, random_params=False, number_of_runs=1, generated=False, multiprocessing=False):
 
     dataloader, columns = run_fit(learning_filename, transfer_filename, models, number_of_participants=number_of_participants, random_params=random_params, number_of_runs=number_of_runs, generated=generated, multiprocessing=multiprocessing)
     fit_data = run_fit_comparison(dataloader, models, dataloader.get_group_ids(), columns)
     run_fit_simulations(learning_filename, transfer_filename, fit_data, models, dataloader.get_participant_ids(), dataloader.get_group_ids(), number_of_participants=number_of_participants, multiprocessing=multiprocessing)
+
+def run_generate_and_fit(models, task_design, parameters, datasets_to_generate=1, multiprocessing=False, clear_data=True):
+    
+    generate_simulated_data(models=models, parameters=parameters, task_design=task_design, datasets_to_generate=datasets_to_generate, multiprocessing=multiprocessing, clear_data=clear_data)
+    dataloader, columns = run_generative_fits(models)
+    fit_data = run_fit_comparison(dataloader=dataloader, models=models, group_ids=['simulated'], columns=columns)
+    plot_generative_fits(models=models, fit_data=fit_data)
 
 def run_fit(learning_filename, transfer_filename, models, number_of_participants=0, random_params=False, number_of_runs=1, number_of_files=None, generated=False, clear_data=True, progress_bar=True, multiprocessing=False):
     # =========================================== #
@@ -337,3 +344,38 @@ def generate_simulated_data(models, parameters, task_design, datasets_to_generat
         #Progress bar checking how many have completed
         mp_progress(len(inputs), filepath='SOMA_RL/data/generated')
         print('\nMultiprocessing complete!')
+
+def run_generative_fits(models):
+
+    #Find all files in SOMA_RL/data/generated
+    generated_filenames = os.listdir('SOMA_RL/data/generated')
+    for f in os.listdir('SOMA_RL/fits/temp'):
+        os.remove(os.path.join('SOMA_RL','fits','temp',f))
+
+    loop = tqdm.tqdm(range(len(generated_filenames)))
+    columns = {model: [] for model in models}
+    for mi, model in enumerate(models):
+        #Find all files that start with model
+        data_names = [filename for filename in generated_filenames if model == filename.split('_')[0]]
+        for di, data_name in enumerate(data_names):
+
+            #Create param dictionary
+            number_of_runs = 5
+            fit_params = {'learning_filename':  f'SOMA_RL/data/generated/{data_name}/{data_name}_generated_learning.csv',
+                          'transfer_filename':  f'SOMA_RL/data/generated/{data_name}/{data_name}_generated_transfer.csv',
+                          'models':             [model],
+                          'random_params':      True,
+                          'number_of_runs':     number_of_runs,
+                          'generated':          True,
+                          'clear_data':         False,
+                          'progress_bar':       False,
+                          'number_of_files':    mi*len(data_names) + di + number_of_runs,
+                          'multiprocessing':    True}
+
+            dataloader, cols = run_fit(**fit_params)
+            columns[model] = cols[model]
+            loop.update(1)
+    
+    return dataloader, columns
+
+    

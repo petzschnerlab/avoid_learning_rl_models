@@ -6,6 +6,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from scipy import stats
 
+from models.rl_models import RLModel
+
 def plot_simulations(accuracy, prediction_errors, values, choice_rates, models, group, dataloader=None):
     
     if dataloader is not None:
@@ -156,8 +158,45 @@ def plot_fits_by_run_number(fit_data_path):
     #Save plot 
     plt.savefig(fit_data_path.replace('.pkl', '.png'))
 
-    print('complete!')
+def plot_generative_fits(models, fit_data):
+    #Create a dictionary with model being keys and pd.dataframe empty as value
+    fit_results = {model: [] for model in models}
+    for model in models:
+        model_data = fit_data[model]
+        for run_params in model_data['participant']:
+            
+            true_parameters = pd.read_csv(f'SOMA_RL/data/generated/{model}_{run_params}/{model}_{run_params}_generated_parameters.csv')
+            fit_parameters = pd.DataFrame(model_data[model_data['participant']==run_params].values[0][4:]).T
+            fit_parameters.columns = true_parameters.columns
 
+            true_parameters['Model'] = model
+            fit_parameters['Model'] = model
+            true_parameters['fit_type'] = 'True'
+            fit_parameters['fit_type'] = 'Fit'
+            combined_parameters = pd.concat([true_parameters, fit_parameters])
+            combined_parameters = combined_parameters[['Model', 'fit_type'] + [col for col in combined_parameters.columns if col not in ['Model', 'fit_type']]]
 
+            if isinstance(fit_results[model], pd.DataFrame):
+                fit_results[model] = pd.concat([fit_results[model], combined_parameters])
+            else:
+                fit_results[model] = combined_parameters            
 
-    
+    for model in models:
+        #Plot correlation plots, new figure for each model, subplot for each parameter
+
+        bounds = RLModel(model).get_bounds()
+        fig, axs = plt.subplots(1, len(fit_results[model].columns)-2, figsize=(5*len(fit_results[model].columns)-2, 5))
+        for i, parameter in enumerate(fit_results[model].columns[2:]):
+            axs[i].scatter(fit_results[model][fit_results[model]['fit_type']=='True'][parameter], 
+                           fit_results[model][fit_results[model]['fit_type']=='Fit'][parameter])
+            axs[i].plot(bounds[parameter], bounds[parameter], '--', color='grey', alpha=0.5)
+            axs[i].set_title(parameter)
+            axs[i].set_xlabel('True')
+            axs[i].set_ylabel('Fit')
+            #Add x and y bounds
+            axs[i].set_xlim(bounds[parameter])
+            axs[i].set_ylim(bounds[parameter])
+
+        fig.suptitle(f'{model} Correlation Plot')
+        plt.tight_layout()
+        plt.savefig(f'SOMA_RL/plots/{model}_correlation_plot.png')

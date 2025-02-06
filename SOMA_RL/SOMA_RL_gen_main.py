@@ -4,7 +4,7 @@ import pandas as pd
 import tqdm
 import matplotlib.pyplot as plt
 
-from helpers.analyses import generate_simulated_data, run_fit, run_fit_comparison
+from helpers.analyses import run_generate_and_fit
 from models.rl_models import RLModel
 
 if __name__ == "__main__":
@@ -53,109 +53,17 @@ if __name__ == "__main__":
               'Hybrid2021+bias+decay', #Standard w/o bias
               'Hybrid2021+bias+decay+novel'] #Standard + novel
 
-    #Task Design
     task_design = {'learning_phase': {
                         'number_of_trials': 24,
                         'number_of_blocks': 4,},
                     'transfer_phase': {
                         'times_repeated': 4}}
     
-    # =========================================== #
-    # ============== RUN ANALYSES =============== #
-    # =========================================== #
+    generate_params = {'models':             models,
+                    'task_design':           task_design,
+                    'parameters':            'random',
+                    'datasets_to_generate':  100,
+                    'multiprocessing':       True
+                    }
 
-    generate_params = {'models':                models,
-                       'task_design':           task_design,
-                       'parameters':            'random',
-                       'datasets_to_generate':  100,
-                       'multiprocessing':       True
-                       }
-
-    generate_simulated_data(**generate_params)
-
-    # =========================================== #
-    # ================ RUN FITS ================= #
-    # =========================================== #
-
-    #Find all files in SOMA_RL/data/generated
-    generated_filenames = os.listdir('SOMA_RL/data/generated')
-    for f in os.listdir('SOMA_RL/fits/temp'):
-        os.remove(os.path.join('SOMA_RL','fits','temp',f))
-
-    loop = tqdm.tqdm(range(len(generated_filenames)))
-    columns = {model: [] for model in models}
-    for mi, model in enumerate(models):
-        #Find all files that start with model
-        data_names = [filename for filename in generated_filenames if model == filename.split('_')[0]]
-        for di, data_name in enumerate(data_names):
-
-            #Create param dictionary
-            number_of_runs = 5
-            fit_params = {'learning_filename':  f'SOMA_RL/data/generated/{data_name}/{data_name}_generated_learning.csv',
-                          'transfer_filename':  f'SOMA_RL/data/generated/{data_name}/{data_name}_generated_transfer.csv',
-                          'models':             [model],
-                          'random_params':      True,
-                          'number_of_runs':     number_of_runs,
-                          'generated':          True,
-                          'clear_data':         False,
-                          'progress_bar':       False,
-                          'number_of_files':    mi*len(data_names) + di + number_of_runs,
-                          'multiprocessing':    True}
-
-            dataloader, cols = run_fit(**fit_params)
-            columns[model] = cols[model]
-            loop.update(1)
-        
-    #Run comparisons
-    comparison_params = {'dataloader': dataloader,
-                         'models': models,
-                         'group_ids': ['simulated'],
-                         'columns': columns}
-
-    fit_data = run_fit_comparison(**comparison_params)
-
-    # =========================================== #
-    # ======= CREATE CORRELATIONAL PLOTS ======== #
-    # =========================================== #
-
-    #Create a dictionary with model being keys and pd.dataframe empty as value
-    fit_results = {model: [] for model in models}
-    for model in models:
-        model_data = fit_data[model]
-        for run_params in model_data['participant']:
-            
-            true_parameters = pd.read_csv(f'SOMA_RL/data/generated/{model}_{run_params}/{model}_{run_params}_generated_parameters.csv')
-            fit_parameters = pd.DataFrame(model_data[model_data['participant']==run_params].values[0][4:]).T
-            fit_parameters.columns = true_parameters.columns
-
-            true_parameters['Model'] = model
-            fit_parameters['Model'] = model
-            true_parameters['fit_type'] = 'True'
-            fit_parameters['fit_type'] = 'Fit'
-            combined_parameters = pd.concat([true_parameters, fit_parameters])
-            combined_parameters = combined_parameters[['Model', 'fit_type'] + [col for col in combined_parameters.columns if col not in ['Model', 'fit_type']]]
-
-            if isinstance(fit_results[model], pd.DataFrame):
-                fit_results[model] = pd.concat([fit_results[model], combined_parameters])
-            else:
-                fit_results[model] = combined_parameters            
-
-    for model in models:
-        #Plot correlation plots, new figure for each model, subplot for each parameter
-
-        bounds = RLModel(model).get_bounds()
-        fig, axs = plt.subplots(1, len(fit_results[model].columns)-2, figsize=(5*len(fit_results[model].columns)-2, 5))
-        for i, parameter in enumerate(fit_results[model].columns[2:]):
-            axs[i].scatter(fit_results[model][fit_results[model]['fit_type']=='True'][parameter], 
-                           fit_results[model][fit_results[model]['fit_type']=='Fit'][parameter])
-            axs[i].plot(bounds[parameter], bounds[parameter], '--', color='grey', alpha=0.5)
-            axs[i].set_title(parameter)
-            axs[i].set_xlabel('True')
-            axs[i].set_ylabel('Fit')
-            #Add x and y bounds
-            axs[i].set_xlim(bounds[parameter])
-            axs[i].set_ylim(bounds[parameter])
-
-        fig.suptitle(f'{model} Correlation Plot')
-        plt.tight_layout()
-        plt.savefig(f'SOMA_RL/plots/{model}_correlation_plot.png')
+    run_generate_and_fit(**generate_params)

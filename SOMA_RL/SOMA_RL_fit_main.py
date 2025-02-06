@@ -11,7 +11,7 @@ if __name__ == "__main__":
     #Seed random number generator
     rnd.seed(1251)
 
-    #Models
+    #Models and Parameters
     '''
     Supported models: 
         QLearning, ActorCritic
@@ -57,7 +57,4 @@ if __name__ == "__main__":
                   'multiprocessing':            True
                  }
 
-    run_fit_empirical(**fit_params)
-
-    print('done')
-            
+    run_fit_empirical(**fit_params)            
