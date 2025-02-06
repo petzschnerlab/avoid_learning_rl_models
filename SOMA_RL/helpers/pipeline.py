@@ -74,7 +74,7 @@ class RLPipeline:
         participant_fitted.extend([float(fitted_params[key]) for key in columns[4:]])
 
         #Save to csv file
-        with open(f'SOMA_RL/fits/temp/{self.task.rl_model.model_name}_{participant_id}_fit_results.csv', 'a') as f:
+        with open(f'SOMA_RL/fits/temp/{self.task.rl_model.model_name}_{participant_id}_Run{run}_fit_results.csv', 'a') as f:
             f.write(','.join([str(x) for x in participant_fitted]) + '\n')
 
     def run_simulations(self, args, generate_data=False):
@@ -142,8 +142,7 @@ class RLPipeline:
             accuracy.to_csv(f'SOMA_RL/fits/temp/{model.model_name}_{group}_{participant_id}_accuracy_sim_results.csv', index=False)
             prediction_errors.to_csv(f'SOMA_RL/fits/temp/{model.model_name}_{group}_{participant_id}_pe_sim_results.csv', index=False)
             values.to_csv(f'SOMA_RL/fits/temp/{model.model_name}_{group}_{participant_id}_values_sim_results.csv', index=False)
-            choice_rates.to_csv(f'SOMA_RL/fits/temp/{model.model_name}_{group}_{participant_id}_choice_sim_results.csv', index=False)
-
+            choice_rates.to_csv(f'SOMA_RL/fits/temp/{model.model_name}_{group}_{participant_id}_choice_sim_results.csv', index=False)        
 # Functions
 def mp_run_fit(args):
     pipeline = args[0]
@@ -151,15 +150,33 @@ def mp_run_fit(args):
 
 def mp_run_simulations(args):
     pipeline = args[0]
-    pipeline.run_simulations(args[1:])
+    if 'generate_data' in str(args[-1]):
+        pipeline.run_simulations(args[1:-1], generate_data=args[-1].split('=')[-1])
+    else:
+        pipeline.run_simulations(args[1:])
 
-def mp_progress(num_files, divide_by=1, multiply_by=1):
+def mp_progress(num_files, filepath='SOMA_RL/fits/temp', divide_by=1, multiply_by=1, progress_bar=True):
+    last_count = 0
+    loop = tqdm.tqdm(range(int(num_files/divide_by))) if progress_bar else None
+    while len(os.listdir(filepath))*multiply_by < num_files:
+        if progress_bar:
+            n_files = np.floor(len(os.listdir(filepath))/divide_by)*multiply_by
+            if n_files > last_count:
+                loop.update(int(n_files-last_count))
+                last_count = n_files
+        time.sleep(1)
+    if progress_bar:
+        loop.update(int((num_files/divide_by)-last_count))
+'''
+
+def mp_progress(num_files, divide_by=1, multiply_by=1, filepath='SOMA_RL/fits/temp'):
     last_count = 0
     loop = tqdm.tqdm(range(int(num_files/divide_by)))
-    while len(os.listdir('SOMA_RL/fits/temp'))*multiply_by < num_files:
-        n_files = np.floor(len(os.listdir('SOMA_RL/fits/temp'))/divide_by)*multiply_by
+    while len(os.listdir(filepath))*multiply_by < num_files:
+        n_files = np.floor(len(os.listdir(filepath))/divide_by)*multiply_by
         if n_files > last_count:
             loop.update(int(n_files-last_count))
             last_count = n_files
         time.sleep(1)
     loop.update(int((num_files/divide_by)-last_count))
+'''

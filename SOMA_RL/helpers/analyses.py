@@ -17,12 +17,18 @@ from helpers.tasks import AvoidanceLearningTask
 from helpers.pipeline import RLPipeline, mp_run_fit, mp_run_simulations, mp_progress
 from helpers.plotting import plot_simulations
 
-def run_fit_analysis(learning_filename, transfer_filename, models, number_of_participants, random_params, number_of_runs, multiprocessing):
+def run_fit_empirical(learning_filename, transfer_filename, models, number_of_participants=0, random_params=False, number_of_runs=1, generated=False, multiprocessing=False):
+
+    dataloader, columns = run_fit(learning_filename, transfer_filename, models, number_of_participants=number_of_participants, random_params=random_params, number_of_runs=number_of_runs, generated=generated, multiprocessing=multiprocessing)
+    fit_data = run_fit_comparison(dataloader, models, dataloader.get_group_ids(), columns)
+    run_fit_simulations(learning_filename, transfer_filename, fit_data, models, dataloader.get_participant_ids(), dataloader.get_group_ids(), number_of_participants=number_of_participants, multiprocessing=multiprocessing)
+
+def run_fit(learning_filename, transfer_filename, models, number_of_participants=0, random_params=False, number_of_runs=1, number_of_files=None, generated=False, clear_data=True, progress_bar=True, multiprocessing=False):
     # =========================================== #
     # ================ LOAD DATA ================ #
     # =========================================== #
 
-    dataloader = DataLoader(learning_filename, transfer_filename, number_of_participants)
+    dataloader = DataLoader(learning_filename, transfer_filename, number_of_participants, generated=generated)
     participant_ids = dataloader.get_participant_ids()
     group_ids = dataloader.get_group_ids()
 
@@ -31,13 +37,15 @@ def run_fit_analysis(learning_filename, transfer_filename, models, number_of_par
     # =========================================== #
 
     #Delete any existing files
-    for f in os.listdir('SOMA_RL/fits/temp'):
-        os.remove(os.path.join('SOMA_RL','fits','temp',f))
+    if clear_data:
+        for f in os.listdir('SOMA_RL/fits/temp'):
+            os.remove(os.path.join('SOMA_RL','fits','temp',f))
 
     #Run fits
-    print('\n')
-    print(f"Number of participants: {len(participant_ids)}, Number of models: {len(models)}, Number of runs: {number_of_runs}, Total fits: {len(participant_ids)*len(models)*number_of_runs}")
-    loop = tqdm.tqdm(range(len(participant_ids)*len(models)*number_of_runs)) if not multiprocessing else None
+    if progress_bar:
+        print('\n')
+        print(f"Number of participants: {len(participant_ids)}, Number of models: {len(models)}, Number of runs: {number_of_runs}, Total fits: {len(participant_ids)*len(models)*number_of_runs}")
+    loop = tqdm.tqdm(range(len(participant_ids)*len(models)*number_of_runs)) if not multiprocessing and progress_bar else None
     inputs = []
     columns = {}
     for n, participant in enumerate(participant_ids):
@@ -53,19 +61,39 @@ def run_fit_analysis(learning_filename, transfer_filename, models, number_of_par
                     inputs.append((pipeline, columns[model_name], participant, run))
                 else:
                     pipeline.run_fit((columns[model_name], participant, run))
-                    loop.update(1)
+                    if progress_bar:
+                        loop.update(1)
 
     #Run all models fits in parallel
     if multiprocessing:
-        print('\nMultiprocessing initiated...')
+        if progress_bar:
+            print('\nMultiprocessing initiated...')
 
         pool = mp.Pool(mp.cpu_count())
         pool.map_async(mp_run_fit, inputs)
         pool.close()
 
         #Progress bar checking how many have completed
-        mp_progress(len(inputs), multiply_by=number_of_runs)
-        print('\nMultiprocessing complete!')
+        num_files = number_of_files if number_of_files is not None else len(inputs)
+        mp_progress(num_files, progress_bar=progress_bar)
+        if progress_bar:
+            print('\nMultiprocessing complete!')
+
+    #Combine all files that are the same except for the run number
+    files = os.listdir('SOMA_RL/fits/temp')
+    files_prefix = [f.split('_Run')[0] for f in files if '_Run' in f]
+    files_prefix = list(set(files_prefix))
+    for file_prefix in files_prefix:
+        files_to_combine = [os.path.join('SOMA_RL','fits','temp',f'{file_prefix}_Run{i}_fit_results.csv') for i in range(number_of_runs)]
+        pd.read_csv(files_to_combine[0], header=None)
+        combined_file = pd.concat([pd.read_csv(f, header=None) for f in files_to_combine], ignore_index=True)
+        combined_file.to_csv(os.path.join('SOMA_RL','fits','temp',f'{file_prefix}_fit_results.csv'), index=False, header=False)
+        for f in files_to_combine:
+            os.remove(f)
+
+    return dataloader, columns
+
+def run_fit_comparison(dataloader, models, group_ids, columns):
 
     #Load all data in the fit data
     files = os.listdir('SOMA_RL/fits/temp')
@@ -157,6 +185,10 @@ def run_fit_analysis(learning_filename, transfer_filename, models, number_of_par
     print('==========')
     print(group_BIC)
     print('==========')
+
+    return fit_data
+
+def run_fit_simulations(learning_filename, transfer_filename, fit_data, models, participant_ids, group_ids, number_of_participants=0, multiprocessing=False):
 
     # =========================================== #
     # =========== SIMULATE WITH FITS ============ #
@@ -275,11 +307,12 @@ def generate_simulated_data(models, parameters, task_design, number_of_runs=1, m
     #Set up parameters
     random_params = True if parameters == 'random' else False
     number_of_runs = number_of_runs if random_params else 1
-    columns = {}
 
     #Run simulations
-    print(f'\nNumber of Models:{len(models)}, Number of Runs: {number_of_runs}, Total Simulations: {len(models)*number_of_runs}')
-    loop = tqdm.tqdm(range(len(models)*number_of_runs))
+    print(f'\nNumber of Models: {len(models)}, Number of Runs: {number_of_runs}, Total Simulations: {len(models)*number_of_runs}')
+    loop = tqdm.tqdm(range(len(models)*number_of_runs)) if not multiprocessing else None
+    inputs = []
+    columns = {}
     for model_name in models:
         for run in range(number_of_runs):
             model_parameters = parameters[model_name] if not random_params else None
@@ -287,48 +320,20 @@ def generate_simulated_data(models, parameters, task_design, number_of_runs=1, m
             task = AvoidanceLearningTask(task_design)
             pipeline = RLPipeline(model, task=task)
             columns[model_name] = ['participant', 'pain_group', 'run', 'fit',] + list(model.get_parameters())
-            pipeline.run_simulations((columns, 'simulation', 'simulation', run), generate_data=True)
-            loop.update(1)
-    print('Data generation complete!')
+            if multiprocessing:
+                inputs.append((pipeline, columns, 'simulation', 'simulation', run, 'generate_data=True'))
+            else:
+                pipeline.run_simulations((columns, 'simulation', 'simulation', run), generate_data=True)
+                loop.update(1)
 
-def plot_fits_by_run_number(fit_data_path):
-    #Load pickle file fit_data_path
-    with open(fit_data_path, 'rb') as f:
-        fit_data = pickle.load(f)
+    #Run all generations in parallel
+    if multiprocessing:
+        print('\nMultiprocessing initiated...')
 
-    min_run, max_run = fit_data[list(fit_data.keys())[0]]['run'].min()+1, fit_data[list(fit_data.keys())[0]]['run'].max()+1
-    best_run = {model: [] for model in fit_data}
-    best_fits = {model: {f'Run {run}': [] for run in range(min_run, max_run)} for model in fit_data}
-    for model in fit_data:
-        model_data = fit_data[model].copy()
-        model_data['run'] += 1
-        for run in range(min_run, max_run):
-            #Find data where run equals or is less than run
-            run_data = model_data[model_data['run'] <= run].reset_index(drop=True)
-            run_sums = run_data.groupby('run').agg('sum').reset_index()
-            best_fits[model][f'Run {run}'] = run_sums['fit'].min()
-        best_run[model] = list(best_fits[model].keys())[list(best_fits[model].values()).index(min(best_fits[model].values()))]
-    average_best_run = f"Run {int(np.ceil(np.mean([int(best_run[model].split(' ')[1]) for model in best_run])))}"
+        pool = mp.Pool(mp.cpu_count())
+        pool.map_async(mp_run_simulations, inputs)
+        pool.close()
 
-    #Create a subplot for each model and plot the fits by run number
-    import matplotlib.pyplot as plt
-    fig, axs = plt.subplots(len(best_fits)//4, len(best_fits)//3, figsize=(5*(len(best_fits)//3), (5*(len(best_fits)//4))))
-    for n, model in enumerate(best_fits):
-        row, col = n//4, n%4
-        ax = axs[row, col] if len(best_fits) > 1 else axs
-        ax.plot(list(best_fits[model].keys()), list(best_fits[model].values()), marker='o')
-        ax.axvline(x=average_best_run, color='red', linestyle='--', alpha=.5)
-        ax.set_title(model)
-        ax.set_xlabel('Run Number')
-        ax.set_ylabel('Best Fit')
-    fig.text(0.01, 0.001, f'Red dashed line indicates the averaged run where the models reached their best fits.', ha='left')
-
-    plt.tight_layout()
-    #Save plot 
-    plt.savefig(fit_data_path.replace('.pkl', '.png'))
-
-    print('complete!')
-
-
-
-    
+        #Progress bar checking how many have completed
+        mp_progress(len(inputs), filepath='SOMA_RL/data/generated')
+        print('\nMultiprocessing complete!')
