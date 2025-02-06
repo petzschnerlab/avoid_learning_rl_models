@@ -30,7 +30,7 @@ class DataLoader:
             learning_data['reward_L'] = learning_data['rewards'].apply(lambda x: x[0])
             learning_data['reward_R'] = learning_data['rewards'].apply(lambda x: x[1])
 
-            transfer_data['participant_id'] = 'simulated'
+            transfer_data['participant_id'] = '['+learning_filename.split(']')[0].split('[')[-1]+']'
             transfer_data['group_code'] = 'simulated'
             transfer_data = transfer_data.rename(columns={'state_id': 'state'})
         else:
