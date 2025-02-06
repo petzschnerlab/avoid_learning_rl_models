@@ -142,6 +142,9 @@ if __name__ == "__main__":
         for i, parameter in enumerate(fit_results[model].columns[2:]):
             axs[i].scatter(fit_results[model][fit_results[model]['fit_type']=='True'][parameter], 
                            fit_results[model][fit_results[model]['fit_type']=='Fit'][parameter])
+            axs[i].plot([fit_results[model][parameter].min(), fit_results[model][parameter].max()], 
+                        [fit_results[model][parameter].min(), fit_results[model][parameter].max()], 
+                        color='grey', alpha=0.5, linestyle='--')
             axs[i].set_title(parameter)
             axs[i].set_xlabel('True')
             axs[i].set_ylabel('Fit')
