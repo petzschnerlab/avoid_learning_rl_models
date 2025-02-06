@@ -1,6 +1,6 @@
 import random as rnd
 
-from helpers.analyses import run_fit_analysis
+from helpers.analyses import run_fit_empirical
 
 if __name__ == "__main__":
 
@@ -59,10 +59,17 @@ if __name__ == "__main__":
               'Hybrid2012+bias+novel', #Standard + novel
               'Hybrid2021+bias+decay', #Standard w/o bias
               'Hybrid2021+bias+decay+novel'] #Standard + novel
-            
+                
     # =========================================== #
     # ============== RUN ANALYSES =============== #
     # =========================================== #
 
-    run_fit_analysis(learning_filename, transfer_filename, models, number_of_participants, random_params, number_of_runs, multiprocessing)
+    run_fit_empirical(learning_filename, 
+                      transfer_filename, 
+                      models, 
+                      number_of_participants=number_of_participants, 
+                      random_params=random_params, 
+                      number_of_runs=number_of_runs, 
+                      multiprocessing=multiprocessing)
+    print('done')
             
