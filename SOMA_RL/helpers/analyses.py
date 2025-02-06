@@ -25,6 +25,9 @@ def run_fit_empirical(learning_filename, transfer_filename, models, number_of_pa
 
 def run_generate_and_fit(models, task_design, parameters, datasets_to_generate=1, multiprocessing=False, clear_data=True):
     
+    if not os.path.exists('SOMA_RL/data/generated'):
+        os.makedirs('SOMA_RL/data/generated')
+
     generate_simulated_data(models=models, parameters=parameters, task_design=task_design, datasets_to_generate=datasets_to_generate, multiprocessing=multiprocessing, clear_data=clear_data)
     dataloader, columns = run_generative_fits(models)
     fit_data = run_fit_comparison(dataloader=dataloader, models=models, group_ids=['simulated'], columns=columns)
@@ -168,7 +171,7 @@ def run_fit_comparison(dataloader, models, group_ids, columns):
         print(f'AIC: {AIC.round(0)}')
         print(f'BIC: {BIC.round(0)}')
         for col in fit_data[model_name].columns[3:]:
-            if fit_data[model_name][col][0] is not None:
+            if fit_data[model_name][col].values[0] is not None:
                 print(f'{col}: {fit_data[model_name][col].mean().round(4)}, {fit_data[model_name][col].std().round(4)}')
         print('==========')
         print('')
