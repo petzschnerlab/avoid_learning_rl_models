@@ -23,13 +23,13 @@ def run_fit_empirical(learning_filename, transfer_filename, models, number_of_pa
     fit_data = run_fit_comparison(dataloader, models, dataloader.get_group_ids(), columns)
     run_fit_simulations(learning_filename, transfer_filename, fit_data, models, dataloader.get_participant_ids(), dataloader.get_group_ids(), number_of_participants=number_of_participants, multiprocessing=multiprocessing)
 
-def run_generate_and_fit(models, task_design, parameters, datasets_to_generate=1, multiprocessing=False, clear_data=True):
+def run_generate_and_fit(models, task_design, parameters, datasets_to_generate=1, number_of_runs=1, multiprocessing=False, clear_data=True):
     
     if not os.path.exists('SOMA_RL/data/generated'):
         os.makedirs('SOMA_RL/data/generated')
 
     generate_simulated_data(models=models, parameters=parameters, task_design=task_design, datasets_to_generate=datasets_to_generate, multiprocessing=multiprocessing, clear_data=clear_data)
-    dataloader, columns = run_generative_fits(models)
+    dataloader, columns = run_generative_fits(models=models, number_of_runs=number_of_runs)
     fit_data = run_fit_comparison(dataloader=dataloader, models=models, group_ids=['simulated'], columns=columns)
     plot_generative_fits(models=models, fit_data=fit_data)
 
@@ -348,7 +348,7 @@ def generate_simulated_data(models, parameters, task_design, datasets_to_generat
         mp_progress(len(inputs), filepath='SOMA_RL/data/generated')
         print('\nMultiprocessing complete!')
 
-def run_generative_fits(models):
+def run_generative_fits(models, number_of_runs=1):
 
     #Find all files in SOMA_RL/data/generated
     generated_filenames = os.listdir('SOMA_RL/data/generated')
@@ -363,7 +363,6 @@ def run_generative_fits(models):
         for di, data_name in enumerate(data_names):
 
             #Create param dictionary
-            number_of_runs = 5
             fit_params = {'learning_filename':  f'SOMA_RL/data/generated/{data_name}/{data_name}_generated_learning.csv',
                           'transfer_filename':  f'SOMA_RL/data/generated/{data_name}/{data_name}_generated_transfer.csv',
                           'models':             [model],

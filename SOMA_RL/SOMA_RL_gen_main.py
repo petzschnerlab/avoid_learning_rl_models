@@ -63,6 +63,7 @@ if __name__ == "__main__":
                        'task_design':           task_design,
                        'parameters':            'random',
                        'datasets_to_generate':  100,
+                       'number_of_runs':        20,
                        'multiprocessing':       True
                        }
 
