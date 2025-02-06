@@ -15,11 +15,6 @@ if __name__ == "__main__":
     #Seed random number generator
     rnd.seed(1251)
 
-    #Parameters
-    multiprocessing = True
-    parameters = 'random'
-    number_of_runs = 100
-
     #Models
     '''
     Supported models: 
@@ -68,16 +63,23 @@ if __name__ == "__main__":
     # ============== RUN ANALYSES =============== #
     # =========================================== #
 
-    generate_simulated_data(models, parameters, task_design, number_of_runs=number_of_runs, multiprocessing=multiprocessing)
+    generate_params = {'models':            models,
+                       'task_design':       task_design,
+                       'parameters':        'random',
+                       'number_of_runs':    100,
+                       'multiprocessing':   True
+                       }
+
+    generate_simulated_data(**generate_params)
 
     # =========================================== #
     # ================ RUN FITS ================= #
     # =========================================== #
 
     #Parameters
-    multiprocessing = True
     random_params = True
     number_of_runs = 5
+    multiprocessing = True
 
     #Find all files in SOMA_RL/data/generated
     generated_filenames = os.listdir('SOMA_RL/data/generated')
@@ -90,25 +92,24 @@ if __name__ == "__main__":
         #Find all files that start with model
         data_names = [filename for filename in generated_filenames if model == filename.split('_')[0]]
         for di, data_name in enumerate(data_names):
-            learning_filename = f'SOMA_RL/data/generated/{data_name}/{data_name}_generated_learning.csv'
-            transfer_filename = f'SOMA_RL/data/generated/{data_name}/{data_name}_generated_transfer.csv'
-            metadata = pd.read_csv(f'SOMA_RL/data/generated/{data_name}/{data_name}_generated_parameters.csv')
 
-            number_of_files = mi*len(data_names) + di + number_of_runs
-            dataloader, cols = run_fit(learning_filename, 
-                                        transfer_filename, 
-                                        [model], 
-                                        random_params=random_params, 
-                                        number_of_runs=number_of_runs, 
-                                        generated=True, 
-                                        clear_data=False, 
-                                        progress_bar=False, 
-                                        number_of_files=number_of_files,
-                                        multiprocessing=multiprocessing)
+            #Create param dictionary
+            fit_params = {'learning_filename':  f'SOMA_RL/data/generated/{data_name}/{data_name}_generated_learning.csv',
+                          'transfer_filename':  f'SOMA_RL/data/generated/{data_name}/{data_name}_generated_transfer.csv',
+                          'models':              model,
+                          'random_params':      random_params,
+                          'number_of_runs':     number_of_runs,
+                          'generated':          True,
+                          'clear_data':         False,
+                          'progress_bar':       False,
+                          'number_of_files':    mi*len(data_names) + di + number_of_runs,
+                          'multiprocessing':    multiprocessing}
+
+            dataloader, cols = run_fit(**fit_params)
             columns[model] = cols[model]
             loop.update(1)
 
-    fit_data = run_fit_comparison(dataloader, models, ['simulated'], columns)
+    fit_data = run_fit_comparison(dataloader, [models], ['simulated'], columns)
 
     # =========================================== #
     # ======= CREATE CORRELATIONAL PLOTS ======== #

@@ -11,18 +11,6 @@ if __name__ == "__main__":
     #Seed random number generator
     rnd.seed(1251)
 
-    #Debug parameters
-    number_of_participants = 0 #Number of participants to keep, 0 = all
-
-    #Parameters
-    multiprocessing = True #Whether to run fits and simulations in parallel
-    random_params = True #Whether to use random initial parameters for the models
-    number_of_runs = 5 #Number of times to fit the dataset for each participant and model (this is especially important when random_params=True). For these data/models 5 was quantitatively determined as best.
-
-    #File names
-    learning_filename = 'SOMA_RL/data/pain_learning_processed.csv'
-    transfer_filename = 'SOMA_RL/data/pain_transfer_processed.csv'
-
     #Models
     '''
     Supported models: 
@@ -59,17 +47,17 @@ if __name__ == "__main__":
               'Hybrid2012+bias+novel', #Standard + novel
               'Hybrid2021+bias+decay', #Standard w/o bias
               'Hybrid2021+bias+decay+novel'] #Standard + novel
-                
-    # =========================================== #
-    # ============== RUN ANALYSES =============== #
-    # =========================================== #
 
-    run_fit_empirical(learning_filename, 
-                      transfer_filename, 
-                      models, 
-                      number_of_participants=number_of_participants, 
-                      random_params=random_params, 
-                      number_of_runs=number_of_runs, 
-                      multiprocessing=multiprocessing)
+    fit_params = {'learning_filename':          'SOMA_RL/data/pain_learning_processed.csv',
+                  'transfer_filename':          'SOMA_RL/data/pain_transfer_processed.csv',
+                  'models':                     models,
+                  'number_of_participants':     0,
+                  'random_params':              True,
+                  'number_of_runs':             5,
+                  'multiprocessing':            True
+                 }
+
+    run_fit_empirical(**fit_params)
+
     print('done')
             
