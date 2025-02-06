@@ -59,11 +59,11 @@ if __name__ == "__main__":
                     'transfer_phase': {
                         'times_repeated': 4}}
     
-    generate_params = {'models':             models,
-                    'task_design':           task_design,
-                    'parameters':            'random',
-                    'datasets_to_generate':  100,
-                    'multiprocessing':       True
-                    }
+    generate_params = {'models':                models,
+                       'task_design':           task_design,
+                       'parameters':            'random',
+                       'datasets_to_generate':  100,
+                       'multiprocessing':       True
+                       }
 
     run_generate_and_fit(**generate_params)
