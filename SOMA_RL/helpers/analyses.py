@@ -29,7 +29,7 @@ def run_generate_and_fit(models, task_design, parameters, datasets_to_generate=1
         os.makedirs('SOMA_RL/data/generated')
 
     generate_simulated_data(models=models, parameters=parameters, task_design=task_design, datasets_to_generate=datasets_to_generate, multiprocessing=multiprocessing, clear_data=clear_data)
-    dataloader, columns = run_generative_fits(models=models, number_of_runs=number_of_runs)
+    dataloader, columns = run_generative_fits(models=models, number_of_runs=number_of_runs, number_of_files=number_of_runs*datasets_to_generate)
     fit_data = run_fit_comparison(dataloader=dataloader, models=models, group_ids=['simulated'], columns=columns)
     plot_generative_fits(models=models, fit_data=fit_data)
 
@@ -84,7 +84,8 @@ def run_fit(learning_filename, transfer_filename, models, number_of_participants
         pool.close()
 
         #Progress bar checking how many have completed
-        mp_progress(len(inputs), progress_bar=progress_bar)
+        num_ints = number_of_files if number_of_files is not None else len(inputs)
+        mp_progress(num_ints, progress_bar=progress_bar)
         if progress_bar:
             print('\nMultiprocessing complete!')
 
@@ -374,7 +375,7 @@ def generate_simulated_data(models, parameters, task_design, datasets_to_generat
         model_learning.to_csv(f'SOMA_RL/data/generated/{model}_generated_learning.csv', index=False)
         model_transfer.to_csv(f'SOMA_RL/data/generated/{model}_generated_transfer.csv', index=False)
 
-def run_generative_fits(models, number_of_runs=1):
+def run_generative_fits(models, number_of_runs=1, number_of_files=1):
 
     #Find all files in SOMA_RL/data/generated that are not folders
     generated_filenames = [f for f in os.listdir('SOMA_RL/data/generated') if '.' in f]
@@ -392,7 +393,7 @@ def run_generative_fits(models, number_of_runs=1):
                         'generated':          True,
                         'clear_data':         False,
                         'progress_bar':       True,
-                        'number_of_files':    mi+1,
+                        'number_of_files':    number_of_files+mi,
                         'multiprocessing':    True}
 
         print(f'\nFitting model: {model}')
