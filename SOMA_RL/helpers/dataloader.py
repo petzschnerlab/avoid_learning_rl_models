@@ -23,14 +23,12 @@ class DataLoader:
 
         #Reorganize data so that left stim is always better
         if generated:
-            learning_data['participant_id'] = '['+learning_filename.split(']')[0].split('[')[-1]+']'
             learning_data['group_code'] = 'simulated'
             learning_data = learning_data.rename(columns={'state_id': 'symbol_names'})
             learning_data['rewards'] = learning_data['rewards'].apply(lambda x: np.array(eval(x)))
             learning_data['reward_L'] = learning_data['rewards'].apply(lambda x: x[0])
             learning_data['reward_R'] = learning_data['rewards'].apply(lambda x: x[1])
 
-            transfer_data['participant_id'] = '['+learning_filename.split(']')[0].split('[')[-1]+']'
             transfer_data['group_code'] = 'simulated'
             transfer_data = transfer_data.rename(columns={'state_id': 'state'})
         else:

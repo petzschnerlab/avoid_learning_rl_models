@@ -84,8 +84,7 @@ def run_fit(learning_filename, transfer_filename, models, number_of_participants
         pool.close()
 
         #Progress bar checking how many have completed
-        num_files = number_of_files if number_of_files is not None else len(inputs)
-        mp_progress(num_files, progress_bar=progress_bar)
+        mp_progress(len(inputs), progress_bar=progress_bar)
         if progress_bar:
             print('\nMultiprocessing complete!')
 
@@ -95,7 +94,6 @@ def run_fit(learning_filename, transfer_filename, models, number_of_participants
     files_prefix = list(set(files_prefix))
     for file_prefix in files_prefix:
         files_to_combine = [os.path.join('SOMA_RL','fits','temp',f'{file_prefix}_Run{i}_fit_results.csv') for i in range(number_of_runs)]
-        pd.read_csv(files_to_combine[0], header=None)
         combined_file = pd.concat([pd.read_csv(f, header=None) for f in files_to_combine], ignore_index=True)
         combined_file.to_csv(os.path.join('SOMA_RL','fits','temp',f'{file_prefix}_fit_results.csv'), index=False, header=False)
         for f in files_to_combine:
@@ -312,7 +310,10 @@ def generate_simulated_data(models, parameters, task_design, datasets_to_generat
     #Delete all folders with generated data from previous run, if desired
     if clear_data:
         for f in os.listdir('SOMA_RL/data/generated'):
-            shutil.rmtree(os.path.join('SOMA_RL','data','generated',f))
+            if '.csv' in f:
+                os.remove(os.path.join('SOMA_RL','data','generated',f))
+            else:
+                shutil.rmtree(os.path.join('SOMA_RL','data','generated',f))
 
     #Set up parameters
     random_params = True if parameters == 'random' else False
@@ -348,35 +349,55 @@ def generate_simulated_data(models, parameters, task_design, datasets_to_generat
         mp_progress(len(inputs), filepath='SOMA_RL/data/generated')
         print('\nMultiprocessing complete!')
 
+    #For each model, combine all files for each model
+    files = os.listdir('SOMA_RL/data/generated')
+    for model in models:
+        #Find all files that start with model
+        data_names = [filename for filename in files if model == filename.split('_')[0]]
+        #Load and concatenate all files
+        model_learning = None
+        model_transfer = None
+        for data_name in data_names:
+            learning_data = pd.read_csv(f'SOMA_RL/data/generated/{data_name}/{data_name}_generated_learning.csv')
+            transfer_data = pd.read_csv(f'SOMA_RL/data/generated/{data_name}/{data_name}_generated_transfer.csv')
+            participant = '['+data_name.split(']')[0].split('[')[-1]+']'
+            learning_data.insert(0, 'participant_id', participant)
+            transfer_data.insert(0, 'participant_id', participant)
+
+            if model_learning is None:
+                model_learning = learning_data
+                model_transfer = transfer_data
+            else:
+                model_learning = pd.concat((model_learning, learning_data), ignore_index=True)
+                model_transfer = pd.concat((model_transfer, transfer_data), ignore_index=True)
+        #Save concatenated files
+        model_learning.to_csv(f'SOMA_RL/data/generated/{model}_generated_learning.csv', index=False)
+        model_transfer.to_csv(f'SOMA_RL/data/generated/{model}_generated_transfer.csv', index=False)
+
 def run_generative_fits(models, number_of_runs=1):
 
-    #Find all files in SOMA_RL/data/generated
-    generated_filenames = os.listdir('SOMA_RL/data/generated')
+    #Find all files in SOMA_RL/data/generated that are not folders
+    generated_filenames = [f for f in os.listdir('SOMA_RL/data/generated') if '.' in f]
     for f in os.listdir('SOMA_RL/fits/temp'):
         os.remove(os.path.join('SOMA_RL','fits','temp',f))
 
-    loop = tqdm.tqdm(range(len(generated_filenames)))
     columns = {model: [] for model in models}
     for mi, model in enumerate(models):
-        #Find all files that start with model
-        data_names = [filename for filename in generated_filenames if model == filename.split('_')[0]]
-        for di, data_name in enumerate(data_names):
+        #Create param dictionary
+        fit_params = {'learning_filename':  f'SOMA_RL/data/generated/{model}_generated_learning.csv',
+                        'transfer_filename':  f'SOMA_RL/data/generated/{model}_generated_transfer.csv',
+                        'models':             [model],
+                        'random_params':      True,
+                        'number_of_runs':     number_of_runs,
+                        'generated':          True,
+                        'clear_data':         False,
+                        'progress_bar':       True,
+                        'number_of_files':    mi+1,
+                        'multiprocessing':    True}
 
-            #Create param dictionary
-            fit_params = {'learning_filename':  f'SOMA_RL/data/generated/{data_name}/{data_name}_generated_learning.csv',
-                          'transfer_filename':  f'SOMA_RL/data/generated/{data_name}/{data_name}_generated_transfer.csv',
-                          'models':             [model],
-                          'random_params':      True,
-                          'number_of_runs':     number_of_runs,
-                          'generated':          True,
-                          'clear_data':         False,
-                          'progress_bar':       False,
-                          'number_of_files':    mi*len(data_names) + di + number_of_runs,
-                          'multiprocessing':    True}
-
-            dataloader, cols = run_fit(**fit_params)
-            columns[model] = cols[model]
-            loop.update(1)
+        print(f'\nFitting model: {model}')
+        dataloader, cols = run_fit(**fit_params)
+        columns[model] = cols[model]
     
     return dataloader, columns
 
