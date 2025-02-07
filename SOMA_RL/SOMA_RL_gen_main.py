@@ -55,9 +55,9 @@ if __name__ == "__main__":
 
     task_design = {'learning_phase': {
                         'number_of_trials': 24,
-                        'number_of_blocks': 4,},
+                        'number_of_blocks': 4},
                     'transfer_phase': {
-                        'times_repeated': 4}}
+                        'times_repeated': 12}}
     
     generate_params = {'models':                models,
                        'task_design':           task_design,
