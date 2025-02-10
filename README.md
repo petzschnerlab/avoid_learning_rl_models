@@ -10,6 +10,21 @@
         - TODO: Expand script to then fit data with corresponding model (random params n times, where n is determined by results of Model Fitting)
         - TODO: Create correlation plots of different parameters and true parameters 
 
+<p align="center">
+    <img src=".\SOMA_RL\plots\correlations\QLearning_correlation_plot.png" width="800" height="200" />
+    <img src=".\SOMA_RL\plots\correlations\QLearning+novel_correlation_plot.png" width="800" height="200" />
+    <img src=".\SOMA_RL\plots\correlations\ActorCritic_correlation_plot.png" width="800" height="200" />
+    <img src=".\SOMA_RL\plots\correlations\ActorCritic+novel_correlation_plot.png" width="800" height="200" />
+    <img src=".\SOMA_RL\plots\correlations\Relative_correlation_plot.png" width="800" height="200" />
+    <img src=".\SOMA_RL\plots\correlations\Relative+novel_correlation_plot.png" width="800" height="200" />
+    <img src=".\SOMA_RL\plots\correlations\wRelative+bias+decay_correlation_plot.png" width="800" height="200" />
+    <img src=".\SOMA_RL\plots\correlations\wRelative+bias+decay+novel_correlation_plot.png" width="800" height="200" />
+    <img src=".\SOMA_RL\plots\correlations\Hybrid2012+bias_correlation_plot.png" width="800" height="200" />
+    <img src=".\SOMA_RL\plots\correlations\Hybrid2012+bias+novel_correlation_plot.png" width="800" height="200" />
+    <img src=".\SOMA_RL\plots\correlations\Hybrid2021+bias+decay_correlation_plot.png" width="800" height="200" />
+    <img src=".\SOMA_RL\plots\correlations\Hybrid2021+bias+decay+novel_correlation_plot.png" width="800" height="200" />
+</p>
+
 - **Model Comparison**: I would add a Bayesian model comparison to our data analysis using the VB Toolbox by Lionel Rigoux.
     - **TODO**: Implement this with PyMC
 
