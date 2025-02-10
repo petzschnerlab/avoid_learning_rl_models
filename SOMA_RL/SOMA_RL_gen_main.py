@@ -52,19 +52,13 @@ if __name__ == "__main__":
               'Hybrid2012+bias+novel', #Standard + novel
               'Hybrid2021+bias+decay', #Standard w/o bias
               'Hybrid2021+bias+decay+novel'] #Standard + novel
-
-    task_design = {'learning_phase': {
-                        'number_of_trials': 24,
-                        'number_of_blocks': 4},
-                    'transfer_phase': {
-                        'times_repeated': 12}}
     
-    generate_params = {'models':                models,
-                       'task_design':           task_design,
+    generate_params = {'learning_filename':     'SOMA_RL/data/pain_learning_processed.csv',
+                       'transfer_filename':     'SOMA_RL/data/pain_transfer_processed.csv',
+                       'models':                models,
                        'parameters':            'random',
-                       'datasets_to_generate':  100,
-                       'number_of_runs':        20,
-                       'multiprocessing':       True
+                       'number_of_runs':        5,
+                       'multiprocessing':       True,
                        }
 
     run_generate_and_fit(**generate_params)

@@ -23,13 +23,16 @@ def run_fit_empirical(learning_filename, transfer_filename, models, number_of_pa
     fit_data = run_fit_comparison(dataloader, models, dataloader.get_group_ids(), columns)
     run_fit_simulations(learning_filename, transfer_filename, fit_data, models, dataloader.get_participant_ids(), dataloader.get_group_ids(), number_of_participants=number_of_participants, multiprocessing=multiprocessing)
 
-def run_generate_and_fit(models, task_design, parameters, datasets_to_generate=1, number_of_runs=1, multiprocessing=False, clear_data=True):
+def run_generate_and_fit(models, parameters, learning_filename=None, transfer_filename=None, task_design=None, datasets_to_generate=1, number_of_runs=1, number_of_participants=0, multiprocessing=False, clear_data=True):
     
     if not os.path.exists('SOMA_RL/data/generated'):
         os.makedirs('SOMA_RL/data/generated')
 
-    generate_simulated_data(models=models, parameters=parameters, task_design=task_design, datasets_to_generate=datasets_to_generate, multiprocessing=multiprocessing, clear_data=clear_data)
-    dataloader, columns = run_generative_fits(models=models, number_of_runs=number_of_runs, datasets_to_generate=datasets_to_generate)
+    if [learning_filename, transfer_filename].count(None) == 0:
+        datasets_to_generate = len(DataLoader(learning_filename, transfer_filename, number_of_participants=number_of_participants, reduced=False).get_participant_ids())
+
+    generate_simulated_data(models=models, parameters=parameters, learning_filename=learning_filename, transfer_filename=transfer_filename, task_design=task_design, datasets_to_generate=datasets_to_generate, number_of_participants=number_of_participants, multiprocessing=multiprocessing, clear_data=clear_data)
+    dataloader, columns = run_generative_fits(models=models, number_of_runs=number_of_runs, datasets_to_generate=datasets_to_generate, multiprocessing=multiprocessing)
     fit_data = run_fit_comparison(dataloader=dataloader, models=models, group_ids=['simulated'], columns=columns)
     plot_generative_fits(models=models, fit_data=fit_data)
 
@@ -293,7 +296,7 @@ def run_fit_simulations(learning_filename, transfer_filename, fit_data, models, 
 
     return None
 
-def generate_simulated_data(models, parameters, task_design, datasets_to_generate=1, multiprocessing=False, clear_data=True):
+def generate_simulated_data(models, parameters, learning_filename=None, transfer_filename=None, task_design=None, datasets_to_generate=1, number_of_participants=0, multiprocessing=False, clear_data=True):
 
     '''
     Parameters
@@ -308,6 +311,10 @@ def generate_simulated_data(models, parameters, task_design, datasets_to_generat
         Number of times to run the simulation for each model (only applicable when parameters='random')
     '''
 
+    #Checks
+    if [learning_filename, transfer_filename].count(None) == 1:
+        raise ValueError('Both learning and transfer filenames must be provided')
+
     #Delete all folders with generated data from previous run, if desired
     if clear_data:
         for f in os.listdir('SOMA_RL/data/generated'):
@@ -320,6 +327,13 @@ def generate_simulated_data(models, parameters, task_design, datasets_to_generat
     random_params = True if parameters == 'random' else False
     datasets_to_generate = datasets_to_generate if random_params else 1
 
+    if learning_filename is not None and transfer_filename is not None:
+        dataloader = DataLoader(learning_filename, transfer_filename, reduced=False, generated=False, number_of_participants=number_of_participants)
+        participant_ids = dataloader.get_participant_ids()
+        datasets_to_generate = len(participant_ids)
+    else:
+        dataloader = None
+
     #Run simulations
     print(f'\nNumber of Models: {len(models)}, Number of Runs: {datasets_to_generate}, Total Simulations: {len(models)*datasets_to_generate}')
     loop = tqdm.tqdm(range(len(models)*datasets_to_generate)) if not multiprocessing else None
@@ -327,10 +341,17 @@ def generate_simulated_data(models, parameters, task_design, datasets_to_generat
     columns = {}
     for model_name in models:
         for run in range(datasets_to_generate):
+
+            if dataloader is not None:
+                p_dataloader = copy.copy(dataloader)
+                p_dataloader.filter_participant_data(participant_ids[run])
+            else:
+                p_dataloader = None
+
             model_parameters = parameters[model_name] if not random_params else None
             model = RLModel(model_name, model_parameters, random_params=random_params)
             task = AvoidanceLearningTask(task_design)
-            pipeline = RLPipeline(model, task=task)
+            pipeline = RLPipeline(model, dataloader=p_dataloader, task=task)
             columns[model_name] = ['participant', 'pain_group', 'run', 'fit',] + list(model.get_parameters())
             if multiprocessing:
                 inputs.append((pipeline, columns, 'simulation', 'simulation', run, 'generate_data=True'))
@@ -375,7 +396,7 @@ def generate_simulated_data(models, parameters, task_design, datasets_to_generat
         model_learning.to_csv(f'SOMA_RL/data/generated/{model}_generated_learning.csv', index=False)
         model_transfer.to_csv(f'SOMA_RL/data/generated/{model}_generated_transfer.csv', index=False)
 
-def run_generative_fits(models, number_of_runs=1, datasets_to_generate=1):
+def run_generative_fits(models, number_of_runs=1, datasets_to_generate=1, multiprocessing=False):
 
     #Find all files in SOMA_RL/data/generated that are not folders
     generated_filenames = [f for f in os.listdir('SOMA_RL/data/generated') if '.' in f]
@@ -394,7 +415,7 @@ def run_generative_fits(models, number_of_runs=1, datasets_to_generate=1):
                         'clear_data':         False,
                         'progress_bar':       True,
                         'number_of_files':    (datasets_to_generate*number_of_runs)+(mi*datasets_to_generate),
-                        'multiprocessing':    True}
+                        'multiprocessing':    multiprocessing}
 
         print(f'\nFitting model: {model}')
         dataloader, cols = run_fit(**fit_params)
