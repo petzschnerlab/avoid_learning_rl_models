@@ -19,12 +19,53 @@ from helpers.plotting import plot_simulations, plot_generative_fits
 
 def run_fit_empirical(learning_filename, transfer_filename, models, number_of_participants=0, random_params=False, number_of_runs=1, generated=False, multiprocessing=False):
 
+    #Report each of the inputs
+    print('Running Empirical Fit with the following parameters:')
+    print('--------------------------------------------------------')
+    print(f'Models: {models}')
+    print(f'Learning Filename: {learning_filename}')
+    print(f'Transfer Filename: {transfer_filename}')
+    print(f'Number of Participants: {number_of_participants}')
+    print(f'Random Parameters: {random_params}')
+    print(f'Number of Runs: {number_of_runs}')
+    print(f'Generated: {generated}')
+    print(f'Multiprocessing: {multiprocessing}')
+    print('--------------------------------------------------------')
+    
     dataloader, columns = run_fit(learning_filename, transfer_filename, models, number_of_participants=number_of_participants, random_params=random_params, number_of_runs=number_of_runs, generated=generated, multiprocessing=multiprocessing)
     fit_data = run_fit_comparison(dataloader, models, dataloader.get_group_ids(), columns)
     run_fit_simulations(learning_filename, transfer_filename, fit_data, models, dataloader.get_participant_ids(), dataloader.get_group_ids(), number_of_participants=number_of_participants, multiprocessing=multiprocessing)
 
 def run_generate_and_fit(models, parameters, learning_filename=None, transfer_filename=None, task_design=None, fixed=None, bounds=None, datasets_to_generate=1, number_of_runs=1, number_of_participants=0, multiprocessing=False, clear_data=True):
     
+    #Report each of the inputs
+    print('Running Generation and Fit with the following parameters:')
+    print('--------------------------------------------------------')
+    print(f'Models: {models}')
+    print(f'Parameters: {parameters}')
+    print(f'Learning Filename: {learning_filename}')
+    print(f'Transfer Filename: {transfer_filename}')
+    print(f'Task Design: {task_design}')
+    print(f'Datasets to Generate: {datasets_to_generate}')
+    print(f'Number of Runs: {number_of_runs}')
+    print(f'Number of Participants: {number_of_participants}')
+    print(f'Multiprocessing: {multiprocessing}')
+    print(f'Clear Data: {clear_data}')
+
+    if fixed is not None:
+        print('\nParameter Overwrites:')
+        for model in fixed:
+            print(f'       {model}:')
+            for key in fixed[model]:
+                print(f'              {key} = {fixed[model][key]}')
+    if bounds is not None:
+        print('\nParameter Bound Overwrites:')
+        for model in bounds:
+            print(f'       {model}:')
+            for key in bounds[model]:
+                print(f'              {key} = {bounds[model][key]}')
+    print('--------------------------------------------------------')
+
     if not os.path.exists('SOMA_RL/data/generated'):
         os.makedirs('SOMA_RL/data/generated')
 
