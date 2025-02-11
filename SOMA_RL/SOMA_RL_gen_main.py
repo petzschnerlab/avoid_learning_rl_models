@@ -53,14 +53,15 @@ if __name__ == "__main__":
               'Hybrid2021+bias+decay', #Standard w/o bias
               'Hybrid2021+bias+decay+novel'] #Standard + novel
     
+    models = ['wRelative', 'wRelative+bias', 'wRelative+decay', 'wRelative+novel', 'wRelative+bias+decay']
+    
     fixed = None
     bounds = {'QLearning':      {'temperature': (0.1, 1)},
-              'ActorCritic':    {'temperature': (0.1, 1)},
+              'ActorCritic':    {'temperature': (0.1, 1), 'critic_lr': (0.1, 0.2)},
               'Relative':       {'temperature': (0.1, 1)},
-              'wRelative':      {'temperature': (0.1, 1)},
-              'QRelative':      {'temperature': (0.1, 1)},
-              'Hybrid2012':     {'temperature': (0.1, 1)},
-              'Hybrid2021':     {'temperature': (0.1, 1)}}
+              'wRelative':      {'temperature': (0.1, 1), 'contextual_lr': (0.1, 0.2)},
+              'Hybrid2012':     {'temperature': (0.1, 1), 'critic_lr': (0.1, 1)},
+              'Hybrid2021':     {'temperature': (0.1, 1), 'critic_lr': (0.1, 1)}}
     
     generate_params = {'learning_filename':     'SOMA_RL/data/pain_learning_processed.csv',
                        'transfer_filename':     'SOMA_RL/data/pain_transfer_processed.csv',
