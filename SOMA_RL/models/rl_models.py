@@ -25,13 +25,9 @@ class RLModel:
         #Set fixed and bounds parameters
         self.fixed, self.bounds = self.get_default_parameters()
         if fixed is not None:
-            if model in fixed:
-                for param in fixed[model]:
-                    self.fixed[model][param] = fixed[model][param]
+            self.fixed[model].update(fixed[model])
         if bounds is not None:
-            if model in bounds:
-                for param in bounds[model]:
-                    self.bounds[model][param] = bounds[model][param]
+            self.bounds[model].update(bounds[model])
 
         #Define model
         self.model = self.define_model(model, parameters)
