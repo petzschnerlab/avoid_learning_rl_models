@@ -367,14 +367,16 @@ class RLToolbox:
                 rewards = self.reward_valence(rewards)
 
             #Populate state
+            stims = ['symbol_L_name', 'symbol_R_name'] if trial_data['stim_order'] else ['symbol_R_name', 'symbol_L_name']
+            stims_index = [0, 1] if trial_data['stim_order'] else [1, 0]
             state = {'block_number': 0, 
                      'trial_number': trial_data['trial_number'], 
                      'state_index': 0, 
                      'state_id': trial_data['state'], 
-                     'stim_id': [trial_data['state'].split('State ')[-1][0],trial_data['state'].split('State ')[-1][1]], 
+                     'stim_id': [trial_data['state'].split(' ')[-1][stims_index[0]], trial_data['state'].split(' ')[-1][stims_index[1]]], 
                      'context': trial_data['context_val_name'], 
                      'feedback': [trial_data['feedback_L'], trial_data['feedback_R']], 
-                     'probabilities': [trial_data['symbol_L_name'][:2], trial_data['symbol_R_name'][:2]], 
+                     'probabilities': [trial_data[stims[0]][:2], trial_data[stims[1]][:2]],
                      'rewards': rewards,
                      'correct_action': 0}
             

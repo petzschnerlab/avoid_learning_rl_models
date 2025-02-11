@@ -158,7 +158,7 @@ def plot_fits_by_run_number(fit_data_path):
     #Save plot 
     plt.savefig(fit_data_path.replace('.pkl', '.png'))
 
-def plot_generative_fits(models, fit_data):
+def plot_generative_fits(models, fit_data, fixed=None, bounds=None):
     #Create a dictionary with model being keys and pd.dataframe empty as value
     fit_results = {model: [] for model in models}
     for model in models:
@@ -184,16 +184,17 @@ def plot_generative_fits(models, fit_data):
     for model in models:
         #Plot correlation plots, new figure for each model, subplot for each parameter
 
-        bounds = RLModel(model).get_bounds()
+        bounds = RLModel(model, fixed=fixed, bounds=bounds).get_bounds()
         fig, axs = plt.subplots(1, len(fit_results[model].columns)-2, figsize=(5*len(fit_results[model].columns)-2, 5))
         for i, parameter in enumerate(fit_results[model].columns[2:]):
-            axs[i].scatter(fit_results[model][fit_results[model]['fit_type']=='True'][parameter], 
-                           fit_results[model][fit_results[model]['fit_type']=='Fit'][parameter])
+            true = fit_results[model][fit_results[model]['fit_type']=='True'][parameter]
+            fit = fit_results[model][fit_results[model]['fit_type']=='Fit'][parameter]
+            axs[i].scatter(true, fit)
+            r = np.round(np.corrcoef(true.to_numpy().astype(float), fit.to_numpy().astype(float))[0,1], 2)
             axs[i].plot(bounds[parameter], bounds[parameter], '--', color='grey', alpha=0.5)
-            axs[i].set_title(parameter)
+            axs[i].set_title(f"{parameter}, r={r}")
             axs[i].set_xlabel('True')
             axs[i].set_ylabel('Fit')
-            #Add x and y bounds
             axs[i].set_xlim(bounds[parameter])
             axs[i].set_ylim(bounds[parameter])
 

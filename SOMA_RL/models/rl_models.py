@@ -7,20 +7,33 @@ from models.hybrid import Hybrid2012, Hybrid2021
 
 class RLModel:
 
-    def __init__(self, model, parameters=None, random_params=False):
+    def __init__(self, model, parameters=None, random_params=False, fixed=None, bounds=None):
 
         self.random_params = random_params
-        
+
         model_name = model
+
+        #Determine optimal parameters, remove them from model name
         fit_bias = True if '+bias' in model else False
         fit_novel = True if '+novel' in model else False
         fit_decay = True if '+decay' in model else False
         self.optional_parameters = {'bias': fit_bias, 'novel': fit_novel, 'decay': fit_decay}
-
         model = model.replace('+bias', '')
         model = model.replace('+novel', '')
         model = model.replace('+decay', '')
 
+        #Set fixed and bounds parameters
+        self.fixed, self.bounds = self.get_default_parameters()
+        if fixed is not None:
+            if model in fixed:
+                for param in fixed[model]:
+                    self.fixed[model][param] = fixed[model][param]
+        if bounds is not None:
+            if model in bounds:
+                for param in bounds[model]:
+                    self.bounds[model][param] = bounds[model][param]
+
+        #Define model
         self.model = self.define_model(model, parameters)
         self.model.model_name = model_name
         self.model.optional_parameters = self.optional_parameters
@@ -70,175 +83,137 @@ class RLModel:
 
         return model_params
     
+    def get_model_parameters(self):
+        model_parameters = {}
+        model_parameters['QLearning'] = {'factual_lr', 
+                                         'counterfactual_lr',
+                                         'temperature',
+                                         'novel_value',
+                                         'decay_factor'}
+        
+        model_parameters['ActorCritic'] = {'factual_actor_lr',
+                                           'counterfactual_actor_lr',
+                                           'critic_lr',
+                                           'temperature',
+                                           'valence_factor',
+                                           'novel_value',
+                                           'decay_factor'}
+        
+        model_parameters['Relative'] = {'factual_lr',
+                                        'counterfactual_lr',
+                                        'contextual_lr',
+                                        'temperature',
+                                        'novel_value',
+                                        'decay_factor'}
+
+        model_parameters['Hybrid2012'] = {'factual_lr',
+                                            'counterfactual_lr',
+                                            'factual_actor_lr',
+                                            'counterfactual_actor_lr',
+                                            'critic_lr',
+                                            'temperature',
+                                            'mixing_factor',
+                                            'valence_factor',
+                                            'novel_value',
+                                            'decay_factor'}
+        
+        model_parameters['Hybrid2021'] = {'factual_lr',
+                                            'counterfactual_lr',
+                                            'factual_actor_lr',
+                                            'counterfactual_actor_lr',
+                                            'critic_lr',
+                                            'temperature',
+                                            'mixing_factor',
+                                            'noise_factor',
+                                            'valence_factor',
+                                            'novel_value',
+                                            'decay_factor'}
+        
+        model_parameters['QRelative'] = {'factual_lr',
+                                        'counterfactual_lr',
+                                        'contextual_lr',
+                                        'temperature',
+                                        'mixing_factor',
+                                        'valence_reward',
+                                        'novel_value',
+                                        'decay_factor'}
+        
+        model_parameters['wRelative'] = {'factual_lr',
+                                        'counterfactual_lr',
+                                        'contextual_lr',
+                                        'temperature',
+                                        'mixing_factor',
+                                        'valence_factor',
+                                        'novel_value',
+                                        'decay_factor'}
+    
+        return model_parameters
+
+    def get_default_parameters(self):
+        return self.get_default_fixed(), self.get_default_bounds()
+
+    def get_default_fixed(self):
+
+        parameters_fixed = {'factual_lr': 0.1,
+                            'counterfactual_lr': 0.05,
+                            'factual_actor_lr': 0.1,
+                            'counterfactual_actor_lr': 0.05,
+                            'critic_lr': 0.1,
+                            'contextual_lr': 0.1,
+                            'temperature': 0.1,
+                            'mixing_factor': 0.5,
+                            'noise_factor': 0.1,
+                            'valence_factor': 0.5,
+                            'valence_reward': 0.5,
+                            'novel_value': 0,
+                            'decay_factor': 0}
+        
+        model_parameters = self.get_model_parameters()
+        default_fixed = {}
+        for model in model_parameters:
+            default_fixed[model] = {param: parameters_fixed[param] for param in model_parameters[model]}
+
+        return default_fixed
+
+    def get_default_bounds(self):
+
+        parameters_bounds = {'factual_lr': (0.01, .99),
+                             'counterfactual_lr': (0.01, .99),
+                             'factual_actor_lr': (0.01, .99),
+                             'counterfactual_actor_lr': (0.01, .99),
+                             'critic_lr': (0.01, .99),
+                             'contextual_lr': (0.01, .99),
+                             'temperature': (0.01, 10),
+                             'mixing_factor': (0, 1),
+                             'noise_factor': (0, 1),
+                             'valence_factor': (0, 1),
+                             'valence_reward': (0, 1),
+                             'novel_value': (-1, 1),
+                             'decay_factor': (0, 1)}
+
+        model_parameters = self.get_model_parameters()
+        default_bounds = {}
+        for model in model_parameters:
+            default_bounds[model] = {param: parameters_bounds[param] for param in model_parameters[model]}
+        
+        return default_bounds
+    
     def define_model(self, model, parameters=None):
 
-        if model == 'QLearning':
-
-            fixed =  {'factual_lr':             0.1,
-                      'counterfactual_lr':      0.05,
-                      'temperature':            0.1,
-                      'novel_value':            0,
-                      'decay_factor':           0}
-             
-            bounds = {'factual_lr':             (0.01, .99), 
-                      'counterfactual_lr':      (0.01, .99), 
-                      'temperature':            (0.01, 10), 
-                      'novel_value':            (-1, 1),
-                      'decay_factor':           (0, 1)}
-            
-            model_params = self.define_params(fixed, bounds, parameters)
-            model = QLearning(**model_params)
-            model.bounds = bounds
-            
-        elif model == 'ActorCritic':
-
-            fixed =  {'factual_actor_lr':           0.1,
-                      'counterfactual_actor_lr':    0.05,
-                      'critic_lr':                  0.1,
-                      'temperature':                0.1,
-                      'valence_factor':             0.5,
-                      'novel_value':                0,
-                      'decay_factor':               0}
-
-            bounds = {'factual_actor_lr':           (0.01, .99),
-                      'counterfactual_actor_lr':    (0.01, .99),
-                      'critic_lr':                  (0.01, .99),
-                      'temperature':                (0.01, 10),
-                      'valence_factor':             (0, 1),
-                      'novel_value':                (-1, 1),
-                      'decay_factor':               (0, 1)}
-            
-            model_params = self.define_params(fixed, bounds, parameters)
-            model = ActorCritic(**model_params)
-            model.bounds = bounds
-
-        elif model == 'Relative':
-
-            fixed =  {'factual_lr':             0.1,
-                      'counterfactual_lr':      0.05,
-                      'contextual_lr':          0.1,
-                      'temperature':            0.1,
-                      'novel_value':            0,
-                      'decay_factor':           0}
-
-            bounds = {'factual_lr':             (0.01, .99),
-                      'counterfactual_lr':      (0.01, .99),
-                      'contextual_lr':          (0.01, .99),
-                      'temperature':            (0.01, 10),
-                      'novel_value':            (-1, 1),
-                      'decay_factor':           (0, 1)}
-            
-            model_params = self.define_params(fixed, bounds, parameters)
-            model = Relative(**model_params)
-            model.bounds = bounds
-
-        elif model == 'Hybrid2012':
-
-            fixed =  {'factual_lr':                 0.1,
-                      'counterfactual_lr':          0.05,
-                      'factual_actor_lr':           0.1,
-                      'counterfactual_actor_lr':    0.05,
-                      'critic_lr':                  0.1,
-                      'temperature':                0.1,
-                      'mixing_factor':              0.5,
-                      'valence_factor':             0.5,
-                      'novel_value':                0,
-                      'decay_factor':               0}
-            
-            bounds = {'factual_lr':                 (0.01, .99),
-                      'counterfactual_lr':          (0.01, .99),
-                      'factual_actor_lr':           (0.01, .99),
-                      'counterfactual_actor_lr':    (0.01, .99),
-                      'critic_lr':                  (0.01, .99),
-                      'temperature':                (0.01, 10),
-                      'mixing_factor':              (0, 1),
-                      'valence_factor':             (0, 1),
-                      'novel_value':                (-1, 1),
-                      'decay_factor':               (0, 1)}
-            
-            model_params = self.define_params(fixed, bounds, parameters)
-            model = Hybrid2012(**model_params)
-            model.bounds = bounds
-
-        elif model == 'Hybrid2021':
-
-            fixed =  {'factual_lr':                 0.1,
-                      'counterfactual_lr':          0.05,
-                      'factual_actor_lr':           0.1,
-                      'counterfactual_actor_lr':    0.05,
-                      'critic_lr':                  0.1,
-                      'temperature':                0.1,
-                      'mixing_factor':              0.5,
-                      'noise_factor':               0.1,
-                      'valence_factor':             0.5,
-                      'novel_value':                0,
-                      'decay_factor':               0}
-            
-            bounds = {'factual_lr':                 (0.01, .99),
-                      'counterfactual_lr':          (0.01, .99),
-                      'factual_actor_lr':           (0.01, .99),
-                      'counterfactual_actor_lr':    (0.01, .99),
-                      'critic_lr':                  (0.01, .99),
-                      'temperature':                (0.01, 10),
-                      'mixing_factor':              (0, 1),
-                      'noise_factor':               (0, 1),
-                      'valence_factor':             (0, 1),
-                      'novel_value':                (-1, 1),
-                      'decay_factor':               (0, 1)}
-            
-            model_params = self.define_params(fixed, bounds, parameters)
-            model = Hybrid2021(**model_params)
-            model.bounds = bounds
-            
-        elif model == 'QRelative':
- 
-            fixed =  {'factual_lr':             0.1,
-                      'counterfactual_lr':      0.05,
-                      'contextual_lr':          0.1,
-                      'temperature':            0.1,
-                      'mixing_factor':          0.5,
-                      'valence_reward':         0.5,
-                      'novel_value':            0,
-                      'decay_factor':           0}
-
-            bounds = {'factual_lr':             (0.01, .99),
-                      'counterfactual_lr':      (0.01, .99),
-                      'contextual_lr':          (0.01, .99),
-                      'temperature':            (0.01, 10),
-                      'mixing_factor':          (0, 1),
-                      'valence_reward':         (0, 1),
-                      'novel_value':            (-1, 1),
-                      'decay_factor':           (0, 1)}
-            
-            model_params = self.define_params(fixed, bounds, parameters)
-            model = QRelative(**model_params)
-            model.bounds = bounds
-
-        elif model == 'wRelative':
-
-            fixed =  {'factual_lr':             0.1,
-                      'counterfactual_lr':      0.05,
-                      'contextual_lr':          0.1,
-                      'temperature':            0.1,
-                      'mixing_factor':          0.5,
-                      'valence_factor':         0.5,
-                      'novel_value':            0,
-                      'decay_factor':           0}
-            
-            bounds = {'factual_lr':             (0.01, .99),
-                      'counterfactual_lr':      (0.01, .99),
-                      'contextual_lr':          (0.01, .99),
-                      'temperature':            (0.01, 10),
-                      'mixing_factor':          (0, 1),
-                      'valence_factor':         (0, 1),
-                      'novel_value':            (-1, 1),
-                      'decay_factor':           (0, 1)}
-            
-            model_params = self.define_params(fixed, bounds, parameters)
-            model = wRelative(**model_params)
-            model.bounds = bounds
-            
-        else:
+        model_classes = {'QLearning': QLearning,
+                         'ActorCritic': ActorCritic,
+                         'Relative': Relative,
+                         'wRelative': wRelative,
+                         'QRelative': QRelative,
+                         'Hybrid2012': Hybrid2012,
+                         'Hybrid2021': Hybrid2021}
+        
+        if model not in model_classes:
             raise ValueError(f'Model {model} not recognized.')
+        
+        bounds = self.bounds[model]
+        model_params = self.define_params(self.fixed[model], self.bounds[model], parameters)
+        model = model_classes[model](**model_params)
+        model.bounds = bounds
                 
         return model
