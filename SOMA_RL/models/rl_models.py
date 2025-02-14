@@ -63,6 +63,9 @@ class RLModel:
     def get_parameters(self):
         return self.model.parameters.keys()
     
+    def get_n_parameters(self):
+        return len(self.model.parameters)
+    
     def starting_param(self, fixed_param=None, bounds=None):
 
         if self.random_params:

@@ -158,7 +158,25 @@ def plot_fits_by_run_number(fit_data_path):
     #Save plot 
     plt.savefig(fit_data_path.replace('.pkl', '.png'))
 
-def plot_generative_fits(models, fit_data, fixed=None, bounds=None):
+def plot_model_fits(confusion_matrix):
+    
+    #Plot confusion matrix
+    fig, ax = plt.subplots(1, 1, figsize=(10, 10))
+    cax = ax.matshow(confusion_matrix, cmap='viridis')
+    fig.colorbar(cax)
+    ax.set_xticks(np.arange(len(confusion_matrix.columns)))
+    ax.set_yticks(np.arange(len(confusion_matrix.index)))
+    ax.set_xticklabels(confusion_matrix.columns)
+    ax.set_yticklabels(confusion_matrix.index)
+
+    for i in range(len(confusion_matrix.index)):
+        for j in range(len(confusion_matrix.columns)):
+            ax.text(j, i, np.round(confusion_matrix.iloc[i, j], 2), ha='center', va='center', color='black')
+    cax.set_clim(0, 100)
+    plt.tight_layout()
+    plt.savefig(f'SOMA_RL/plots/model_fits.png')
+
+def plot_parameter_fits(models, fit_data, fixed=None, bounds=None):
     #Create a dictionary with model being keys and pd.dataframe empty as value
     fit_results = {model: [] for model in models}
     for model in models:
@@ -182,8 +200,6 @@ def plot_generative_fits(models, fit_data, fixed=None, bounds=None):
                 fit_results[model] = combined_parameters            
 
     for model in models:
-        #Plot correlation plots, new figure for each model, subplot for each parameter
-
         model_bounds = RLModel(model, fixed=fixed, bounds=bounds).get_bounds()
         fig, axs = plt.subplots(1, len(fit_results[model].columns)-2, figsize=(5*len(fit_results[model].columns)-2, 5))
         for i, parameter in enumerate(fit_results[model].columns[2:]):

@@ -4,8 +4,7 @@ import pandas as pd
 import tqdm
 import matplotlib.pyplot as plt
 
-from helpers.analyses import run_generate_and_fit
-from models.rl_models import RLModel
+from helpers.analyses import run_recovery
 
 if __name__ == "__main__":
 
@@ -53,15 +52,15 @@ if __name__ == "__main__":
               'Hybrid2021+bias+decay', #Standard w/o bias
               'Hybrid2021+bias+decay+novel'] #Standard + novel
     
-    models = ['wRelative', 'wRelative+bias', 'wRelative+decay', 'wRelative+novel', 'wRelative+bias+decay']
-    
+    models = ['QLearning', 'Relative', 'wRelative']
+
     fixed = None
     bounds = {'QLearning':      {'temperature': (0.1, 1)},
-              'ActorCritic':    {'temperature': (0.1, 1), 'critic_lr': (0.1, 0.2)},
+              'ActorCritic':    {'temperature': (0.1, 1)},
               'Relative':       {'temperature': (0.1, 1)},
-              'wRelative':      {'temperature': (0.1, 1), 'contextual_lr': (0.1, 0.2)},
-              'Hybrid2012':     {'temperature': (0.1, 1), 'critic_lr': (0.1, 1)},
-              'Hybrid2021':     {'temperature': (0.1, 1), 'critic_lr': (0.1, 1)}}
+              'wRelative':      {'temperature': (0.1, 1)},
+              'Hybrid2012':     {'temperature': (0.1, 1)},
+              'Hybrid2021':     {'temperature': (0.1, 1)}}
     
     generate_params = {'learning_filename':     'SOMA_RL/data/pain_learning_processed.csv',
                        'transfer_filename':     'SOMA_RL/data/pain_transfer_processed.csv',
@@ -71,7 +70,8 @@ if __name__ == "__main__":
                        'bounds':                bounds,
                        'number_of_runs':        5,
                        'multiprocessing':       True,
-                       'number_of_participants': 0,
+                       'number_of_participants': 10,
                        }
 
-    run_generate_and_fit(**generate_params)
+    #run_recovery(**generate_params, recovery='parameter')
+    run_recovery(**generate_params, recovery='model')

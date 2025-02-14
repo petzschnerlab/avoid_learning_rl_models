@@ -125,7 +125,7 @@ class RLPipeline:
 
         #Save task data
         if generate_data:
-            model_parameters_string = f"[{'_'.join([str(model_param).replace('.','') for model_param in model.parameters.values()])}]"
+            model_parameters_string = f"[{model.model_name}_{'_'.join([str(model_param).replace('.','') for model_param in model.parameters.values()])}]"
             simulation_name = f'{model.model_name}_{model_parameters_string}'
             os.makedirs(f'SOMA_RL/data/generated/{simulation_name}', exist_ok=True)
             model_parameters.to_csv(f'SOMA_RL/data/generated/{simulation_name}/{simulation_name}_generated_parameters.csv', header=True, index=False)
