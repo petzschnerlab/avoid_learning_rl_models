@@ -17,7 +17,14 @@ from helpers.tasks import AvoidanceLearningTask
 from helpers.pipeline import RLPipeline, mp_run_fit, mp_run_simulations, mp_progress
 from helpers.plotting import plot_simulations, plot_parameter_fits, plot_model_fits
 
-def run_fit_empirical(learning_filename, transfer_filename, models, number_of_participants=0, random_params=False, number_of_runs=1, generated=False, multiprocessing=False):
+def run_fit_empirical(learning_filename, 
+                      transfer_filename, 
+                      models, 
+                      number_of_participants=0, 
+                      random_params=False, 
+                      number_of_runs=1, 
+                      generated=False, 
+                      multiprocessing=False):
 
     #Report each of the inputs
     print('Running Empirical Fit with the following parameters:')
@@ -32,11 +39,40 @@ def run_fit_empirical(learning_filename, transfer_filename, models, number_of_pa
     print(f'Multiprocessing: {multiprocessing}')
     print('--------------------------------------------------------')
     
-    dataloader, columns = run_fit(learning_filename, transfer_filename, models, number_of_participants=number_of_participants, random_params=random_params, number_of_runs=number_of_runs, generated=generated, multiprocessing=multiprocessing)
-    fit_data = run_fit_comparison(dataloader, models, dataloader.get_group_ids(), columns)
-    run_fit_simulations(learning_filename, transfer_filename, fit_data, models, dataloader.get_participant_ids(), dataloader.get_group_ids(), number_of_participants=number_of_participants, multiprocessing=multiprocessing)
+    dataloader = run_fit(learning_filename, 
+                         transfer_filename, models, 
+                         number_of_participants=number_of_participants, 
+                         random_params=random_params, 
+                         number_of_runs=number_of_runs, 
+                         generated=generated, 
+                         multiprocessing=multiprocessing)
+    
+    fit_data = run_fit_comparison(dataloader, 
+                                  models, 
+                                  dataloader.get_group_ids())
+    
+    run_fit_simulations(learning_filename, 
+                        transfer_filename, 
+                        fit_data, 
+                        models, 
+                        dataloader.get_participant_ids(), 
+                        dataloader.get_group_ids(), 
+                        number_of_participants=number_of_participants, 
+                        multiprocessing=multiprocessing)
 
-def run_recovery(models, parameters, learning_filename=None, transfer_filename=None, task_design=None, fixed=None, bounds=None, datasets_to_generate=1, number_of_runs=1, number_of_participants=0, multiprocessing=False, clear_data=True, recovery='parameter'):
+def run_recovery(models, 
+                 parameters, 
+                 learning_filename=None, 
+                 transfer_filename=None, 
+                 task_design=None, 
+                 fixed=None, 
+                 bounds=None, 
+                 datasets_to_generate=1, 
+                 number_of_runs=1, 
+                 number_of_participants=0, 
+                 multiprocessing=False, 
+                 clear_data=True, 
+                 recovery='parameter'):
     
     #Report each of the inputs
     print('Running Generation and Fit with the following parameters:')
@@ -72,14 +108,41 @@ def run_recovery(models, parameters, learning_filename=None, transfer_filename=N
     if [learning_filename, transfer_filename].count(None) == 0:
         datasets_to_generate = len(DataLoader(learning_filename, transfer_filename, number_of_participants=number_of_participants, reduced=False).get_participant_ids())
 
-    generate_simulated_data(models=models, parameters=parameters, learning_filename=learning_filename, transfer_filename=transfer_filename, task_design=task_design, fixed=fixed, bounds=bounds, datasets_to_generate=datasets_to_generate, number_of_participants=number_of_participants, multiprocessing=multiprocessing, clear_data=clear_data)
-    dataloader, columns = run_generative_fits(models=models, number_of_runs=number_of_runs, datasets_to_generate=datasets_to_generate, fixed=fixed, bounds=bounds, multiprocessing=multiprocessing, recovery=recovery)
-    fit_data = run_fit_comparison(dataloader=dataloader, models=models, group_ids=['simulated'], columns=columns, recovery=recovery)
+    generate_simulated_data(models=models, 
+                            parameters=parameters, 
+                            learning_filename=learning_filename, 
+                            transfer_filename=transfer_filename, 
+                            task_design=task_design, 
+                            fixed=fixed, 
+                            bounds=bounds, 
+                            datasets_to_generate=datasets_to_generate, 
+                            number_of_participants=number_of_participants, 
+                            multiprocessing=multiprocessing, 
+                            clear_data=clear_data)
+    
+    dataloader = run_generative_fits(models=models, 
+                                     number_of_runs=number_of_runs, 
+                                     datasets_to_generate=datasets_to_generate, 
+                                     fixed=fixed, 
+                                     bounds=bounds, 
+                                     multiprocessing=multiprocessing, 
+                                     recovery=recovery)
+    
+    fit_data = run_fit_comparison(dataloader=dataloader, 
+                                  models=models, 
+                                  group_ids=['simulated'], 
+                                  recovery=recovery)
+    
     if recovery == 'model':
-        confusion_matrix = create_confusion_matrix(dataloader=dataloader, fit_data=fit_data)
+        confusion_matrix = create_confusion_matrix(dataloader=dataloader, 
+                                                   fit_data=fit_data)
+        
         plot_model_fits(confusion_matrix=confusion_matrix)
     else:
-        plot_parameter_fits(models=models, fit_data=fit_data, fixed=fixed, bounds=bounds)
+        plot_parameter_fits(models=models, 
+                            fit_data=fit_data, 
+                            fixed=fixed, 
+                            bounds=bounds)
 
 def create_confusion_matrix(dataloader, fit_data):
     confusion_matrix = pd.DataFrame(index=fit_data.keys(), columns=fit_data.keys()) #Rows = model fit, Columns = generated model
@@ -96,7 +159,19 @@ def create_confusion_matrix(dataloader, fit_data):
             
     return confusion_matrix
             
-def run_fit(learning_filename, transfer_filename, models, fixed=None, bounds=None, number_of_participants=0, random_params=False, number_of_runs=1, number_of_files=None, generated=False, clear_data=True, progress_bar=True, multiprocessing=False):
+def run_fit(learning_filename, 
+            transfer_filename,
+            models, 
+            fixed=None, 
+            bounds=None, 
+            number_of_participants=0, 
+            random_params=False, 
+            number_of_runs=1, 
+            number_of_files=None, 
+            generated=False, 
+            clear_data=True, 
+            progress_bar=True, 
+            multiprocessing=False):
 
     #Delete any existing files
     if clear_data:
@@ -104,12 +179,13 @@ def run_fit(learning_filename, transfer_filename, models, fixed=None, bounds=Non
             os.remove(os.path.join('SOMA_RL','fits','temp',f))
 
     #Run fits
-    #if progress_bar:
-    #    print('\n')
-    #    print(f"Number of participants: {len(participant_ids)}, Number of models: {len(models)}, Number of runs: {number_of_runs}, Total fits: {len(participant_ids)*len(models)*number_of_runs}")
-    #loop = tqdm.tqdm(range(len(participant_ids)*len(models)*number_of_runs)) if not multiprocessing and progress_bar else None
+    if progress_bar:
+        print('\n')
+        participant_ids = DataLoader(learning_filename.replace('XX', models[0]), transfer_filename.replace('XX', models[0]), number_of_participants, generated=generated).get_participant_ids()
+        print(f"Number of participants: {len(participant_ids)}, Number of models: {len(models)**2}, Number of runs: {number_of_runs}, Total fits: {len(participant_ids)*len(models)**2*number_of_runs}")
+        loop = tqdm.tqdm(range(len(participant_ids)*len(models)**2*number_of_runs)) if not multiprocessing else None
     inputs = []
-    columns = {}
+    columns = RLModel().get_model_columns()
     for generated_model_name in models:  
         current_learning_filename = learning_filename.replace('XX', generated_model_name)
         current_transfer_filename = transfer_filename.replace('XX', generated_model_name)
@@ -123,14 +199,12 @@ def run_fit(learning_filename, transfer_filename, models, fixed=None, bounds=Non
                     model = RLModel(model_name, random_params=random_params, fixed=fixed, bounds=bounds)
                     task = AvoidanceLearningTask()
                     pipeline = RLPipeline(model, p_dataloader, task)
-                    columns[model_name] = ['participant', 'pain_group', 'run', 'fit',] + list(model.get_parameters())
                     if multiprocessing:
-                        inputs.append((pipeline, columns[model_name], participant, run))
+                        inputs.append((pipeline, columns[model_name.split('+')[0]], participant, run))
                     else:
-                        pipeline.run_fit((columns[model_name], participant, run))
+                        pipeline.run_fit((columns[model_name.split('+')[0]], participant, run))
                         if progress_bar:
-                            #loop.update(1)
-                            pass
+                            loop.update(1)
 
     #Run all models fits in parallel
     if multiprocessing:
@@ -158,26 +232,30 @@ def run_fit(learning_filename, transfer_filename, models, fixed=None, bounds=Non
         for f in files_to_combine:
             os.remove(f)
 
-    return dataloader, columns
+    return dataloader
 
-def run_fit_comparison(dataloader, models, group_ids, columns, recovery='parameter'):
+def run_fit_comparison(dataloader, models, group_ids, recovery='parameter'):
     
+    columns = RLModel().get_model_columns()
+
     if recovery == 'model':
         for m in models:
-            columns[m].insert(2, 'model')
+            columns[m.split('+')[0]].insert(2, 'model')
 
     #Load all data in the fit data
     files = os.listdir('SOMA_RL/fits/temp')
-    fit_data = {model: pd.DataFrame(columns=columns[model]) for model in models}
-    full_fit_data = {model: pd.DataFrame(columns=columns[model]) for model in models}
+    fit_data = {model: pd.DataFrame(columns=columns[model.split('+')[0]]) for model in models}
+    full_fit_data = {model: pd.DataFrame(columns=columns[model.split('+')[0]]) for model in models}
     for f in files:
         model_name = f.split('_')[0]
         if model_name in models:
             participant_data = pd.read_csv(os.path.join('SOMA_RL','fits','temp',f), header=None)
             data_model = participant_data.loc[0,0].split('_')[0][1:]
+            model_columns = RLModel(model_name).get_model_columns(model_name.split('+')[0])
             if recovery == 'model':
                 participant_data.insert(2, 'model', data_model)
-            participant_data.columns = columns[model_name]
+                model_columns.insert(2, 'model')
+            participant_data.columns = model_columns
             best_participant_data = participant_data.iloc[[participant_data['fit'].idxmin()]]
             nan_keys = [key for key in best_participant_data if best_participant_data[key].isnull().any()]
             full_nan_keys = [key for key in participant_data if participant_data[key].isnull().any()]
@@ -401,7 +479,7 @@ def generate_simulated_data(models, parameters, learning_filename=None, transfer
     print(f'\nNumber of Models: {len(models)}, Number of Runs: {datasets_to_generate}, Total Simulations: {len(models)*datasets_to_generate}')
     loop = tqdm.tqdm(range(len(models)*datasets_to_generate)) if not multiprocessing else None
     inputs = []
-    columns = {}
+    columns = RLModel().get_model_columns()
     for model_name in models:
         for run in range(datasets_to_generate):
 
@@ -415,7 +493,6 @@ def generate_simulated_data(models, parameters, learning_filename=None, transfer
             model = RLModel(model_name, model_parameters, random_params=random_params, fixed=fixed, bounds=bounds)
             task = AvoidanceLearningTask(task_design)
             pipeline = RLPipeline(model, dataloader=p_dataloader, task=task)
-            columns[model_name] = ['participant', 'pain_group', 'run', 'fit',] + list(model.get_parameters())
             if multiprocessing:
                 inputs.append((pipeline, columns, 'simulation', 'simulation', run, 'generate_data=True'))
             else:
@@ -485,8 +562,8 @@ def run_generative_fits(models, number_of_runs=1, datasets_to_generate=1, fixed=
                         'multiprocessing':    multiprocessing}
 
         print(f'\nFitting model: {model}')
-        dataloader, columns = run_fit(**fit_params)
+        dataloader = run_fit(**fit_params)
     
-    return dataloader, columns
+    return dataloader
 
     

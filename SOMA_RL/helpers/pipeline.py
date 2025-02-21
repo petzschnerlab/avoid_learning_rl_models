@@ -71,7 +71,7 @@ class RLPipeline:
 
         #Store fit results
         participant_fitted = [participant_id, pain_group, run, float(fit_results.fun)]
-        participant_fitted.extend([float(fitted_params[key]) for key in columns[4:]])
+        participant_fitted.extend([float(fitted_params[key]) for key in columns[4:] if key in fitted_params])
 
         #Save to csv file
         with open(f'SOMA_RL/fits/temp/{self.task.rl_model.model_name}_{participant_id}_Run{run}_fit_results.csv', 'a') as f:
@@ -125,8 +125,8 @@ class RLPipeline:
 
         #Save task data
         if generate_data:
-            model_parameters_string = f"[{model.model_name}_{'_'.join([str(model_param).replace('.','') for model_param in model.parameters.values()])}]"
-            simulation_name = f'{model.model_name}_{model_parameters_string}'
+            unique_id = np.random.randint(0, 1000000)
+            simulation_name = f"{model.model_name}_{unique_id}"
             os.makedirs(f'SOMA_RL/data/generated/{simulation_name}', exist_ok=True)
             model_parameters.to_csv(f'SOMA_RL/data/generated/{simulation_name}/{simulation_name}_generated_parameters.csv', header=True, index=False)
             task_learning_data.to_csv(f'SOMA_RL/data/generated/{simulation_name}/{simulation_name}_generated_learning.csv', header=True, index=False)
@@ -156,17 +156,21 @@ def mp_run_simulations(args):
         pipeline.run_simulations(args[1:])
 
 def mp_progress(num_files, filepath='SOMA_RL/fits/temp', divide_by=1, multiply_by=1, progress_bar=True):
+    n_files = 0
     last_count = 0
-    loop = tqdm.tqdm(range(int(num_files/divide_by))) if progress_bar else None
-    while len(os.listdir(filepath))*multiply_by < num_files:
+    start_file_count = len(os.listdir(filepath))
+    if progress_bar:
+        loop = tqdm.tqdm(range(int((num_files-start_file_count)/divide_by))) if progress_bar else None
+    while n_files*multiply_by < (num_files-start_file_count):
         if progress_bar:
-            n_files = np.floor(len(os.listdir(filepath))/divide_by)*multiply_by
+            n_files = (np.floor(len(os.listdir(filepath))/divide_by)*multiply_by)-start_file_count
             if n_files > last_count:
                 loop.update(int(n_files-last_count))
                 last_count = n_files
         time.sleep(1)
     if progress_bar:
-        loop.update(int((num_files/divide_by)-last_count))
+        loop.update(int((num_files-start_file_count)-last_count))
+        
 '''
 
 def mp_progress(num_files, divide_by=1, multiply_by=1, filepath='SOMA_RL/fits/temp'):

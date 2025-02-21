@@ -182,8 +182,8 @@ def plot_parameter_fits(models, fit_data, fixed=None, bounds=None):
     for model in models:
         model_data = fit_data[model]
         for run_params in model_data['participant']:
-            
-            true_parameters = pd.read_csv(f'SOMA_RL/data/generated/{model}_{run_params}/{model}_{run_params}_generated_parameters.csv')
+            data_name = run_params.replace('[','').replace(']','')
+            true_parameters = pd.read_csv(f'SOMA_RL/data/generated/{data_name}/{data_name}_generated_parameters.csv')
             fit_parameters = pd.DataFrame(model_data[model_data['participant']==run_params].values[0][4:]).T
             fit_parameters.columns = true_parameters.columns
 
@@ -216,4 +216,6 @@ def plot_parameter_fits(models, fit_data, fixed=None, bounds=None):
 
         fig.suptitle(f'{model} Correlation Plot')
         plt.tight_layout()
-        plt.savefig(f'SOMA_RL/plots/{model}_correlation_plot.png')
+        if not os.path.exists('SOMA_RL/plots/correlations'):
+            os.makedirs('SOMA_RL/plots/correlations')
+        plt.savefig(f'SOMA_RL/plots/correlations/{model}_correlation_plot.png')

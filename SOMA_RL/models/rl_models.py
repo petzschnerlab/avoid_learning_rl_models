@@ -7,52 +7,52 @@ from models.hybrid import Hybrid2012, Hybrid2021
 
 class RLModel:
 
-    def __init__(self, model, parameters=None, random_params=False, fixed=None, bounds=None):
+    def __init__(self, model=None, parameters=None, random_params=False, fixed=None, bounds=None):
 
-        self.random_params = random_params
+        if model is not None:
+            self.random_params = random_params
+            model_name = model
 
-        model_name = model
+            #Determine optimal parameters, remove them from model name
+            fit_bias = True if '+bias' in model else False
+            fit_novel = True if '+novel' in model else False
+            fit_decay = True if '+decay' in model else False
+            self.optional_parameters = {'bias': fit_bias, 'novel': fit_novel, 'decay': fit_decay}
+            model = model.replace('+bias', '')
+            model = model.replace('+novel', '')
+            model = model.replace('+decay', '')
 
-        #Determine optimal parameters, remove them from model name
-        fit_bias = True if '+bias' in model else False
-        fit_novel = True if '+novel' in model else False
-        fit_decay = True if '+decay' in model else False
-        self.optional_parameters = {'bias': fit_bias, 'novel': fit_novel, 'decay': fit_decay}
-        model = model.replace('+bias', '')
-        model = model.replace('+novel', '')
-        model = model.replace('+decay', '')
+            #Set fixed and bounds parameters
+            self.fixed, self.bounds = self.get_default_parameters()
+            if fixed is not None:
+                if model in fixed:
+                    self.fixed[model].update(fixed[model])
+            if bounds is not None:
+                if model in bounds:
+                    self.bounds[model].update(bounds[model])
 
-        #Set fixed and bounds parameters
-        self.fixed, self.bounds = self.get_default_parameters()
-        if fixed is not None:
-            if model in fixed:
-                self.fixed[model].update(fixed[model])
-        if bounds is not None:
-            if model in bounds:
-                self.bounds[model].update(bounds[model])
+            #Define model
+            self.model = self.define_model(model, parameters)
+            self.model.model_name = model_name
+            self.model.optional_parameters = self.optional_parameters
 
-        #Define model
-        self.model = self.define_model(model, parameters)
-        self.model.model_name = model_name
-        self.model.optional_parameters = self.optional_parameters
+            #Remove any optional parameters that are not being used
+            linked_keys = {'bias': 'valence_factor', 'novel': 'novel_value', 'decay': 'decay_factor'}
+            for opt_key, param_key in linked_keys.items():
+                if not self.model.optional_parameters.get(opt_key, True) and param_key in self.model.parameters:
+                    self.model.parameters.pop(param_key)
+                    self.model.bounds.pop(param_key)
 
-        #Remove any optional parameters that are not being used
-        linked_keys = {'bias': 'valence_factor', 'novel': 'novel_value', 'decay': 'decay_factor'}
-        for opt_key, param_key in linked_keys.items():
-            if not self.model.optional_parameters.get(opt_key, True) and param_key in self.model.parameters:
-                self.model.parameters.pop(param_key)
-                self.model.bounds.pop(param_key)
-
-        #Reorder optional parameters so that they are always in same order
-        parameter_keys = [key for key in self.model.parameters.keys() if key not in linked_keys.values()]
-        if self.model.optional_parameters['bias']:
-            parameter_keys.append('valence_factor')
-        if self.model.optional_parameters['novel']:
-            parameter_keys.append('novel_value')
-        if self.model.optional_parameters['decay']:
-            parameter_keys.append('decay_factor')
-        self.model.parameters = {key: self.model.parameters[key] for key in parameter_keys}
-        self.model.bounds = {key: self.model.bounds[key] for key in parameter_keys}
+            #Reorder optional parameters so that they are always in same order
+            parameter_keys = [key for key in self.model.parameters.keys() if key not in linked_keys.values()]
+            if self.model.optional_parameters['bias']:
+                parameter_keys.append('valence_factor')
+            if self.model.optional_parameters['novel']:
+                parameter_keys.append('novel_value')
+            if self.model.optional_parameters['decay']:
+                parameter_keys.append('decay_factor')
+            self.model.parameters = {key: self.model.parameters[key] for key in parameter_keys}
+            self.model.bounds = {key: self.model.bounds[key] for key in parameter_keys}
 
     def get_model(self):
         return self.model
@@ -86,28 +86,28 @@ class RLModel:
     
     def get_model_parameters(self):
         model_parameters = {}
-        model_parameters['QLearning'] = {'factual_lr', 
+        model_parameters['QLearning'] = ['factual_lr', 
                                          'counterfactual_lr',
                                          'temperature',
                                          'novel_value',
-                                         'decay_factor'}
+                                         'decay_factor']
         
-        model_parameters['ActorCritic'] = {'factual_actor_lr',
+        model_parameters['ActorCritic'] = ['factual_actor_lr',
                                            'counterfactual_actor_lr',
                                            'critic_lr',
                                            'temperature',
                                            'valence_factor',
                                            'novel_value',
-                                           'decay_factor'}
+                                           'decay_factor']
         
-        model_parameters['Relative'] = {'factual_lr',
+        model_parameters['Relative'] = ['factual_lr',
                                         'counterfactual_lr',
                                         'contextual_lr',
                                         'temperature',
                                         'novel_value',
-                                        'decay_factor'}
+                                        'decay_factor']
 
-        model_parameters['Hybrid2012'] = {'factual_lr',
+        model_parameters['Hybrid2012'] = ['factual_lr',
                                             'counterfactual_lr',
                                             'factual_actor_lr',
                                             'counterfactual_actor_lr',
@@ -116,9 +116,9 @@ class RLModel:
                                             'mixing_factor',
                                             'valence_factor',
                                             'novel_value',
-                                            'decay_factor'}
+                                            'decay_factor']
         
-        model_parameters['Hybrid2021'] = {'factual_lr',
+        model_parameters['Hybrid2021'] = ['factual_lr',
                                             'counterfactual_lr',
                                             'factual_actor_lr',
                                             'counterfactual_actor_lr',
@@ -128,27 +128,43 @@ class RLModel:
                                             'noise_factor',
                                             'valence_factor',
                                             'novel_value',
-                                            'decay_factor'}
+                                            'decay_factor']
         
-        model_parameters['QRelative'] = {'factual_lr',
+        model_parameters['QRelative'] = ['factual_lr',
                                         'counterfactual_lr',
                                         'contextual_lr',
                                         'temperature',
                                         'mixing_factor',
                                         'valence_reward',
                                         'novel_value',
-                                        'decay_factor'}
+                                        'decay_factor']
         
-        model_parameters['wRelative'] = {'factual_lr',
+        model_parameters['wRelative'] = ['factual_lr',
                                         'counterfactual_lr',
                                         'contextual_lr',
                                         'temperature',
                                         'mixing_factor',
                                         'valence_factor',
                                         'novel_value',
-                                        'decay_factor'}
+                                        'decay_factor']
     
         return model_parameters
+    
+    def get_model_columns(self, model=None):
+        metadata = ['participant', 'pain_group', 'run', 'fit']
+        model_parameters = self.get_model_parameters()
+        #check if class has attribute optional_parameters
+        if model is not None and hasattr(self.model, 'optional_parameters'):
+            linked_keys = {'bias': 'valence_factor', 'novel': 'novel_value', 'decay': 'decay_factor'}
+            for key in self.model.optional_parameters:
+                if not self.model.optional_parameters[key] and linked_keys[key] in model_parameters[model]:
+                    model_parameters[model].remove(linked_keys[key])
+
+        columns = {model: metadata + model_parameters[model] for model in model_parameters}
+        if model is not None:
+            return columns[model]
+        else:
+            return columns
 
     def get_default_parameters(self):
         return self.get_default_fixed(), self.get_default_bounds()

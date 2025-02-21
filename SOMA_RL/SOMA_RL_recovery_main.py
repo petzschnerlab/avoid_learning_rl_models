@@ -51,9 +51,7 @@ if __name__ == "__main__":
               'Hybrid2012+bias+novel', #Standard + novel
               'Hybrid2021+bias+decay', #Standard w/o bias
               'Hybrid2021+bias+decay+novel'] #Standard + novel
-    
-    models = ['QLearning', 'Relative', 'wRelative']
-
+        
     fixed = None
     bounds = {'QLearning':      {'temperature': (0.1, 1)},
               'ActorCritic':    {'temperature': (0.1, 1)},
@@ -62,16 +60,16 @@ if __name__ == "__main__":
               'Hybrid2012':     {'temperature': (0.1, 1)},
               'Hybrid2021':     {'temperature': (0.1, 1)}}
     
-    generate_params = {'learning_filename':     'SOMA_RL/data/pain_learning_processed.csv',
-                       'transfer_filename':     'SOMA_RL/data/pain_transfer_processed.csv',
-                       'models':                models,
-                       'parameters':            'random',
-                       'fixed':                 fixed,
-                       'bounds':                bounds,
-                       'number_of_runs':        5,
-                       'multiprocessing':       True,
-                       'number_of_participants': 10,
+    generate_params = {'learning_filename':         'SOMA_RL/data/pain_learning_processed.csv',
+                       'transfer_filename':         'SOMA_RL/data/pain_transfer_processed.csv',
+                       'models':                    models,
+                       'parameters':                'random',
+                       'fixed':                     fixed,
+                       'bounds':                    bounds,
+                       'number_of_runs':            10,
+                       'multiprocessing':           True,
+                       'number_of_participants':    0,
                        }
 
-    #run_recovery(**generate_params, recovery='parameter')
+    run_recovery(**generate_params, recovery='parameter')
     run_recovery(**generate_params, recovery='model')
