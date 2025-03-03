@@ -15,7 +15,9 @@ from models.rl_models import RLModel
 from helpers.dataloader import DataLoader
 from helpers.tasks import AvoidanceLearningTask
 from helpers.pipeline import RLPipeline, mp_run_fit, mp_run_simulations, mp_progress
-from helpers.plotting import plot_simulations, plot_parameter_fits, plot_model_fits
+from helpers.plotting import plot_simulations, plot_parameter_fits, plot_model_fits, plot_rainclouds
+from helpers.statistics import Statistics
+from helpers.report import Report
 
 def run_fit_empirical(learning_filename, 
                       transfer_filename, 
@@ -50,6 +52,8 @@ def run_fit_empirical(learning_filename,
     fit_data = run_fit_comparison(dataloader, 
                                   models, 
                                   dataloader.get_group_ids())
+    
+    linear_results, ttest_results = run_fit_analyses(fit_data)
     
     run_fit_simulations(learning_filename, 
                         transfer_filename, 
@@ -144,6 +148,46 @@ def run_recovery(models,
                             fixed=fixed, 
                             bounds=bounds)
 
+def run_fit_analyses(fit_data):
+
+    linear_results = None
+    ttest_results = None
+    for model in fit_data:
+        model_data = fit_data[model]
+        fit_parameters = model_data.columns[4:]
+        for parameter in fit_parameters:
+            statistics = Statistics()
+            
+            #turn pain_group in model_data into a category
+            model_data['pain_group'] = pd.Categorical(model_data['pain_group'], categories=['no pain', 'acute pain', 'chronic pain'])
+            linear_model = statistics.linear_model_categorical(f'{parameter} ~ pain_group', model_data)
+            linear_result = linear_model['model_summary']
+            linear_result.insert(0, 'parameter', parameter)
+            linear_result.insert(0, 'model', model)
+            if linear_results is None:
+                linear_results = linear_result
+            else:
+                linear_results = pd.concat((linear_results, linear_result), ignore_index=True)
+
+            comparisons = [['no pain', 'acute pain'], ['no pain', 'chronic pain']]
+            model_data = model_data.rename(columns={'participant': 'participant_id'})
+            ttest_model = statistics.planned_ttests(parameter, 'pain_group', comparisons, model_data)
+            ttest_result = ttest_model['model_summary']
+            ttest_result.insert(0, 'parameter', parameter)
+            ttest_result.insert(0, 'model', model)
+            if ttest_results is None:
+                ttest_results = ttest_result
+            else:
+                ttest_results = pd.concat((ttest_results, ttest_result), ignore_index=True)
+
+    linear_results.to_csv('SOMA_RL/stats/pain_fits_linear_results.csv', index=False)
+    ttest_results.to_csv('SOMA_RL/stats/pain_fits_ttest_results.csv', index=False)
+
+    for model in fit_data:
+        plot_rainclouds(f'{model}-model-fits', fit_data[model])
+
+    return linear_results, ttest_results
+
 def create_confusion_matrix(dataloader, fit_data):
     confusion_matrix = pd.DataFrame(index=fit_data.keys(), columns=fit_data.keys()) #Rows = model fit, Columns = generated model
     number_samples = dataloader.get_num_samples_by_group('simulated')
@@ -182,13 +226,15 @@ def run_fit(learning_filename,
     if progress_bar:
         print('\n')
         participant_ids = DataLoader(learning_filename.replace('XX', models[0]), transfer_filename.replace('XX', models[0]), number_of_participants, generated=generated).get_participant_ids()
-        print(f"Number of participants: {len(participant_ids)}, Number of models: {len(models)**2}, Number of runs: {number_of_runs}, Total fits: {len(participant_ids)*len(models)**2*number_of_runs}")
-        loop = tqdm.tqdm(range(len(participant_ids)*len(models)**2*number_of_runs)) if not multiprocessing else None
+        model_runs = len(models)**2 if 'XX' in learning_filename else len(models)
+        print(f"Number of participants: {len(participant_ids)}, Number of models: {model_runs}, Number of runs: {number_of_runs}, Total fits: {len(participant_ids)*model_runs*number_of_runs}")
+        loop = tqdm.tqdm(range(len(participant_ids)*model_runs*number_of_runs)) if not multiprocessing else None
     inputs = []
     columns = RLModel().get_model_columns()
-    for generated_model_name in models:  
-        current_learning_filename = learning_filename.replace('XX', generated_model_name)
-        current_transfer_filename = transfer_filename.replace('XX', generated_model_name)
+    data_names = models if 'XX' in learning_filename else ['']
+    for data_model_name in data_names:  
+        current_learning_filename = learning_filename.replace('XX', data_model_name)
+        current_transfer_filename = transfer_filename.replace('XX', data_model_name)
         dataloader = DataLoader(current_learning_filename, current_transfer_filename, number_of_participants, generated=generated)
         participant_ids = dataloader.get_participant_ids()
         for participant in participant_ids:

@@ -219,3 +219,150 @@ def plot_parameter_fits(models, fit_data, fixed=None, bounds=None):
         if not os.path.exists('SOMA_RL/plots/correlations'):
             os.makedirs('SOMA_RL/plots/correlations')
         plt.savefig(f'SOMA_RL/plots/correlations/{model}_correlation_plot.png')
+
+def plot_rainclouds(save_name: str, model_data: pd.DataFrame = None) -> None:
+
+    """
+    Create raincloud plots of the data
+
+    Parameters
+    ----------
+    save_name : str
+        The name to save the plot as
+
+    Returns (External)
+    ------------------
+    Image: PNG
+        A plot of the raincloud plots
+    """
+
+    #Set data specific parameters
+    if 'model-fits' in save_name:
+        if model_data is None:
+            data = self.model_fits
+        else:
+            data = model_data
+            data.set_index('pain_group', inplace=True)
+
+    condition_name = 'pain_group'
+    condition_values = ['no pain', 'acute pain', 'chronic pain']
+    x_values = np.arange(1, len(condition_values)+1).tolist()
+    x_labels = ['No Pain', 'Acute Pain', 'Chronic Pain']
+    plot_labels = data.columns[3:]
+    num_subplots = len(plot_labels)
+    
+    fig, ax = plt.subplots(1, num_subplots, figsize=(5*num_subplots, 5))
+    for group_index, group in enumerate(plot_labels):
+        if group != '':
+            group_data = data[group].reset_index()
+        else:
+            group_data = data.reset_index()
+        group_data[condition_name] = pd.Categorical(group_data[condition_name], condition_values)
+        group_data = group_data.sort_values(condition_name)
+
+        #Compute t-statistic
+        _, t_scores = compute_n_and_t(group_data, condition_name)
+
+        #Get descriptive statistics for the group
+        group_data = group_data.set_index(condition_name)[group].astype(float)
+
+        #Create plot
+        raincloud_plot(data=group_data, ax=ax[group_index], t_scores=t_scores)
+
+        #Create horizontal line for the mean the same width
+        ax[group_index].set_xticks(x_values, x_labels)
+        ax[group_index].set_xlabel('')
+        ax[group_index].set_ylabel(group.replace('_', ' ').replace('lr', 'learning rate').title())
+
+    #Save the plot
+    plt.savefig(f'SOMA_RL/plots/fits/{save_name}.png')
+
+    #Close figure
+    plt.close()
+
+def raincloud_plot(data: pd.DataFrame, ax: plt.axes, t_scores: list[float], alpha: float=0.25) -> None:
+        
+        """
+        Create a raincloud plot of the data
+
+        Parameters
+        ----------
+        data : DataFrame
+            The data to be plotted
+        ax : Axes
+            The axes to plot the data on
+        t_scores : list
+            The t-scores for each group
+        alpha : float
+            The transparency of the scatter plot
+        """
+        
+        #Set parameters
+        if data.index.nunique() == 2:
+            colors = ['#B2DF8A', '#FB9A99']
+        elif data.index.nunique() == 3:
+            colors = ['#B2DF8A', '#FFD92F', '#FB9A99']
+        else:
+            colors = ['#33A02C', '#B2DF8A', '#FB9A99', '#E31A1C', '#D3D3D3']
+
+        #Set index name
+        data.index.name = 'code'
+        data = data.to_frame()
+        data.columns = ['score']
+
+        #Create a violin plot of the data for each level
+        wide_data = data.reset_index().pivot(columns='code', values='score')
+        wide_list = [wide_data[code].dropna() for code in wide_data.columns]
+        vp = ax.violinplot(wide_list, showmeans=False, showmedians=False, showextrema=False)
+        
+        for bi, b in enumerate(vp['bodies']):
+            m = np.mean(b.get_paths()[0].vertices[:, 0])
+            b.get_paths()[0].vertices[:, 0] = np.clip(b.get_paths()[0].vertices[:, 0], m, np.inf)
+            b.set_color(colors[bi])
+
+        #Add jittered scatter plot of the choice rate for each column
+        for factor_index, factor in enumerate(data.index.unique()):
+            x = np.random.normal([factor_index+1-.2]*data.loc[factor].shape[0], 0.02)
+            ax.scatter(x+.02, data.loc[factor], color=colors[factor_index], s=10, alpha=alpha)
+        
+        #Compute the mean and 95% CIs for the choice rate for each symbol
+        mean_data = data.groupby('code').mean()
+        CIs = data.groupby('code').sem()['score'] * t_scores
+
+        #Draw rectangle for each symbol that rerpesents the top and bottom of the 95% CI that has no fill and a black outline
+        for factor_index, factor in enumerate(data.index.unique()):
+            ax.add_patch(plt.Rectangle((factor_index+1-0.4, (mean_data.loc[factor] - CIs.loc[factor])['score']), 0.8, 2*CIs.loc[factor], fill=None, edgecolor='darkgrey'))
+            ax.hlines(mean_data.loc[factor], factor_index+1-0.4, factor_index+1+0.4, color='darkgrey')            
+
+def compute_n_and_t(data: pd.DataFrame, splitting_column: str) -> tuple:
+
+    """
+    Compute the sample size and t-score for each group
+
+    Parameters
+    ----------
+    data : DataFrame
+        The data to be analyzed
+    splitting_column : str
+        The column to split the data by
+
+    Returns
+    -------
+    sample_sizes : list
+        The sample sizes for each group
+    t_scores : list
+        The t-scores for each group
+    """
+
+    #Reset index to allow access to all columns
+    data = data.reset_index()
+
+    #Compute the sample size and t-score for each group
+    if splitting_column == None:
+        sample_sizes = data.shape[0]
+        t_scores = stats.t.ppf(0.975, sample_sizes-1)
+    else:
+        sample_sizes = [data[data[splitting_column] == group].shape[0] for group in data[splitting_column].unique()]
+        t_scores = [stats.t.ppf(0.975, s-1) for s in sample_sizes]
+
+    return sample_sizes, t_scores
