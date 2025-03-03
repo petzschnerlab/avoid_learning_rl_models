@@ -2,7 +2,7 @@ import os
 import warnings
 import pandas as pd
 import dataframe_image as dfi
-from markdown_pdf import MarkdownPdf, Section
+
 
 class Report:
 

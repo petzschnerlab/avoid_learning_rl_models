@@ -411,7 +411,7 @@ def run_fit_simulations(learning_filename, transfer_filename, fit_data, models, 
         for model_name in models:
 
             #Participant data
-            participant_params = fit_data[model_name][fit_data[model_name]['participant'] == participant].copy()
+            participant_params = fit_data[model_name][fit_data[model_name]['participant'] == participant].copy().reset_index()
             group = participant_params['pain_group'].values[0]
             
             #Initialize task, model, and task design
