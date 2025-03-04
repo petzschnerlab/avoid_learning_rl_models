@@ -22,7 +22,9 @@ from helpers.report import Report
 def run_fit_empirical(learning_filename, 
                       transfer_filename, 
                       models, 
-                      number_of_participants=0, 
+                      number_of_participants=0,
+                      fixed=None, 
+                      bounds=None,  
                       random_params=False, 
                       number_of_runs=1, 
                       generated=False, 
@@ -39,11 +41,26 @@ def run_fit_empirical(learning_filename,
     print(f'Number of Runs: {number_of_runs}')
     print(f'Generated: {generated}')
     print(f'Multiprocessing: {multiprocessing}')
+
+    if fixed is not None:
+        print('\nParameter Overwrites:')
+        for model in fixed:
+            print(f'       {model}:')
+            for key in fixed[model]:
+                print(f'              {key} = {fixed[model][key]}')
+    if bounds is not None:
+        print('\nParameter Bound Overwrites:')
+        for model in bounds:
+            print(f'       {model}:')
+            for key in bounds[model]:
+                print(f'              {key} = {bounds[model][key]}')
     print('--------------------------------------------------------')
     
     dataloader = run_fit(learning_filename, 
                          transfer_filename, models, 
                          number_of_participants=number_of_participants, 
+                         fixed=fixed,
+                         bounds=bounds,
                          random_params=random_params, 
                          number_of_runs=number_of_runs, 
                          generated=generated, 

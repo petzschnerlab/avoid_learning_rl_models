@@ -71,7 +71,7 @@ class RLModel:
         if self.random_params == 'random':
             return np.round(rnd.uniform(bounds[0], bounds[1]),2)
         elif self.random_params == 'normal':
-            std = (bounds[1]-bounds[0])/10 # TODO: make this a parameter
+            std = (bounds[1]-bounds[0])/15 # TODO: make this a parameter
             param = np.round(np.random.normal(fixed_param, std), 2)
             return np.clip(param, bounds[0], bounds[1])
         else:
@@ -81,7 +81,14 @@ class RLModel:
         
         model_params = {}
         for param in fixed:
-            if parameters is None or param == 'valence_factor' and not self.optional_parameters['bias'] or param == 'novel_value' and not self.optional_parameters['novel'] or param == 'decay_factor' and not self.optional_parameters['decay']:
+
+            #Check parameter type
+            bool_parameter = parameters is None
+            bool_valence = param == 'valence_factor' and not self.optional_parameters['bias']
+            bool_novel = param == 'novel_value' and not self.optional_parameters['novel']
+            bool_decay = param == 'decay_factor' and not self.optional_parameters['decay']
+
+            if bool_parameter or bool_valence or bool_novel or bool_decay:
                 model_params[param] = self.starting_param(fixed[param], bounds[param]) 
             else:
                 model_params[param] = parameters[param].values[0]
@@ -204,7 +211,7 @@ class RLModel:
                              'counterfactual_actor_lr': (0.01, .99),
                              'critic_lr': (0.01, .99),
                              'contextual_lr': (0.01, .99),
-                             'temperature': (0.01, 10),
+                             'temperature': (0.01, 5),
                              'mixing_factor': (0, 1),
                              'noise_factor': (0, 1),
                              'valence_factor': (0, 1),

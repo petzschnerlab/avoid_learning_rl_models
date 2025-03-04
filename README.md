@@ -42,3 +42,36 @@
     - **Supplementary Figures**: Parameter Recovery
     - **Supplementary Figures**: Confusion Matrix
     - **Supplementary Figure**: Single subject fit (example of trial trajectory)
+
+
+## Other Considerations
+
+### Parameter values from the literature
+
+- Hybrid 2021: Geana et al 2021 (Healthy Controls)
+  - Q LR: .49
+  - Actor LR: .33
+  - Critic LR: .48
+  - Beta: 15.72
+  - Reward Discount (d): .33
+  - Mixing Param: .69
+  - Decay: .08
+  - Noise: .04
+
+- Hybrid 2012: Gold et al 2012 (Healthy Controls)
+  - Only mixing parameter was reported
+  - Mixing Parameter (c): 0.7
+
+- Relative: Palminteri et al 2015
+  - Beta: 21.52 +/- 5.95 (SEM)
+  - Factual LR: .19 +/- .02 (SEM)
+  - Counterfactual LR: .15 +/- .02 (SEM)
+  - Context LR: 0.33 +/- .07 (SEM)
+
+- QLearning: Palminteri et al., 2015
+  - Beta: 17.4 +/- 5.92 (SEM)
+  - Factual LR: 0.28 +/- .02 (SEM)
+  - Counterfactual LR: 0.18 +/- .02 (SEM)
+
+Actor Critic
+  - Using parameters from Geana et al., 2021
