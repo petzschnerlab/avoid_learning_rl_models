@@ -68,8 +68,12 @@ class RLModel:
     
     def starting_param(self, fixed_param=None, bounds=None):
 
-        if self.random_params:
+        if self.random_params == 'random':
             return np.round(rnd.uniform(bounds[0], bounds[1]),2)
+        elif self.random_params == 'normal':
+            std = (bounds[1]-bounds[0])/10 # TODO: make this a parameter
+            param = np.round(np.random.normal(fixed_param, std), 2)
+            return np.clip(param, bounds[0], bounds[1])
         else:
             return fixed_param
         

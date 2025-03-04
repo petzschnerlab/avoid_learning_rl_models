@@ -511,7 +511,7 @@ def generate_simulated_data(models, parameters, learning_filename=None, transfer
                 shutil.rmtree(os.path.join('SOMA_RL','data','generated',f))
 
     #Set up parameters
-    random_params = True if parameters == 'random' else False
+    random_params = True if parameters == 'random' or parameters == 'normal' else False
     datasets_to_generate = datasets_to_generate if random_params else 1
 
     if learning_filename is not None and transfer_filename is not None:
@@ -536,7 +536,7 @@ def generate_simulated_data(models, parameters, learning_filename=None, transfer
                 p_dataloader = None
 
             model_parameters = parameters[model_name] if not random_params else None
-            model = RLModel(model_name, model_parameters, random_params=random_params, fixed=fixed, bounds=bounds)
+            model = RLModel(model_name, model_parameters, random_params=parameters, fixed=fixed, bounds=bounds)
             task = AvoidanceLearningTask(task_design)
             pipeline = RLPipeline(model, dataloader=p_dataloader, task=task)
             if multiprocessing:
