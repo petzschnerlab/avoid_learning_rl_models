@@ -5,6 +5,7 @@ import tqdm
 import matplotlib.pyplot as plt
 
 from helpers.analyses import run_recovery
+from helpers.priors import get_priors
 
 if __name__ == "__main__":
 
@@ -119,6 +120,7 @@ if __name__ == "__main__":
         },
     }
 
+    fixed, _ = get_priors()
     bounds = {'QLearning':      {'temperature': (0.1, 1)},
               'ActorCritic':    {'temperature': (0.1, 1)},
               'Relative':       {'temperature': (0.1, 1)},
