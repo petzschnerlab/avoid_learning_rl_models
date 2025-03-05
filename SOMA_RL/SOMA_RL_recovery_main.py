@@ -38,87 +38,10 @@ if __name__ == "__main__":
     '''
 
     models = ['QLearning', #Standard
-              'QLearning+novel', #Standard + novel
-              
               'ActorCritic', #Standard
-              'ActorCritic+novel', #Standard + novel
-
               'Relative', #Standard
-              'Relative+novel', #Standard + novel
-              'wRelative+bias+decay', #Standard
-              'wRelative+bias+decay+novel', #Standard + novel
-
-              'Hybrid2012+bias', #Standard w/o bias
-              'Hybrid2012+bias+novel', #Standard + novel
-              'Hybrid2021+bias+decay', #Standard w/o bias
-              'Hybrid2021+bias+decay+novel'] #Standard + novel
-    
-    models = ['QLearning', 'ActorCritic', 'Relative']
-
-    fixed = {
-        'QLearning': {  # From Palminteri et al., 2015
-            'factual_lr': 0.28,
-            'counterfactual_lr': 0.18,
-            'temperature': 0.06,
-            # From Geana et al., 2021:
-            'decay_factor': 0.08,
-            # Custom
-            'novel_value': .50,
-        },
-
-        'ActorCritic': {  # From Geana et al., 2021's Hybrid2021 model
-            'factual_actor_lr': .33,
-            'counterfactual_actor_lr': .33,
-            'critic_lr': .48,
-            'temperature': .06,
-            # From Geana et al., 2021:
-            'valence_factor': .33,
-            'decay_factor': .08,
-            # Custom
-            'novel_value': .50,
-        },
-
-        'Relative': {  # From Palminteri et al., 2015
-            'factual_lr': 0.19,
-            'counterfactual_lr': 0.15,
-            'context_lr': 0.33,
-            'temperature': 0.05,
-            # From Geana et al., 2021:
-            'decay_factor': 0.08,
-            # Custom
-            'novel_value': .50,
-        },
-
-        'Hybrid2012': {  # From Geana et al., 2021:
-            'factual_lr': 0.49,
-            'counterfactual_lr': 0.49,
-            'factual_actor_lr': .33,
-            'counterfactual_actor_lr': .33,
-            'critic_lr': .48,
-            'temperature': 0.06,
-            'mixing_factor': 0.7,  # From Gold et al., 2012
-            # From Geana et al., 2021:
-            'valence_bias': 0.33,
-            'decay_factor': 0.08,
-            # Custom
-            'novel_value': .50,
-        },
-
-        'Hybrid2021': {  # From Geana et al., 2021
-            'factual_lr': 0.49,
-            'counterfactual_lr': 0.49,
-            'factual_actor_lr': .33,
-            'counterfactual_actor_lr': .33,
-            'critic_lr': .48,
-            'temperature': 0.06,
-            'mixing_factor': 0.69,
-            # From Geana et al., 2021:
-            'valence_bias': 0.33,
-            'decay_factor': 0.08,
-            # Custom
-            'novel_value': .50,
-        },
-    }
+              'Hybrid2012+bias', #Standard
+              'Hybrid2021+bias+decay'] #Standard
 
     fixed, _ = get_priors()
     bounds = {'QLearning':      {'temperature': (0.1, 1)},
