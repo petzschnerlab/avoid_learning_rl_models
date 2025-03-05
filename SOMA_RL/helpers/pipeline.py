@@ -125,7 +125,9 @@ class RLPipeline:
 
         #Save task data
         if generate_data:
-            unique_id = np.random.randint(0, 1000000)
+            unique_id = np.random.randint(0, 1000000) 
+            while f"{model.model_name}_{unique_id}" in os.listdir(f'SOMA_RL/data/generated/'):
+                unique_id = np.random.randint(0, 1000000)
             simulation_name = f"{model.model_name}_{unique_id}"
             os.makedirs(f'SOMA_RL/data/generated/{simulation_name}', exist_ok=True)
             model_parameters.to_csv(f'SOMA_RL/data/generated/{simulation_name}/{simulation_name}_generated_parameters.csv', header=True, index=False)
