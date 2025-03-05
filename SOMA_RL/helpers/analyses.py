@@ -138,7 +138,7 @@ def run_recovery(models,
                             bounds=bounds, 
                             datasets_to_generate=datasets_to_generate, 
                             number_of_participants=number_of_participants, 
-                            multiprocessing=multiprocessing, 
+                            multiprocessing=False, # TODO: True fails on ODD for some reason 
                             clear_data=clear_data)
     
     dataloader = run_generative_fits(models=models, 
