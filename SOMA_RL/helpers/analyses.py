@@ -28,7 +28,10 @@ def run_fit_empirical(learning_filename,
                       random_params=False, 
                       number_of_runs=1, 
                       generated=False, 
-                      multiprocessing=False):
+                      multiprocessing=False,
+                      training='torch',
+                      training_epochs=1000,
+                      optimizer_lr=0.01):
 
     #Report each of the inputs
     print('Running Empirical Fit with the following parameters:')
@@ -41,6 +44,9 @@ def run_fit_empirical(learning_filename,
     print(f'Number of Runs: {number_of_runs}')
     print(f'Generated: {generated}')
     print(f'Multiprocessing: {multiprocessing}')
+    print(f'Training: {training}')
+    print(f'Training Epochs: {training_epochs}')
+    print(f'Optimizer Learning Rate: {optimizer_lr}')
 
     if fixed is not None:
         print('\nParameter Overwrites:')
@@ -64,7 +70,10 @@ def run_fit_empirical(learning_filename,
                          random_params=random_params, 
                          number_of_runs=number_of_runs, 
                          generated=generated, 
-                         multiprocessing=multiprocessing)
+                         multiprocessing=multiprocessing,
+                         training=training,
+                         training_epochs=training_epochs,
+                         optimizer_lr=optimizer_lr)
     
     fit_data = run_fit_comparison(dataloader, 
                                   models, 
@@ -232,7 +241,10 @@ def run_fit(learning_filename,
             generated=False, 
             clear_data=True, 
             progress_bar=True, 
-            multiprocessing=False):
+            multiprocessing=False,
+            training='torch',
+            training_epochs=1000,
+            optimizer_lr=0.01):
 
     #Delete any existing files
     if clear_data:
@@ -261,7 +273,7 @@ def run_fit(learning_filename,
                 for run in range(number_of_runs):
                     model = RLModel(model_name, random_params=random_params, fixed=fixed, bounds=bounds)
                     task = AvoidanceLearningTask()
-                    pipeline = RLPipeline(model, p_dataloader, task)
+                    pipeline = RLPipeline(model, p_dataloader, task, training, training_epochs, optimizer_lr)
                     if multiprocessing:
                         inputs.append((pipeline, columns[model_name.split('+')[0]], participant, run))
                     else:

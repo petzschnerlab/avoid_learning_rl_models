@@ -19,8 +19,11 @@ class RLPipeline:
         Dictionary containing task design parameters
     """
 
-    def __init__(self, model, dataloader=None, task=None):
+    def __init__(self, model, dataloader=None, task=None, training='torch', training_epochs=1000, optimizer_lr=0.01):
 
+        #Set parameters
+        self.training = training
+    
         #Get parameters
         self.dataloader = dataloader
         if dataloader is None:
@@ -32,6 +35,9 @@ class RLPipeline:
             task.task_design = self.task_design
         self.task = task
         self.task.initiate_model(model.get_model())
+        self.task.rl_model.training = training
+        self.task.rl_model.training_epochs = training_epochs
+        self.task.rl_model.optimizer_lr = optimizer_lr
 
     def simulate(self, data):
 
@@ -46,7 +52,12 @@ class RLPipeline:
 
     def fit(self, data, bounds):
 
-        return self.task.rl_model.fit(data, bounds)
+        if self.training == 'torch':
+            fit_results, fitted_params = self.task.rl_model.fit_torch(data, bounds)
+        else:
+            fit_results, fitted_params = self.task.rl_model.fit(data, bounds)
+
+        return fit_results, fitted_params
         
     def run_fit(self, args):
 
@@ -70,7 +81,8 @@ class RLPipeline:
         fit_results, fitted_params = self.fit(data, bounds=self.task.rl_model.bounds)
 
         #Store fit results
-        participant_fitted = [participant_id, pain_group, run, float(fit_results.fun)]
+        fit_results = fit_results if self.training == 'torch' else fit_results.fun
+        participant_fitted = [participant_id, pain_group, run, float(fit_results)]
         participant_fitted.extend([float(fitted_params[key]) for key in columns[4:] if key in fitted_params])
 
         #Save to csv file

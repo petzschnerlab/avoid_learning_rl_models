@@ -5,3 +5,5 @@ SOMA_RL/testing_fit.py
 SOMA_RL/data/pain_transfer_processed.csv
 SOMA_RL/data/fits
 
+/SOMA_RL/data
+/SOMA_RL/fits

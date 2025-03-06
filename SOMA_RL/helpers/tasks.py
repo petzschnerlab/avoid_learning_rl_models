@@ -1,6 +1,8 @@
 import random as rnd
 import numpy as np
 import pandas as pd
+import torch 
+
 
 class AvoidanceLearningTask:
 
@@ -118,11 +120,17 @@ class AvoidanceLearningTask:
         self.compute_choice_rate()
 
     def combine_q_values(self):
-
-        stimuli = ['A','B','C','D','E','F','G','H']
-        self.rl_model.final_q_values = pd.DataFrame(np.array([self.rl_model.q_values[state] for state in self.rl_model.q_values.keys()]).flatten()).T
-        self.rl_model.final_q_values.columns = stimuli
-        self.rl_model.final_q_values['N'] = 0
+        if self.rl_model.training == 'torch':
+            final_q_values = {state.replace('State ', '')[i]: values[i] 
+                            for state, values in self.rl_model.q_values.items() 
+                            for i in range(2)}
+            final_q_values['N'] = torch.tensor([0.], requires_grad=True)
+            self.rl_model.final_q_values = final_q_values
+        else:
+            stimuli = ['A','B','C','D','E','F','G','H']
+            self.rl_model.final_q_values = pd.DataFrame(np.array([self.rl_model.q_values[state] for state in self.rl_model.q_values.keys()]).flatten()).T
+            self.rl_model.final_q_values.columns = stimuli
+            self.rl_model.final_q_values['N'] = 0
 
     def combine_v_values(self):
 
