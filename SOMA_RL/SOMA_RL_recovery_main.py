@@ -53,10 +53,9 @@ if __name__ == "__main__":
               'Hybrid2012':     {'temperature': (0.1, 1)},
               'Hybrid2021':     {'temperature': (0.1, 1)}}
     
-    fixed, bounds = get_priors()
     training_params = {'training':              'torch',
                        'training_epochs':       10,
-                       'optimizer_lr':          0.01,
+                       'optimizer_lr':          0.001,
                     }
     generate_params = {'learning_filename':         'SOMA_RL/data/pain_learning_processed.csv',
                        'transfer_filename':         'SOMA_RL/data/pain_transfer_processed.csv',
