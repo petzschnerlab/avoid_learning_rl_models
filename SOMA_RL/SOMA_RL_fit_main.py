@@ -60,7 +60,7 @@ if __name__ == "__main__":
     fit_params = {'learning_filename':          'SOMA_RL/data/pain_learning_processed.csv',
                   'transfer_filename':          'SOMA_RL/data/pain_transfer_processed.csv',
                   'models':                     models,
-                  'number_of_participants':     30,
+                  'number_of_participants':     0,
                   'random_params':              'normal',
                   'fixed':                      fixed,
                   'bounds':                     bounds,

@@ -175,7 +175,7 @@ def mp_progress(num_files, filepath='SOMA_RL/fits/temp', divide_by=1, multiply_b
     last_count = 0
     start_file_count = len(os.listdir(filepath))
     if progress_bar:
-        loop = tqdm.tqdm(total=int((num_files-start_file_count)/divide_by)) if progress_bar else None
+        loop = tqdm.tqdm(total=int((num_files-start_file_count)/divide_by))
     while n_files*multiply_by < (num_files-start_file_count):
         if progress_bar:
             n_files = (np.floor(len(os.listdir(filepath))/divide_by)*multiply_by)-start_file_count

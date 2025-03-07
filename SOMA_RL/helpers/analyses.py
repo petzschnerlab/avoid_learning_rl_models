@@ -515,12 +515,6 @@ def run_fit_simulations(learning_filename, transfer_filename, fit_data, models, 
     for group in accuracy:
         plot_simulations(accuracy[group], prediction_errors[group], values[group], choice_rates[group], models, group, dataloader)
 
-    #Debug print
-    print('')
-
-    return None
-
-
 def generate_simulated_data(models, parameters, learning_filename=None, transfer_filename=None, task_design=None, fixed=None, bounds=None, datasets_to_generate=1, number_of_participants=0, multiprocessing=False, clear_data=True):
     '''
     Parameters
