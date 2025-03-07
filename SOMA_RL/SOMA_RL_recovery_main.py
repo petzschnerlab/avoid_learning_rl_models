@@ -54,7 +54,7 @@ if __name__ == "__main__":
               'Hybrid2021':     {'temperature': (0.1, 1)}}
     
     training_params = {'training':              'torch',
-                       'training_epochs':       10,
+                       'training_epochs':       100,
                        'optimizer_lr':          0.001,
                     }
     generate_params = {'learning_filename':         'SOMA_RL/data/pain_learning_processed.csv',

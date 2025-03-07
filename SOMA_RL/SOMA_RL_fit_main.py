@@ -64,7 +64,7 @@ if __name__ == "__main__":
                   'random_params':              'normal',
                   'fixed':                      fixed,
                   'bounds':                     bounds,
-                  'number_of_runs':             1,
+                  'number_of_runs':             10,
                   'multiprocessing':            True,
                  }
     fit_params.update(training_params)
