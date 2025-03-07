@@ -72,7 +72,7 @@ class QLearning(RLToolbox, nn.Module):
     
     def compute_prediction_error(self, state):
         if self.training == 'torch':
-            state['prediction_errors'] = torch.tensor(state['rewards'], dtype=torch.float32) - torch.tensor(state['q_values'], dtype=torch.float32)
+            state['prediction_errors'] = state['rewards'] - state['q_values']
         else:
             state['prediction_errors'] = [state['rewards'][i] - state['q_values'][i] for i in range(len(state['rewards']))]
         return state
@@ -100,15 +100,13 @@ class QLearning(RLToolbox, nn.Module):
         
         return state
     
-    def fit_forward_torch(self, state, phase = 'learning', update = False):
-        if update == True:
-            self.update_model(state)
+    def fit_forward_torch(self, state, phase = 'learning'):
+        if phase == 'learning':
+            state = self.get_q_value(state)
+            state = self.compute_prediction_error(state)
+            state = self.update_model(state)
         else:
-            if phase == 'learning':
-                state = self.get_q_value(state)
-                state = self.compute_prediction_error(state)
-            else:
-                state = self.get_final_q_values(state)
+            state = self.get_final_q_values(state)
             
         return state
     

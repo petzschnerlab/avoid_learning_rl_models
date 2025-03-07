@@ -42,6 +42,8 @@ if __name__ == "__main__":
               'Relative', #Standard
               'Hybrid2012+bias', #Standard
               'Hybrid2021+bias+decay'] #Standard
+    
+    models = ['QLearning']
 
     fixed, _ = get_priors()
     bounds = {'QLearning':      {'temperature': (0.1, 1)},
@@ -51,6 +53,11 @@ if __name__ == "__main__":
               'Hybrid2012':     {'temperature': (0.1, 1)},
               'Hybrid2021':     {'temperature': (0.1, 1)}}
     
+    fixed, bounds = get_priors()
+    training_params = {'training':              'torch',
+                       'training_epochs':       10,
+                       'optimizer_lr':          0.01,
+                    }
     generate_params = {'learning_filename':         'SOMA_RL/data/pain_learning_processed.csv',
                        'transfer_filename':         'SOMA_RL/data/pain_transfer_processed.csv',
                        'models':                    models,
@@ -61,6 +68,7 @@ if __name__ == "__main__":
                        'multiprocessing':           True,
                        'number_of_participants':    0,
                        }
+    generate_params.update(training_params)
 
     run_recovery(**generate_params, recovery='parameter')
     run_recovery(**generate_params, recovery='model')

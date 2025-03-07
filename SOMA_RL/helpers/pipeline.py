@@ -19,7 +19,7 @@ class RLPipeline:
         Dictionary containing task design parameters
     """
 
-    def __init__(self, model, dataloader=None, task=None, training='torch', training_epochs=1000, optimizer_lr=0.01):
+    def __init__(self, model, dataloader=None, task=None, training='torch', training_epochs=1000, optimizer_lr=0.01, multiprocessing=False):
 
         #Set parameters
         self.training = training
@@ -38,6 +38,7 @@ class RLPipeline:
         self.task.rl_model.training = training
         self.task.rl_model.training_epochs = training_epochs
         self.task.rl_model.optimizer_lr = optimizer_lr
+        self.task.rl_model.multiprocessing = multiprocessing
 
     def simulate(self, data):
 
@@ -174,7 +175,7 @@ def mp_progress(num_files, filepath='SOMA_RL/fits/temp', divide_by=1, multiply_b
     last_count = 0
     start_file_count = len(os.listdir(filepath))
     if progress_bar:
-        loop = tqdm.tqdm(range(int((num_files-start_file_count)/divide_by))) if progress_bar else None
+        loop = tqdm.tqdm(total=int((num_files-start_file_count)/divide_by)) if progress_bar else None
     while n_files*multiply_by < (num_files-start_file_count):
         if progress_bar:
             n_files = (np.floor(len(os.listdir(filepath))/divide_by)*multiply_by)-start_file_count
