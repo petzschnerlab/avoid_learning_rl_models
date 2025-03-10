@@ -253,36 +253,52 @@ class RLToolbox:
 
     def detach_values(self, values):
         return {state: [x.item() for x in values[state]] for state in values.keys()}
-    
+
     def attach_values(self, values):
         return {key: torch.tensor(value, dtype=torch.float32) for key, value in values.items()}
 
+    def detach_final_values(self, value_type):
+        if value_type == 'q_values':
+            self.final_q_values = {key: value.detach() for key, value in self.final_q_values.items()}
+    
     def combine_values(self):
         #Inter-phase processing
         if self.__class__.__name__ == 'ActorCritic':
             self.combine_v_values()
             self.combine_w_values()
+            if self.training == 'torch':
+                self.detach_final_values('v_values')
+                self.detach_final_values('w_values')
             if self.novel_value is not None:
-                self.final_v_values['N'] = self.novel_value
-                self.final_w_values['N'] = self.novel_value
+                self.final_v_values['N'] = torch.tensor(self.novel_value) if self.training == 'torch' else self.novel_value
+                self.final_w_values['N'] = torch.tensor(self.novel_value) if self.training == 'torch' else self.novel_value
         elif 'Hybrid' in self.__class__.__name__:
             self.combine_q_values()
             self.combine_v_values()
             self.combine_w_values()
+            if self.training == 'torch':
+                self.detach_final_values('q_values')
+                self.detach_final_values('v_values')
+                self.detach_final_values('w_values')
             if self.novel_value is not None:
-                self.final_q_values['N'] = self.novel_value
-                self.final_v_values['N'] = self.novel_value
-                self.final_w_values['N'] = self.novel_value
+                self.final_q_values['N'] = torch.tensor(self.novel_value) if self.training == 'torch' else self.novel_value
+                self.final_v_values['N'] = torch.tensor(self.novel_value) if self.training == 'torch' else self.novel_value
+                self.final_w_values['N'] = torch.tensor(self.novel_value) if self.training == 'torch' else self.novel_value
         elif 'QRelative' == self.__class__.__name__:
             self.combine_q_values()
             self.combine_c_values()
+            if self.training == 'torch':
+                self.detach_final_values('q_values')
+                self.detach_final_values('c_values')
             if self.novel_value is not None:
-                self.final_q_values['N'] = self.novel_value
-                self.final_c_values['N'] = self.novel_value
+                self.final_q_values['N'] = torch.tensor(self.novel_value) if self.training == 'torch' else self.novel_value
+                self.final_c_values['N'] = torch.tensor(self.novel_value) if self.training == 'torch' else self.novel_value
         else:
             self.combine_q_values()
+            if self.training == 'torch':
+                self.detach_final_values('q_values')
             if self.novel_value is not None:
-                self.final_q_values['N'] = torch.tensor(self.novel_value) #TODO: WILL FAIL OUT OF TORCH
+                self.final_q_values['N'] = torch.tensor(self.novel_value) if self.training == 'torch' else self.novel_value
 
     def fit_log_likelihood(self, values):
 
@@ -386,8 +402,8 @@ class RLToolbox:
 
             #Inter-phase processing  
             self.combine_values()
+            
             #Detach all values in self.final_q_values
-            self.final_q_values = {key: value.detach() for key, value in self.final_q_values.items()}
             
             #Transfer phase
             for trial, (state_id, action) in enumerate(zip(transfer_states.copy(), transfer_actions.copy())):
@@ -398,8 +414,7 @@ class RLToolbox:
                         'stim_id': [stim for stim in state_id.split(' ')[-1]]}
                 
                 # Forward
-                #state = self.fit_forward_torch(state, phase='transfer')
-                state['q_values'] = torch.stack([self.final_q_values[stim] for stim in state['stim_id']])
+                state = self.fit_forward_torch(state, phase='transfer')
 
                 # Compute and store the log probability of the observed action
                 action_values = torch.divide(state[value_type], self.temperature)
