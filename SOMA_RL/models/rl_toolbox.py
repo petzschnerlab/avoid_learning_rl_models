@@ -383,7 +383,7 @@ class RLToolbox:
                 # Update model
                 learning_rates = torch.stack([self.factual_lr, self.counterfactual_lr]) if state['action'] == 0 else torch.stack([self.counterfactual_lr, self.factual_lr])
                 self.prediction_errors[state['state_id']] = state['prediction_errors'].detach()
-                self.q_values[state['state_id']] = state['q_values'].detach() + (learning_rates * state['prediction_errors'])
+                self.q_values[state['state_id']] = state['q_values'].detach() + (learning_rates * state['prediction_errors'].detach())
 
                 # Clamp parameters to stay within bounds
                 self.factual_lr.data.clamp_(bounds['factual_lr'][0], bounds['factual_lr'][1])
@@ -395,6 +395,8 @@ class RLToolbox:
 
             #Inter-phase processing  
             self.combine_values()
+            #Detach all values in self.final_q_values
+            self.final_q_values = {key: value.detach() for key, value in self.final_q_values.items()}
             
             #Transfer phase
             for trial, (state_id, action) in enumerate(zip(transfer_states.copy(), transfer_actions.copy())):
