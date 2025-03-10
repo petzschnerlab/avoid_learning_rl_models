@@ -367,9 +367,10 @@ class RLToolbox:
                     state['context_reward'] = torch.mean(reward)
 
                 # Forward
-                state = self.fit_forward_torch(state)
+                #state = self.fit_forward_torch(state)
+                state['q_values'] = self.q_values[state['state_id']]
+                state['prediction_errors'] = state['rewards'] - state['q_values']
 
-                # Compute loss fn()
                 action_values = torch.divide(state[value_type], self.temperature)
                 loss = loss_fn(action_values, action)
                 #loss = self.fit_log_likelihood(state[value_type])[action]
@@ -378,6 +379,11 @@ class RLToolbox:
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
+
+                # Update model
+                learning_rates = torch.stack([self.factual_lr, self.counterfactual_lr]) if state['action'] == 0 else torch.stack([self.counterfactual_lr, self.factual_lr])
+                self.prediction_errors[state['state_id']] = state['prediction_errors']
+                self.q_values[state['state_id']] = state['q_values'] + (learning_rates * state['prediction_errors'])
 
                 # Clamp parameters to stay within bounds
                 self.factual_lr.data.clamp_(bounds['factual_lr'][0], bounds['factual_lr'][1])
@@ -399,7 +405,8 @@ class RLToolbox:
                         'stim_id': [stim for stim in state_id.split(' ')[-1]]}
                 
                 # Forward
-                state = self.fit_forward_torch(state, phase='transfer')
+                #state = self.fit_forward_torch(state, phase='transfer')
+                state['q_values'] = torch.stack([self.final_q_values[stim] for stim in state['stim_id']])
 
                 # Compute and store the log probability of the observed action
                 action_values = torch.divide(state[value_type], self.temperature)
