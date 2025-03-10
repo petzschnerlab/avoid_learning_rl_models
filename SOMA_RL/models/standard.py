@@ -104,12 +104,11 @@ class QLearning(RLToolbox, nn.Module):
         if phase == 'learning':
             state = self.get_q_value(state)
             state = self.compute_prediction_error(state)
-            state = self.update_model(state)
         else:
             state = self.get_final_q_values(state)
             
         return state
-    
+
     def sim_forward(self, state, phase = 'learning'):
         if phase == 'learning':
             state = self.get_q_value(state)

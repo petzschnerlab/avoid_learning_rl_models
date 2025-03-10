@@ -121,16 +121,12 @@ class RLToolbox:
     def update_q_values(self, state):
         if self.training == 'torch':
             learning_rates = torch.stack([self.factual_lr, self.counterfactual_lr]) if state['action'] == 0 else torch.stack([self.counterfactual_lr, self.factual_lr])
-            prediction_errors = state['q_prediction_errors'] if 'Hybrid' in self.__class__.__name__ or 'QRelative' == self.__class__.__name__ else state['prediction_errors']
-            new_values = state['q_values'] + (learning_rates * prediction_errors)
-            state['q_values'] = new_values
-            self.q_values[state['state_id']] = new_values.detach()
-            return state
+            prediction_errors = state['q_prediction_errors'].detach() if 'Hybrid' in self.__class__.__name__ or 'QRelative' == self.__class__.__name__ else state['prediction_errors'].detach()
+            self.q_values[state['state_id']] = state['q_values'].detach() + (learning_rates * prediction_errors)
         else:
             learning_rates = [self.factual_lr, self.counterfactual_lr] if state['action'] == 0 else [self.counterfactual_lr, self.factual_lr]
             prediction_errors = state['q_prediction_errors'] if 'Hybrid' in self.__class__.__name__ or 'QRelative' == self.__class__.__name__ else state['prediction_errors']
             self.q_values[state['state_id']] = [state['q_values'][i] + (learning_rates[i] * prediction_errors[i]) for i in range(len(state['q_values']))]
-            return state
 
     def update_w_values(self, state):
         learning_rates = [self.factual_actor_lr, self.counterfactual_actor_lr] if state['action'] == 0 else [self.counterfactual_actor_lr, self.factual_actor_lr]
@@ -175,7 +171,7 @@ class RLToolbox:
         self.update_prediction_errors(state)
 
         if self.__class__.__name__ != 'ActorCritic':
-            state = self.update_q_values(state)
+            self.update_q_values(state)
 
         if 'Relative' in self.__class__.__name__:
             self.update_context_values(state)
@@ -192,8 +188,6 @@ class RLToolbox:
         
         if 'Hybrid' in self.__class__.__name__:
             self.update_h_values(state)
-
-        return state
     
     def reset_datalists(self):
 
@@ -367,10 +361,9 @@ class RLToolbox:
                     state['context_reward'] = torch.mean(reward)
 
                 # Forward
-                #state = self.fit_forward_torch(state)
-                state['q_values'] = self.q_values[state['state_id']]
-                state['prediction_errors'] = state['rewards'] - state['q_values']
+                state = self.fit_forward_torch(state)
 
+                # Compute loss
                 action_values = torch.divide(state[value_type], self.temperature)
                 loss = loss_fn(action_values, action)
                 #loss = self.fit_log_likelihood(state[value_type])[action]
@@ -381,9 +374,7 @@ class RLToolbox:
                 optimizer.step()
 
                 # Update model
-                learning_rates = torch.stack([self.factual_lr, self.counterfactual_lr]) if state['action'] == 0 else torch.stack([self.counterfactual_lr, self.factual_lr])
-                self.prediction_errors[state['state_id']] = state['prediction_errors'].detach()
-                self.q_values[state['state_id']] = state['q_values'].detach() + (learning_rates * state['prediction_errors'].detach())
+                self.update_model(state)
 
                 # Clamp parameters to stay within bounds
                 self.factual_lr.data.clamp_(bounds['factual_lr'][0], bounds['factual_lr'][1])
