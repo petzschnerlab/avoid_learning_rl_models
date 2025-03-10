@@ -382,8 +382,8 @@ class RLToolbox:
 
                 # Update model
                 learning_rates = torch.stack([self.factual_lr, self.counterfactual_lr]) if state['action'] == 0 else torch.stack([self.counterfactual_lr, self.factual_lr])
-                self.prediction_errors[state['state_id']] = state['prediction_errors']
-                self.q_values[state['state_id']] = state['q_values'] + (learning_rates * state['prediction_errors'])
+                self.prediction_errors[state['state_id']] = state['prediction_errors'].detach()
+                self.q_values[state['state_id']] = state['q_values'].detach() + (learning_rates * state['prediction_errors'])
 
                 # Clamp parameters to stay within bounds
                 self.factual_lr.data.clamp_(bounds['factual_lr'][0], bounds['factual_lr'][1])
