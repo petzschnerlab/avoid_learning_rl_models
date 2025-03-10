@@ -123,6 +123,7 @@ def run_recovery(models,
     print(f'Recovery: {recovery}')
     print(f'Training: {training}')
     print(f'Training Epochs: {training_epochs}')
+    print(f'Optimizer Learning Rate: {optimizer_lr}')
 
     if fixed is not None:
         print('\nParameter Overwrites:')
