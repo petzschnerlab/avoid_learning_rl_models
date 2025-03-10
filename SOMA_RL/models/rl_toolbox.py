@@ -344,6 +344,7 @@ class RLToolbox:
         if not self.multiprocessing:
             loop = tqdm.tqdm(range(self.training_epochs), leave=True)
         optimizer = optim.Adam(self.parameters(), lr=self.optimizer_lr)
+        loss_fn = nn.CrossEntropyLoss()
         all_losses = []
         for epoch in range(self.training_epochs):
             # Reset data lists
@@ -369,7 +370,9 @@ class RLToolbox:
                 state = self.fit_forward_torch(state)
 
                 # Compute loss fn()
-                loss = self.fit_log_likelihood(state[value_type])[action]
+                action_values = torch.divide(state[value_type], self.temperature)
+                loss = loss_fn(action_values, action)
+                #loss = self.fit_log_likelihood(state[value_type])[action]
 
                 # Backward pass
                 optimizer.zero_grad()
@@ -389,6 +392,7 @@ class RLToolbox:
             
             #Transfer phase
             for trial, (state_id, action) in enumerate(zip(transfer_states.copy(), transfer_actions.copy())):
+                action = torch.tensor(action, dtype=torch.long, requires_grad=False)
                 
                 #Populate state
                 state = {'action': action, 
@@ -398,7 +402,9 @@ class RLToolbox:
                 state = self.fit_forward_torch(state, phase='transfer')
 
                 # Compute and store the log probability of the observed action
-                loss = self.fit_log_likelihood(state[value_type])[action]
+                action_values = torch.divide(state[value_type], self.temperature)
+                loss = loss_fn(action_values, action)
+                #loss = self.fit_log_likelihood(state[value_type])[action]
 
                 # Backward pass
                 optimizer.zero_grad()
