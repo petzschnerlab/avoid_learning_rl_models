@@ -163,14 +163,14 @@ class RLToolbox:
     def update_prediction_errors(self, state):
 
         if 'Hybrid' in self.__class__.__name__:
-            self.q_prediction_errors[state['state_id']] = state['q_prediction_errors'].detach() if self.training == 'torch' else state['q_prediction_errors']
-            self.v_prediction_errors[state['state_id']] = state['v_prediction_errors'].detach() if self.training == 'torch' else state['v_prediction_errors']
+            self.q_prediction_errors[state['state_id']] = state['q_prediction_errors']
+            self.v_prediction_errors[state['state_id']] = state['v_prediction_errors']
 
         elif 'QRelative' == self.__class__.__name__:
-            self.q_prediction_errors[state['state_id']] = state['q_prediction_errors'].detach() if self.training == 'torch' else state['q_prediction_errors']
-            self.c_prediction_errors[state['state_id']] = state['c_prediction_errors'].detach() if self.training == 'torch' else state['c_prediction_errors']
+            self.q_prediction_errors[state['state_id']] = state['q_prediction_errors']
+            self.c_prediction_errors[state['state_id']] = state['c_prediction_errors']
         else:
-            self.prediction_errors[state['state_id']] = state['prediction_errors'].detach() if self.training == 'torch' else state['prediction_errors']
+            self.prediction_errors[state['state_id']] = state['prediction_errors']
 
     def update_q_values(self, state):
         if self.training == 'torch':
