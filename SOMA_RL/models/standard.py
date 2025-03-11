@@ -90,6 +90,9 @@ class QLearning(RLToolbox, nn.Module):
             state = self.select_action(state)
         self.update_task_data(state, phase=phase)
 
+    def fit_model_update(self, state):
+        self.update_model(state)
+
     def fit_forward(self, state, phase = 'learning'):
         if phase == 'learning':
             state = self.get_q_value(state)
@@ -221,12 +224,16 @@ class ActorCritic(RLToolbox, nn.Module):
             state = self.select_action(state)
         self.update_task_data(state, phase=phase)
 
+    def fit_model_update(self, state):
+        state = self.compute_prediction_error(state)
+        self.update_model(state)
+
     def fit_forward(self, state, phase = 'learning'):
         if phase == 'learning':
             state = self.get_v_value(state)
             state = self.get_w_value(state)
-            state = self.compute_prediction_error(state)
             if not self.training == 'torch':
+                state = self.compute_prediction_error(state)
                 self.update_model(state)
         else:
             state = self.get_final_w_values(state)

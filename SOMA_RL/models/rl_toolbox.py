@@ -163,14 +163,14 @@ class RLToolbox:
     def update_prediction_errors(self, state):
 
         if 'Hybrid' in self.__class__.__name__:
-            self.q_prediction_errors[state['state_id']] = state['q_prediction_errors']
-            self.v_prediction_errors[state['state_id']] = state['v_prediction_errors']
+            self.q_prediction_errors[state['state_id']] = state['q_prediction_errors'].detach() if self.training == 'torch' else state['prediction_errors']
+            self.v_prediction_errors[state['state_id']] = state['v_prediction_errors'].detach() if self.training == 'torch' else state['prediction_errors']
 
         elif 'QRelative' == self.__class__.__name__:
-            self.q_prediction_errors[state['state_id']] = state['q_prediction_errors']
-            self.c_prediction_errors[state['state_id']] = state['c_prediction_errors']
+            self.q_prediction_errors[state['state_id']] = state['q_prediction_errors'].detach() if self.training == 'torch' else state['prediction_errors']
+            self.c_prediction_errors[state['state_id']] = state['c_prediction_errors'].detach() if self.training == 'torch' else state['prediction_errors']
         else:
-            self.prediction_errors[state['state_id']] = state['prediction_errors']
+            self.prediction_errors[state['state_id']] = state['prediction_errors'].detach() if self.training == 'torch' else state['prediction_errors']
 
     def update_q_values(self, state):
         if self.training == 'torch':
@@ -185,7 +185,7 @@ class RLToolbox:
     def update_w_values(self, state):
         if self.training == 'torch':
             learning_rates = torch.stack([self.factual_actor_lr, self.counterfactual_actor_lr]) if state['action'] == 0 else torch.stack([self.counterfactual_actor_lr, self.factual_actor_lr])
-            prediction_errors = state['v_prediction_errors'].detach() if 'Hybrid' in self.__class__.__name__ else state['prediction_errors'].detach()
+            prediction_errors = state['v_prediction_errors'] if 'Hybrid' in self.__class__.__name__ else state['prediction_errors']
             new_w_values = state['w_values'].detach() + (learning_rates * prediction_errors)
         else:
             learning_rates = [self.factual_actor_lr, self.counterfactual_actor_lr] if state['action'] == 0 else [self.counterfactual_actor_lr, self.factual_actor_lr]
@@ -426,7 +426,7 @@ class RLToolbox:
                 optimizer.step()
 
                 # Update model
-                self.update_model(state)
+                self.fit_model_update(state)
 
                 # Clamp parameters to stay within bounds
                 self.clamp_parameters(bounds)
