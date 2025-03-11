@@ -572,9 +572,9 @@ def generate_simulated_data(models, parameters, learning_filename=None, transfer
             task = AvoidanceLearningTask(task_design)
             pipeline = RLPipeline(model, dataloader=p_dataloader, task=task, training='scipy')
             if multiprocessing:
-                inputs.append((pipeline, columns, 'simulation', 'simulation', run, 'generate_data=True'))
+                inputs.append((pipeline, columns, run, 'simulation', run, 'generate_data=True'))
             else:
-                pipeline.run_simulations((columns, 'simulation', 'simulation', run), generate_data=True)
+                pipeline.run_simulations((columns, run, 'simulation', run), generate_data=True)
                 loop.update(1)
 
     #Run all generations in parallel

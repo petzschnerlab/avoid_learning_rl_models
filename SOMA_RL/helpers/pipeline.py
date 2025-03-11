@@ -138,7 +138,7 @@ class RLPipeline:
 
         #Save task data
         if generate_data:
-            unique_id = np.random.randint(0, 1000000) 
+            unique_id = np.random.randint(0, 1000000) if participant_id == None else participant_id
             while f"{model.model_name}_{unique_id}" in os.listdir(f'SOMA_RL/data/generated/'):
                 unique_id = np.random.randint(0, 1000000)
             simulation_name = f"{model.model_name}_{unique_id}"
