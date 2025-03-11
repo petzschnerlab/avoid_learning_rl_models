@@ -1,9 +1,11 @@
 import random as rnd
 import numpy as np
+import torch.nn as nn
+import torch
 
 from .rl_toolbox import RLToolbox
 
-class Hybrid2012(RLToolbox):
+class Hybrid2012(RLToolbox, nn.Module):
 
     """
     Reinforcement Learning Model: Hybrid Actor-Critic-Q-Learning Model (Gold et al., 2012)
@@ -57,17 +59,26 @@ class Hybrid2012(RLToolbox):
         return state
     
     def compute_prediction_error(self, state):
-        state['q_prediction_errors'] = [state['rewards'][i] - state['q_values'][i] for i in range(len(state['rewards']))]
-        #state['v_prediction_errors'] = [state['rewards'][i] - state['v_values'][0] for i in range(len(state['rewards']))]
-        state['v_prediction_errors'] = [state['rewards'][state['action']] - state['v_values'][0] for i in range(len(state['rewards']))] #Uses selected reward
+        if self.training == 'torch':
+            state['q_prediction_errors'] = state['rewards'] - state['q_values']
+            state['v_prediction_errors'] = state['rewards'][state['action']] - state['v_values']
+        else:
+            state['q_prediction_errors'] = [state['rewards'][i] - state['q_values'][i] for i in range(len(state['rewards']))]
+            state['v_prediction_errors'] = [state['rewards'][state['action']] - state['v_values'][0] for i in range(len(state['rewards']))]
 
         return state
 
     def select_action(self, state):
 
-        transformed_h_values = np.exp(np.divide(state['h_values'], self.temperature))
-        probability_h_values = (transformed_h_values/np.sum(transformed_h_values)).cumsum()
-        state['action'] = np.where(probability_h_values >= rnd.random())[0][0]
+        if self.training == 'torch':
+            transformed_h_values = torch.exp(torch.div(state['h_values'], self.temperature))
+            probability_h_values = torch.cumsum(transformed_h_values/torch.sum(transformed_h_values), dim=0)
+            state['action'] = torch.where(probability_h_values >= rnd.random())[0][0]
+        else:
+            transformed_h_values = np.exp(np.divide(state['h_values'], self.temperature))
+            probability_h_values = (transformed_h_values/np.sum(transformed_h_values)).cumsum()
+            state['action'] = np.where(probability_h_values >= rnd.random())[0][0]
+
         if 'correct_action' in state.keys():
             state['accuracy'] = int(state['action'] == state['correct_action'])
 
@@ -98,7 +109,8 @@ class Hybrid2012(RLToolbox):
             state = self.get_w_value(state)
             state = self.get_h_values(state)
             state = self.compute_prediction_error(state)
-            self.update_model(state)
+            if not self.training == 'torch':
+                self.update_model(state)
         else:
             state = self.get_final_q_values(state)
             state = self.get_final_w_values(state)
@@ -150,7 +162,7 @@ class Hybrid2012(RLToolbox):
 
         return self.sim_task(args, transform_reward=self.optional_parameters['bias'])
 
-class Hybrid2021(RLToolbox):
+class Hybrid2021(RLToolbox, nn.Module):
 
     """
     Reinforcement Learning Model: Hybrid Actor-Critic-Q-Learning Model (Geana et al., 2021)
@@ -207,20 +219,32 @@ class Hybrid2021(RLToolbox):
         return state
     
     def compute_prediction_error(self, state):
-        state['q_prediction_errors'] = [state['rewards'][i] - state['q_values'][i] for i in range(len(state['rewards']))]
-        #state['v_prediction_errors'] = [state['rewards'][i] - state['v_values'][0] for i in range(len(state['rewards']))]
-        state['v_prediction_errors'] = [state['rewards'][state['action']] - state['v_values'][0] for i in range(len(state['rewards']))] #Uses selected reward
+        if self.training == 'torch':
+            state['q_prediction_errors'] = state['rewards'] - state['q_values']
+            state['v_prediction_errors'] = state['rewards'][state['action']] - state['v_values']
+        else:
+            state['q_prediction_errors'] = [state['rewards'][i] - state['q_values'][i] for i in range(len(state['rewards']))]
+            state['v_prediction_errors'] = [state['rewards'][state['action']] - state['v_values'][0] for i in range(len(state['rewards']))] #Uses selected reward
 
         return state
 
     def select_action(self, state):
 
-        state['h_values'] = [(state['w_values'][i] * (1-self.mixing_factor)) + (state['q_values'][i] * self.mixing_factor) for i in range(len(state['w_values']))]
-        transformed_h_values = np.exp(np.divide(state['h_values'], self.temperature))
-        probability_h_values = (transformed_h_values/np.sum(transformed_h_values))
-        uniform_dist = np.ones(len(probability_h_values))/len(probability_h_values)
-        probability_h_values = (((1-self.noise_factor)*probability_h_values) + (self.noise_factor*uniform_dist)).cumsum()
-        state['action'] = np.where(probability_h_values >= rnd.random())[0][0]
+        if self.training == 'torch':
+            state['h_values'] = (state['w_values'] * (1-self.mixing_factor)) + (state['q_values'] * self.mixing_factor)
+            transformed_h_values = torch.exp(torch.div(state['h_values'], self.temperature))
+            probability_h_values = transformed_h_values/torch.sum(transformed_h_values)
+            uniform_dist = torch.ones(len(probability_h_values))/len(probability_h_values)
+            probability_h_values = torch.cumsum(((1-self.noise_factor)*probability_h_values) + (self.noise_factor*uniform_dist), dim=0)
+            state['action'] = torch.where(probability_h_values >= rnd.random())[0][0]
+        else:
+            state['h_values'] = [(state['w_values'][i] * (1-self.mixing_factor)) + (state['q_values'][i] * self.mixing_factor) for i in range(len(state['w_values']))]
+            transformed_h_values = np.exp(np.divide(state['h_values'], self.temperature))
+            probability_h_values = (transformed_h_values/np.sum(transformed_h_values))
+            uniform_dist = np.ones(len(probability_h_values))/len(probability_h_values)
+            probability_h_values = (((1-self.noise_factor)*probability_h_values) + (self.noise_factor*uniform_dist)).cumsum()
+            state['action'] = np.where(probability_h_values >= rnd.random())[0][0]
+
         if 'correct_action' in state.keys():
             state['accuracy'] = int(state['action'] == state['correct_action'])
 
@@ -250,7 +274,8 @@ class Hybrid2021(RLToolbox):
             state = self.get_w_value(state)
             state = self.get_h_values(state)
             state = self.compute_prediction_error(state)
-            self.update_model(state)
+            if not self.training == 'torch':
+                self.update_model(state)
         else:
             state = self.get_final_q_values(state)
             state = self.get_final_w_values(state)

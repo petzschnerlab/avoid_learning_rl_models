@@ -94,19 +94,11 @@ class QLearning(RLToolbox, nn.Module):
         if phase == 'learning':
             state = self.get_q_value(state)
             state = self.compute_prediction_error(state)
-            self.update_model(state)
+            if not self.training == 'torch':
+                self.update_model(state)
         else:
             state = self.get_final_q_values(state)
         
-        return state
-    
-    def fit_forward_torch(self, state, phase = 'learning'):
-        if phase == 'learning':
-            state = self.get_q_value(state)
-            state = self.compute_prediction_error(state)
-        else:
-            state = self.get_final_q_values(state)
-            
         return state
 
     def sim_forward(self, state, phase = 'learning'):
@@ -147,7 +139,7 @@ class QLearning(RLToolbox, nn.Module):
 
         return self.sim_task(args)
 
-class ActorCritic(RLToolbox):
+class ActorCritic(RLToolbox, nn.Module):
 
     """
     Reinforcement Learning Model: Actor-Critic
@@ -198,8 +190,11 @@ class ActorCritic(RLToolbox):
         return state
     
     def compute_prediction_error(self, state):
-        state['prediction_errors'] = [state['rewards'][state['action']] - state['v_values'][0] for i in range(len(state['rewards']))]
-        #state['prediction_errors'] = [state['rewards'][i] - state['v_values'][0] for i in range(len(state['rewards']))] #Uses rewards independently
+        if self.training == 'torch':
+            state['prediction_errors'] = state['rewards'][state['action']] - state['v_values']
+        else:
+            state['prediction_errors'] = [state['rewards'][state['action']] - state['v_values'][0] for i in range(len(state['rewards']))]
+
         return state
 
     def select_action(self, state):
@@ -231,7 +226,8 @@ class ActorCritic(RLToolbox):
             state = self.get_v_value(state)
             state = self.get_w_value(state)
             state = self.compute_prediction_error(state)
-            self.update_model(state)
+            if not self.training == 'torch':
+                self.update_model(state)
         else:
             state = self.get_final_w_values(state)
         

@@ -19,10 +19,44 @@ class RLToolbox:
         for key in methods:
             setattr(self, key, methods[key])
 
-    def unpack_parameters(self, x):
-        #TODO: Implement this
-        if self.__class__.__name__ == 'QLearning':
-            self.factual_lr, self.counterfactual_lr, self.temperature, *optionals = x
+    def get_value_type(self, model_name):
+        if model_name == 'QLearning' or model_name == 'Relative' or model_name == 'wRelative':
+            return 'q_values'
+        elif model_name == 'ActorCritic':
+            return 'w_values'
+        elif model_name == 'QRelative':
+            return 'm_values'
+        elif model_name == 'Hybrid2012' or model_name == 'Hybrid2021':
+            return 'h_values'
+        
+    def get_context_reward(self, model_name):
+        if model_name == 'Relative' or model_name == 'wRelative' or model_name == 'QRelative':
+            return True
+        else:
+            return False
+
+    def define_parameters(self):
+
+        # Re-Assign parameters
+        self.free_params = self.parameters.copy()
+        del self.parameters
+
+        # Get model specifics
+        value_type = self.get_value_type(self.__class__.__name__)
+        context_reward = self.get_context_reward(self.__class__.__name__)
+        transform_reward = self.optional_parameters['bias']
+
+        # Assign parameters using torch
+        self.unpack_parameters(self.free_params)
+
+        return value_type, context_reward, transform_reward
+    
+    def unpack_parameters(self, free_params):
+
+        for key, value in free_params.items():
+            value_torch = nn.Parameter(torch.tensor(value, dtype=torch.float32, requires_grad=True))
+            setattr(self, key, value_torch)
+            self.register_parameter(key, value_torch)
 
     def unpack_optionals(self, optionals):
         if self.optional_parameters['bias'] == True and 'valence_factor' in self.parameters:
@@ -34,6 +68,11 @@ class RLToolbox:
         if self.optional_parameters['decay'] == True and 'decay_factor' in self.parameters:
             self.decay_factor = optionals[0]
             optionals = optionals[1:]
+
+    def clamp_parameters(self, bounds):
+        for param_name in self.free_params:
+            param = getattr(self, param_name)
+            param.data.clamp_(bounds[param_name][0], bounds[param_name][1])
 
     #Extraction functions
     def get_q_value(self, state):
@@ -57,7 +96,10 @@ class RLToolbox:
         return state
     
     def get_h_values(self, state):
-        state['h_values'] = [(state['w_values'][i] * (1-self.mixing_factor)) + (state['q_values'][i] * self.mixing_factor) for i in range(len(state['w_values']))]
+        if self.training == 'torch':
+            state['h_values'] = state['w_values'] * (1-self.mixing_factor) + state['q_values'] * self.mixing_factor
+        else:
+            state['h_values'] = [(state['w_values'][i] * (1-self.mixing_factor)) + (state['q_values'][i] * self.mixing_factor) for i in range(len(state['w_values']))]
         return state
 
     def get_final_q_values(self, state):
@@ -71,9 +113,10 @@ class RLToolbox:
         return state
 
     def get_final_c_values(self, state):
-        state['c_values'] = [self.final_c_values[stim] for stim in state['stim_id']]
-        if self.training != 'torch':
-            state['c_values'] = [value.values[0] for value in state['c_values']]
+        if self.training == 'torch':
+            state['c_values'] = torch.stack([self.final_c_values[stim] for stim in state['stim_id']])
+        else:
+            state['c_values'] = [self.final_c_values[stim].values[0] for stim in state['stim_id']]
         return state
 
     def get_context_value(self, state):
@@ -84,37 +127,48 @@ class RLToolbox:
         if self.optional_parameters['decay']:
             state['w_values'] = self.get_decayed_w_values(state)
         else:
-            state['w_values'] = [self.final_w_values[stim] for stim in state['stim_id']]
-            if self.training != 'torch':
-                state['w_values'] = [value.values[0] for value in state['w_values']]
+            if self.training == 'torch':
+                state['w_values'] = torch.stack([self.final_w_values[stim] for stim in state['stim_id']])
+            else:
+                state['w_values'] = [self.final_w_values[stim].values[0] for stim in state['stim_id']]
         return state
     
     def get_decayed_q_values(self, state):
-        q_final = [self.final_q_values[stim] for stim in state['stim_id']]
-        q_initial = [self.initial_q_values[stim] for stim in state['stim_id']]
-        q_final_decayed = [q*(1-self.decay_factor) for q in q_final]
-        q_initial_decayed = [q*(self.decay_factor) for q in q_initial]
-        q_values = [q_final_decayed[i].values[0] + q_initial_decayed[i].values[0] for i in range(len(q_final))]
+        if self.training == 'torch':
+            q_final = torch.stack([self.final_q_values[stim] for stim in state['stim_id']])
+            q_initial = torch.stack([torch.tensor(self.initial_q_values[stim][0]) for stim in state['stim_id']])
+            q_values = q_final*(1-self.decay_factor) + q_initial*(self.decay_factor)
+        else:
+            q_final = [self.final_q_values[stim] for stim in state['stim_id']]
+            q_initial = [self.initial_q_values[stim] for stim in state['stim_id']]
+            q_final_decayed = [q*(1-self.decay_factor) for q in q_final]
+            q_initial_decayed = [q*(self.decay_factor) for q in q_initial]
+            q_values = [q_final_decayed[i].values[0] + q_initial_decayed[i].values[0] for i in range(len(q_final))]
         return q_values
     
     def get_decayed_w_values(self, state):
-        w_final = [self.final_w_values[stim] for stim in state['stim_id']]
-        w_initial = [self.initial_w_values[stim] for stim in state['stim_id']]
-        w_final_decayed = [w*(1-self.decay_factor) for w in w_final]
-        w_initial_decayed = [w*(self.decay_factor) for w in w_initial]
-        w_values = [w_final_decayed[i].values[0] + w_initial_decayed[i].values[0] for i in range(len(w_final))]
+        if self.training == 'torch':
+            w_final = torch.stack([self.final_w_values[stim] for stim in state['stim_id']])
+            w_initial = torch.stack([torch.tensor(self.initial_w_values[stim][0]) for stim in state['stim_id']])
+            w_values = w_final*(1-self.decay_factor) + w_initial*(self.decay_factor)
+        else:
+            w_final = [self.final_w_values[stim] for stim in state['stim_id']]
+            w_initial = [self.initial_w_values[stim] for stim in state['stim_id']]
+            w_final_decayed = [w*(1-self.decay_factor) for w in w_final]
+            w_initial_decayed = [w*(self.decay_factor) for w in w_initial]
+            w_values = [w_final_decayed[i].values[0] + w_initial_decayed[i].values[0] for i in range(len(w_final))]
         return w_values
 
     #Update functions
     def update_prediction_errors(self, state):
 
         if 'Hybrid' in self.__class__.__name__:
-            self.q_prediction_errors[state['state_id']] = state['q_prediction_errors']
-            self.v_prediction_errors[state['state_id']] = state['v_prediction_errors']
+            self.q_prediction_errors[state['state_id']] = state['q_prediction_errors'].detach() if self.training == 'torch' else state['q_prediction_errors']
+            self.v_prediction_errors[state['state_id']] = state['v_prediction_errors'].detach() if self.training == 'torch' else state['v_prediction_errors']
 
         elif 'QRelative' == self.__class__.__name__:
-            self.q_prediction_errors[state['state_id']] = state['q_prediction_errors']
-            self.c_prediction_errors[state['state_id']] = state['c_prediction_errors']
+            self.q_prediction_errors[state['state_id']] = state['q_prediction_errors'].detach() if self.training == 'torch' else state['q_prediction_errors']
+            self.c_prediction_errors[state['state_id']] = state['c_prediction_errors'].detach() if self.training == 'torch' else state['c_prediction_errors']
         else:
             self.prediction_errors[state['state_id']] = state['prediction_errors'].detach() if self.training == 'torch' else state['prediction_errors']
 
@@ -129,39 +183,61 @@ class RLToolbox:
             self.q_values[state['state_id']] = [state['q_values'][i] + (learning_rates[i] * prediction_errors[i]) for i in range(len(state['q_values']))]
 
     def update_w_values(self, state):
-        learning_rates = [self.factual_actor_lr, self.counterfactual_actor_lr] if state['action'] == 0 else [self.counterfactual_actor_lr, self.factual_actor_lr]
-        prediction_errors = state['v_prediction_errors'] if 'Hybrid' in self.__class__.__name__ else state['prediction_errors']
-        new_w_values = [state['w_values'][i] + (learning_rates[i] * prediction_errors[i]) for i in range(len(state['w_values']))]
+        if self.training == 'torch':
+            learning_rates = torch.stack([self.factual_actor_lr, self.counterfactual_actor_lr]) if state['action'] == 0 else torch.stack([self.counterfactual_actor_lr, self.factual_actor_lr])
+            prediction_errors = state['v_prediction_errors'].detach() if 'Hybrid' in self.__class__.__name__ else state['prediction_errors'].detach()
+            new_w_values = state['w_values'].detach() + (learning_rates * prediction_errors)
+        else:
+            learning_rates = [self.factual_actor_lr, self.counterfactual_actor_lr] if state['action'] == 0 else [self.counterfactual_actor_lr, self.factual_actor_lr]
+            prediction_errors = state['v_prediction_errors'] if 'Hybrid' in self.__class__.__name__ else state['prediction_errors']
+            new_w_values = [state['w_values'][i] + (learning_rates[i] * prediction_errors[i]) for i in range(len(state['w_values']))]
 
         #Check if the new w values are all zeros, and adjust them to initial values if so
-        if np.sum([np.abs(new_w_values[i]) for i in range(len(new_w_values))]) == 0:
-            new_w_values = [0.01]*len(new_w_values)
+        if self.training == 'torch':
+            if torch.sum(torch.abs(new_w_values)).item() == 0:
+                new_w_values = torch.tensor([0.01]*len(new_w_values), dtype=torch.float32)
+            new_w_values = new_w_values/torch.sum(torch.abs(new_w_values))
+        else:
+            if np.sum([np.abs(new_w_values[i]) for i in range(len(new_w_values))]) == 0:
+                new_w_values = [0.01]*len(new_w_values)
+            new_w_values = new_w_values/np.sum(np.abs(new_w_values))
 
-        self.w_values[state['state_id']] = new_w_values/np.sum(np.abs(new_w_values))
+        self.w_values[state['state_id']] = new_w_values
     
     def update_v_values(self, state):
-        prediction_errors = state['v_prediction_errors'] if 'Hybrid' in self.__class__.__name__ else state['prediction_errors']
-        self.v_values[state['state_id']] = [state['v_values'][0] + (self.critic_lr * prediction_errors[state['action']])] #TODO: Should we use the averaged prediction error or the selected action's prediction error?
+        if self.training == 'torch':
+            prediction_errors = state['v_prediction_errors'].detach() if 'Hybrid' in self.__class__.__name__ else state['prediction_errors'].detach()
+            self.v_values[state['state_id']] = state['v_values'].detach() + (self.critic_lr * prediction_errors)
+        else:
+            prediction_errors = state['v_prediction_errors'] if 'Hybrid' in self.__class__.__name__ else state['prediction_errors']
+            self.v_values[state['state_id']] = [state['v_values'][0] + (self.critic_lr * prediction_errors[state['action']])]
     
     def update_h_values(self, state):
-        self.h_values[state['state_id']] = state['h_values']
+        self.h_values[state['state_id']] = state['h_values'].detach() if self.training == 'torch' else state['h_values']
 
     def update_c_values(self, state):
-        learning_rates = [self.factual_lr, self.counterfactual_lr] if state['action'] == 0 else [self.counterfactual_lr, self.factual_lr]
-        self.c_values[state['state_id']] = [state['c_values'][i] + (learning_rates[i] * state['c_prediction_errors'][i]) for i in range(len(state['c_values']))]
+        if self.training == 'torch':
+            learning_rates = torch.stack([self.factual_lr, self.counterfactual_lr]) if state['action'] == 0 else torch.stack([self.counterfactual_lr, self.factual_lr])
+            self.c_values[state['state_id']] = state['c_values'].detach() + (learning_rates * state['c_prediction_errors'].detach())
+        else:
+            learning_rates = [self.factual_lr, self.counterfactual_lr] if state['action'] == 0 else [self.counterfactual_lr, self.factual_lr]
+            self.c_values[state['state_id']] = [state['c_values'][i] + (learning_rates[i] * state['c_prediction_errors'][i]) for i in range(len(state['c_values']))]
 
     def update_context_values(self, state):
-        self.context_values[state['state_id']] = state['context_value'] + (self.contextual_lr * state['context_prediction_errors'])
+        if self.training == 'torch':
+            self.context_values[state['state_id']] = state['context_value'].detach() + (self.contextual_lr * state['context_prediction_errors'].detach())
+        else:
+            self.context_values[state['state_id']] = state['context_value'] + (self.contextual_lr * state['context_prediction_errors'])
     
     def update_context_prediction_errors(self, state):
-        self.context_prediction_errors[state['state_id']] = state['context_prediction_errors']
+        self.context_prediction_errors[state['state_id']] = state['context_prediction_errors'].detach() if self.training == 'torch' else state['context_prediction_errors']
 
     def reward_valence(self, reward):
         for ri, r in enumerate(reward):
             if r > 0:
-                reward[ri] = (1-self.valence_factor)*r
+                reward[ri] = (1-self.valence_factor)*r.detach() if self.training == 'torch' else (1-self.valence_factor)*r
             elif r < 0:
-                reward[ri] = self.valence_factor*r
+                reward[ri] = self.valence_factor*r.detach() if self.training == 'torch' else self.valence_factor*r
             else:
                 reward[ri] = 0
         return reward
@@ -256,49 +332,21 @@ class RLToolbox:
 
     def attach_values(self, values):
         return {key: torch.tensor(value, dtype=torch.float32) for key, value in values.items()}
-
-    def detach_final_values(self, value_type):
-        if value_type == 'q_values':
-            self.final_q_values = {key: value.detach() for key, value in self.final_q_values.items()}
     
     def combine_values(self):
         #Inter-phase processing
         if self.__class__.__name__ == 'ActorCritic':
             self.combine_v_values()
             self.combine_w_values()
-            if self.training == 'torch':
-                self.detach_final_values('v_values')
-                self.detach_final_values('w_values')
-            if self.novel_value is not None:
-                self.final_v_values['N'] = torch.tensor(self.novel_value) if self.training == 'torch' else self.novel_value
-                self.final_w_values['N'] = torch.tensor(self.novel_value) if self.training == 'torch' else self.novel_value
         elif 'Hybrid' in self.__class__.__name__:
             self.combine_q_values()
             self.combine_v_values()
             self.combine_w_values()
-            if self.training == 'torch':
-                self.detach_final_values('q_values')
-                self.detach_final_values('v_values')
-                self.detach_final_values('w_values')
-            if self.novel_value is not None:
-                self.final_q_values['N'] = torch.tensor(self.novel_value) if self.training == 'torch' else self.novel_value
-                self.final_v_values['N'] = torch.tensor(self.novel_value) if self.training == 'torch' else self.novel_value
-                self.final_w_values['N'] = torch.tensor(self.novel_value) if self.training == 'torch' else self.novel_value
         elif 'QRelative' == self.__class__.__name__:
             self.combine_q_values()
             self.combine_c_values()
-            if self.training == 'torch':
-                self.detach_final_values('q_values')
-                self.detach_final_values('c_values')
-            if self.novel_value is not None:
-                self.final_q_values['N'] = torch.tensor(self.novel_value) if self.training == 'torch' else self.novel_value
-                self.final_c_values['N'] = torch.tensor(self.novel_value) if self.training == 'torch' else self.novel_value
         else:
             self.combine_q_values()
-            if self.training == 'torch':
-                self.detach_final_values('q_values')
-            if self.novel_value is not None:
-                self.final_q_values['N'] = torch.tensor(self.novel_value) if self.training == 'torch' else self.novel_value
 
     def fit_log_likelihood(self, values):
 
@@ -328,22 +376,13 @@ class RLToolbox:
         return -torch.log(probability_values) if self.training == 'torch' else -np.log(probability_values)
         
     def fit_torch(self, data, bounds):
-        free_params = list(self.parameters.values())
-        self.free_parameters = self.parameters.copy()
-        del self.parameters
-        value_type = 'q_values'  # TODO: make this specific to model
-        context_reward = False  # TODO: make this specific to model
-        transform_reward = self.optional_parameters['bias']  # TODO: make this specific to model?
 
-        # Initialize parameters as nn.Parameters
-        self.factual_lr = torch.nn.Parameter(torch.tensor(free_params[0], dtype=torch.float32, requires_grad=True))
-        self.counterfactual_lr = torch.nn.Parameter(torch.tensor(free_params[1], dtype=torch.float32, requires_grad=True))
-        self.temperature = torch.nn.Parameter(torch.tensor(free_params[2], dtype=torch.float32, requires_grad=True))
+        # TODO:
+        # Check self.novel_value (in combine_values?)
+        # Check scipy NLL (should I minus max like nn.CrossEntropyLoss?)
 
-        # Ensure parameters are part of model parameters
-        self.register_parameter("factual_lr", self.factual_lr)
-        self.register_parameter("counterfactual_lr", self.counterfactual_lr)
-        self.register_parameter("temperature", self.temperature)
+        # Define parameters
+        value_type, context_reward, transform_reward = self.define_parameters()
 
         # Set data
         learning_data, transfer_data = data
@@ -360,7 +399,6 @@ class RLToolbox:
             # Reset data lists
             self.reset_datalists_torch()
             losses = []
-            #log_likelihood = torch.tensor(0, dtype=torch.float, requires_grad=False)
 
             # Learning phase
             for trial, (state_id, action, reward) in enumerate(zip(learning_states.copy(), learning_actions.copy(), learning_rewards.copy())):
@@ -377,12 +415,11 @@ class RLToolbox:
                     state['context_reward'] = torch.mean(reward)
 
                 # Forward
-                state = self.fit_forward_torch(state)
+                state = self.fit_forward(state)
 
                 # Compute loss
                 action_values = torch.divide(state[value_type], self.temperature)
                 loss = loss_fn(action_values, action)
-                #loss = self.fit_log_likelihood(state[value_type])[action]
 
                 # Backward pass
                 optimizer.zero_grad()
@@ -393,18 +430,14 @@ class RLToolbox:
                 self.update_model(state)
 
                 # Clamp parameters to stay within bounds
-                self.factual_lr.data.clamp_(bounds['factual_lr'][0], bounds['factual_lr'][1])
-                self.counterfactual_lr.data.clamp_(bounds['counterfactual_lr'][0], bounds['counterfactual_lr'][1])
-                self.temperature.data.clamp_(bounds['temperature'][0], bounds['temperature'][1])
-            
+                self.clamp_parameters(bounds)
+
                 # Track loss
                 losses.append(loss.detach().numpy())
 
             #Inter-phase processing  
             self.combine_values()
-            
-            #Detach all values in self.final_q_values
-            
+                        
             #Transfer phase
             for trial, (state_id, action) in enumerate(zip(transfer_states.copy(), transfer_actions.copy())):
                 action = torch.tensor(action, dtype=torch.long, requires_grad=False)
@@ -414,12 +447,11 @@ class RLToolbox:
                         'stim_id': [stim for stim in state_id.split(' ')[-1]]}
                 
                 # Forward
-                state = self.fit_forward_torch(state, phase='transfer')
+                state = self.fit_forward(state, phase='transfer')
 
                 # Compute and store the log probability of the observed action
                 action_values = torch.divide(state[value_type], self.temperature)
                 loss = loss_fn(action_values, action)
-                #loss = self.fit_log_likelihood(state[value_type])[action]
 
                 # Backward pass
                 optimizer.zero_grad()
@@ -427,9 +459,7 @@ class RLToolbox:
                 optimizer.step()
 
                 # Clamp parameters to stay within bounds
-                self.factual_lr.data.clamp_(bounds['factual_lr'][0], bounds['factual_lr'][1])
-                self.counterfactual_lr.data.clamp_(bounds['counterfactual_lr'][0], bounds['counterfactual_lr'][1])
-                self.temperature.data.clamp_(bounds['temperature'][0], bounds['temperature'][1])
+                self.clamp_parameters(bounds)
             
                 # Track loss
                 losses.append(loss.detach().numpy())

@@ -1,9 +1,11 @@
 import numpy as np
 import random as rnd
+import torch
+import torch.nn as nn
 
 from .rl_toolbox import RLToolbox
 
-class Relative(RLToolbox):
+class Relative(RLToolbox, nn.Module):
 
     """
     Reinforcement Learning Model: Relative (Palminteri et al., 2015)
@@ -47,15 +49,24 @@ class Relative(RLToolbox):
         return state
     
     def compute_prediction_error(self, state):
-        state['prediction_errors'] = [state['rewards'][i] - state['context_value'][0] - state['q_values'][i] for i in range(len(state['rewards']))]
+        if self.training == 'torch':
+            state['prediction_errors'] = state['rewards'] - state['q_values']
+        else:
+            state['prediction_errors'] = [state['rewards'][i] - state['context_value'][0] - state['q_values'][i] for i in range(len(state['rewards']))]
         state['context_prediction_errors'] = state['context_reward'] - state['context_value']
         return state
     
     def select_action(self, state):
 
-        transformed_q_values = np.exp(np.divide(state['q_values'], self.temperature))
-        probability_q_values = (transformed_q_values/np.sum(transformed_q_values)).cumsum()
-        state['action'] = np.where(probability_q_values >= rnd.random())[0][0]
+        if self.training == 'torch':
+            transformed_q_values = torch.exp(torch.div(state['q_values'], self.temperature))
+            probability_q_values = torch.cumsum(transformed_q_values/torch.sum(transformed_q_values), dim=0)
+            state['action'] = torch.where(probability_q_values >= rnd.random())[0][0]
+        else:
+            transformed_q_values = np.exp(np.divide(state['q_values'], self.temperature))
+            probability_q_values = (transformed_q_values/np.sum(transformed_q_values)).cumsum()
+            state['action'] = np.where(probability_q_values >= rnd.random())[0][0]
+            
         if 'correct_action' in state.keys():
             state['accuracy'] = int(state['action'] == state['correct_action'])
 
@@ -80,7 +91,8 @@ class Relative(RLToolbox):
             state = self.get_q_value(state)
             state = self.get_context_value(state)
             state = self.compute_prediction_error(state)
-            self.update_model(state)
+            if not self.training == 'torch':
+                self.update_model(state)
         else:
             state = self.get_final_q_values(state)
             state = self.select_action(state)
@@ -126,7 +138,7 @@ class Relative(RLToolbox):
 
         return self.sim_task(args, context_reward=True)
 
-class wRelative(RLToolbox):
+class wRelative(RLToolbox, nn.Module):
 
     """
     Reinforcement Learning Model: Relative (Palminteri et al., 2015)
@@ -208,7 +220,8 @@ class wRelative(RLToolbox):
             state = self.get_q_value(state)
             state = self.get_context_value(state)
             state = self.compute_prediction_error(state)
-            self.update_model(state)
+            if not self.training == 'torch':
+                self.update_model(state)
         else:
             state = self.get_final_q_values(state)
             state = self.select_action(state)
@@ -254,7 +267,7 @@ class wRelative(RLToolbox):
 
         return self.sim_task(args, context_reward=True, transform_reward=self.optional_parameters['bias'])
     
-class QRelative(RLToolbox):
+class QRelative(RLToolbox, nn.Module):
 
     """
     Reinforcement Learning Model: Q-Relative
@@ -346,7 +359,8 @@ class QRelative(RLToolbox):
             state = self.get_m_value(state)
             state = self.get_context_value(state)
             state = self.compute_prediction_error(state)
-            self.update_model(state)
+            if not self.training == 'torch':
+                self.update_model(state)
         else:
             state = self.get_final_q_values(state)
             state = self.get_final_c_values(state)
