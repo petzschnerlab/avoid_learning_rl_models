@@ -42,7 +42,9 @@ class RLModel:
                 if not self.model.optional_parameters.get(opt_key, True) and param_key in self.model.parameters:
                     self.model.parameters.pop(param_key)
                     self.model.bounds.pop(param_key)
-
+            if not self.model.optional_parameters['novel']:
+                self.model.novel_value = None
+            
             #Reorder optional parameters so that they are always in same order
             parameter_keys = [key for key in self.model.parameters.keys() if key not in linked_keys.values()]
             if self.model.optional_parameters['bias']:

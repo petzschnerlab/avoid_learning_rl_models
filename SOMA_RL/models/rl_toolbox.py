@@ -378,7 +378,6 @@ class RLToolbox:
     def fit_torch(self, data, bounds):
 
         # TODO:
-        # Check self.novel_value (in combine_values?)
         # Check scipy NLL (should I minus max like nn.CrossEntropyLoss?)
 
         # Define parameters
