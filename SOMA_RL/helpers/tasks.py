@@ -124,7 +124,7 @@ class AvoidanceLearningTask:
             final_q_values = {state.replace('State ', '')[i]: values[i].detach()
                             for state, values in self.rl_model.q_values.items() 
                             for i in range(2)}
-            final_q_values['N'] = torch.tensor(0.) if self.rl_model.novel_value is None else torch.tensor(self.rl_model.novel_value)
+            final_q_values['N'] = torch.tensor(0.) if self.rl_model.novel_value is None else self.rl_model.novel_value
             self.rl_model.final_q_values = final_q_values
         else:
             stimuli = ['A','B','C','D','E','F','G','H']
@@ -137,7 +137,7 @@ class AvoidanceLearningTask:
             final_v_values = {state.replace('State ', '')[i]: values.detach()
                             for state, values in self.rl_model.v_values.items()
                             for i in range(2)}
-            final_v_values['N'] = torch.tensor(0.) if self.rl_model.novel_value is None else torch.tensor(self.rl_model.novel_value)
+            final_v_values['N'] = torch.tensor(0.) if self.rl_model.novel_value is None else self.rl_model.novel_value
             self.rl_model.final_v_values = final_v_values
         else:
             stimuli = ['A','B','C','D','E','F','G','H']
@@ -152,7 +152,7 @@ class AvoidanceLearningTask:
             final_w_values = {state.replace('State ', '')[i]: values[i].detach()
                             for state, values in self.rl_model.w_values.items() 
                             for i in range(2)}
-            final_w_values['N'] = torch.tensor(0.) if self.rl_model.novel_value is None else torch.tensor(self.rl_model.novel_value)
+            final_w_values['N'] = torch.tensor(0.) if self.rl_model.novel_value is None else self.rl_model.novel_value
             self.rl_model.final_w_values = final_w_values
         else:
             stimuli = ['A','B','C','D','E','F','G','H']
@@ -166,7 +166,7 @@ class AvoidanceLearningTask:
             final_c_values = {state.replace('State ', '')[i]: values[i].detach()
                             for state, values in self.rl_model.c_values.items() 
                             for i in range(2)}
-            final_c_values['N'] = torch.tensor(0.) if self.rl_model.novel_value is None else torch.tensor(self.rl_model.novel_value)
+            final_c_values['N'] = torch.tensor(0.) if self.rl_model.novel_value is None else self.rl_model.novel_value
             self.rl_model.final_c_values = final_c_values
         else:
             stimuli = ['A','B','C','D','E','F','G','H']
