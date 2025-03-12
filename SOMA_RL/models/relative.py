@@ -50,10 +50,11 @@ class Relative(RLToolbox, nn.Module):
     
     def compute_prediction_error(self, state):
         if self.training == 'torch':
-            state['prediction_errors'] = state['rewards'] - state['q_values']
+            state['prediction_errors'] = state['rewards'] - state['context_value'] - state['q_values'].detach()
+            state['context_prediction_errors'] = state['context_reward'] - state['context_value'].detach()
         else:
             state['prediction_errors'] = [state['rewards'][i] - state['context_value'][0] - state['q_values'][i] for i in range(len(state['rewards']))]
-        state['context_prediction_errors'] = state['context_reward'] - state['context_value']
+            state['context_prediction_errors'] = state['context_reward'] - state['context_value']
         return state
     
     def select_action(self, state):

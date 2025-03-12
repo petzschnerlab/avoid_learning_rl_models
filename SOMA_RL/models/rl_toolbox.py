@@ -175,7 +175,12 @@ class RLToolbox:
     def update_q_values(self, state):
         if self.training == 'torch':
             learning_rates = torch.stack([self.factual_lr, self.counterfactual_lr]) if state['action'] == 0 else torch.stack([self.counterfactual_lr, self.factual_lr])
-            prediction_errors = state['q_prediction_errors'] if 'Hybrid' in self.__class__.__name__ or 'QRelative' == self.__class__.__name__ else state['prediction_errors']
+            if 'Hybrid' in self.__class__.__name__ or 'QRelative' == self.__class__.__name__:
+                prediction_errors = state['q_prediction_errors']
+            elif 'Relative' == self.__class__.__name__:
+                prediction_errors = state['prediction_errors']
+            else:
+                prediction_errors = state['prediction_errors'].detach()
             self.q_values[state['state_id']] = state['q_values'].detach() + (learning_rates * prediction_errors)
         else:
             learning_rates = [self.factual_lr, self.counterfactual_lr] if state['action'] == 0 else [self.counterfactual_lr, self.factual_lr]
@@ -206,8 +211,8 @@ class RLToolbox:
     
     def update_v_values(self, state):
         if self.training == 'torch':
-            prediction_errors = state['v_prediction_errors'].detach() if 'Hybrid' in self.__class__.__name__ else state['prediction_errors']
-            self.v_values[state['state_id']] = state['v_values'].detach() + (self.critic_lr * prediction_errors) #### V -> PE (detached) -> V (attach)
+            prediction_errors = state['v_prediction_errors'].detach() if 'Hybrid' in self.__class__.__name__ else state['prediction_errors'].detach()
+            self.v_values[state['state_id']] = state['v_values'].detach() + (self.critic_lr * prediction_errors)
         else:
             prediction_errors = state['v_prediction_errors'] if 'Hybrid' in self.__class__.__name__ else state['prediction_errors']
             self.v_values[state['state_id']] = [state['v_values'][0] + (self.critic_lr * prediction_errors[state['action']])]
@@ -225,7 +230,7 @@ class RLToolbox:
 
     def update_context_values(self, state):
         if self.training == 'torch':
-            self.context_values[state['state_id']] = state['context_value'].detach() + (self.contextual_lr * state['context_prediction_errors'].detach())
+            self.context_values[state['state_id']] = state['context_value'].detach() + (self.contextual_lr * state['context_prediction_errors'])
         else:
             self.context_values[state['state_id']] = state['context_value'] + (self.contextual_lr * state['context_prediction_errors'])
     
@@ -248,7 +253,7 @@ class RLToolbox:
         self.update_prediction_errors(state)
 
         if self.__class__.__name__ != 'ActorCritic':
-            self.update_q_values(state) #AFTER: q_values: factual_lr, counterfactual_lr (no detach)
+            self.update_q_values(state)
 
         if 'Relative' in self.__class__.__name__:
             self.update_context_values(state)
@@ -260,11 +265,11 @@ class RLToolbox:
             self.update_c_values(state)
             
         if self.__class__.__name__ == 'ActorCritic' or 'Hybrid' in self.__class__.__name__:
-            self.update_w_values(state) #AFTER: w_values: factual_actor_lr, counterfactual_actor_lr (No detach)
-            self.update_v_values(state) #AFTER: v_values: critic_lr (No detach)
+            self.update_w_values(state)
+            self.update_v_values(state)
         
         if 'Hybrid' in self.__class__.__name__:
-            self.update_h_values(state) #Nothing?
+            self.update_h_values(state)
     
     def reset_datalists(self):
 
@@ -395,6 +400,12 @@ class RLToolbox:
         optimizer = optim.Adam(self.parameters(), lr=self.optimizer_lr)
         loss_fn = nn.CrossEntropyLoss()
         all_losses = []
+
+        fitted_params = {}
+        for name, param in self.named_parameters():
+            fitted_params[name] = param.item()  
+        print(fitted_params)
+
         for epoch in range(self.training_epochs):
             # Reset data lists
             self.reset_datalists_torch()
@@ -402,6 +413,7 @@ class RLToolbox:
 
             # Learning phase
             for trial, (state_id, action, reward) in enumerate(zip(learning_states.copy(), learning_actions.copy(), learning_rewards.copy())):
+                state_id = 'State AB'
                 action = torch.tensor(action, dtype=torch.long, requires_grad=False)
                 reward = torch.tensor(reward, dtype=torch.float32, requires_grad=False)
 
@@ -468,6 +480,11 @@ class RLToolbox:
             if not self.multiprocessing:
                 loop.update(1)
                 loop.set_postfix_str(f'loss: {all_losses[-1]:.0f}')
+
+        fitted_params = {}
+        for name, param in self.named_parameters():
+            fitted_params[name] = param.item()  
+        print(fitted_params)          
         
         return np.sum(losses), fitted_params
     

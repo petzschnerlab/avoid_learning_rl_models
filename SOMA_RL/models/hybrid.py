@@ -224,7 +224,7 @@ class Hybrid2021(RLToolbox, nn.Module):
     
     def compute_prediction_error(self, state):
         if self.training == 'torch':
-            state['q_prediction_errors'] = state['rewards'] - state['q_values']
+            state['q_prediction_errors'] = state['rewards'] - state['q_values'].detach()
             state['v_prediction_errors'] = state['rewards'][state['action']] - state['v_values']
         else:
             state['q_prediction_errors'] = [state['rewards'][i] - state['q_values'][i] for i in range(len(state['rewards']))]
@@ -241,6 +241,7 @@ class Hybrid2021(RLToolbox, nn.Module):
             uniform_dist = torch.ones(len(probability_h_values))/len(probability_h_values)
             probability_h_values = torch.cumsum(((1-self.noise_factor)*probability_h_values) + (self.noise_factor*uniform_dist), dim=0)
             state['action'] = torch.where(probability_h_values >= rnd.random())[0][0]
+            state['h_values'] = probability_h_values
         else:
             state['h_values'] = [(state['w_values'][i] * (1-self.mixing_factor)) + (state['q_values'][i] * self.mixing_factor) for i in range(len(state['w_values']))]
             transformed_h_values = np.exp(np.divide(state['h_values'], self.temperature))
