@@ -371,11 +371,6 @@ class RLToolbox:
         loss_fn = nn.CrossEntropyLoss()
         all_losses = []
 
-        fitted_params = {}
-        for name, param in self.named_parameters():
-            fitted_params[name] = param.item()  
-        print(fitted_params)
-
         for epoch in range(self.training_epochs):
             # Reset data lists
             self.reset_datalists_torch()
@@ -454,7 +449,6 @@ class RLToolbox:
         fitted_params = {}
         for name, param in self.named_parameters():
             fitted_params[name] = param.item()  
-        print(fitted_params)          
         
         return np.sum(losses), fitted_params
     
