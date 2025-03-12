@@ -161,8 +161,8 @@ class RLToolbox:
     def update_prediction_errors(self, state):
 
         if 'Hybrid' in self.__class__.__name__:
-            self.q_prediction_errors[state['state_id']] = state['q_prediction_errors'].detach() if self.training == 'torch' else state['prediction_errors']
-            self.v_prediction_errors[state['state_id']] = state['v_prediction_errors'].detach() if self.training == 'torch' else state['prediction_errors']
+            self.q_prediction_errors[state['state_id']] = state['q_prediction_errors'].detach() if self.training == 'torch' else state['q_prediction_errors']
+            self.v_prediction_errors[state['state_id']] = state['v_prediction_errors'].detach() if self.training == 'torch' else state['v_prediction_errors']
         else:
             self.prediction_errors[state['state_id']] = state['prediction_errors'].detach() if self.training == 'torch' else state['prediction_errors']
 
@@ -171,7 +171,7 @@ class RLToolbox:
             learning_rates = torch.stack([self.factual_lr, self.counterfactual_lr]) if state['action'] == 0 else torch.stack([self.counterfactual_lr, self.factual_lr])
             if 'Hybrid' in self.__class__.__name__:
                 prediction_errors = state['q_prediction_errors']
-            elif 'Relative' == self.__class__.__name__:
+            elif 'Relative' in self.__class__.__name__:
                 prediction_errors = state['prediction_errors']
             else:
                 prediction_errors = state['prediction_errors'].detach()
@@ -385,7 +385,7 @@ class RLToolbox:
                 state = {'rewards': reward, 'action': action, 'state_id': state_id}
                                 
                 if transform_reward:
-                    state['rewards'] = self.reward_valence(state['rewards']) #R -> R' (attached)
+                    state['rewards'] = self.reward_valence(state['rewards'])
                 
                 if context_reward:
                     state['context_reward'] = torch.mean(reward)
@@ -447,7 +447,7 @@ class RLToolbox:
 
         fitted_params = {}
         for name, param in self.named_parameters():
-            fitted_params[name] = param.item()  
+            fitted_params[name] = param.item()
         
         return np.sum(losses), fitted_params
     
