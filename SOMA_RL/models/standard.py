@@ -91,13 +91,14 @@ class QLearning(RLToolbox, nn.Module):
         self.update_task_data(state, phase=phase)
 
     def fit_model_update(self, state):
+        state = self.compute_prediction_error(state)
         self.update_model(state)
 
     def fit_forward(self, state, phase = 'learning'):
         if phase == 'learning':
             state = self.get_q_value(state)
-            state = self.compute_prediction_error(state)
             if not self.training == 'torch':
+                state = self.compute_prediction_error(state)
                 self.update_model(state)
         else:
             state = self.get_final_q_values(state)

@@ -175,7 +175,7 @@ class RLToolbox:
     def update_q_values(self, state):
         if self.training == 'torch':
             learning_rates = torch.stack([self.factual_lr, self.counterfactual_lr]) if state['action'] == 0 else torch.stack([self.counterfactual_lr, self.factual_lr])
-            prediction_errors = state['q_prediction_errors'].detach() if 'Hybrid' in self.__class__.__name__ or 'QRelative' == self.__class__.__name__ else state['prediction_errors'].detach()
+            prediction_errors = state['q_prediction_errors'] if 'Hybrid' in self.__class__.__name__ or 'QRelative' == self.__class__.__name__ else state['prediction_errors']
             self.q_values[state['state_id']] = state['q_values'].detach() + (learning_rates * prediction_errors)
         else:
             learning_rates = [self.factual_lr, self.counterfactual_lr] if state['action'] == 0 else [self.counterfactual_lr, self.factual_lr]
@@ -206,8 +206,8 @@ class RLToolbox:
     
     def update_v_values(self, state):
         if self.training == 'torch':
-            prediction_errors = state['v_prediction_errors'].detach() if 'Hybrid' in self.__class__.__name__ else state['prediction_errors'].detach()
-            self.v_values[state['state_id']] = state['v_values'].detach() + (self.critic_lr * prediction_errors)
+            prediction_errors = state['v_prediction_errors'].detach() if 'Hybrid' in self.__class__.__name__ else state['prediction_errors']
+            self.v_values[state['state_id']] = state['v_values'].detach() + (self.critic_lr * prediction_errors) #### V -> PE (detached) -> V (attach)
         else:
             prediction_errors = state['v_prediction_errors'] if 'Hybrid' in self.__class__.__name__ else state['prediction_errors']
             self.v_values[state['state_id']] = [state['v_values'][0] + (self.critic_lr * prediction_errors[state['action']])]
@@ -233,21 +233,22 @@ class RLToolbox:
         self.context_prediction_errors[state['state_id']] = state['context_prediction_errors'].detach() if self.training == 'torch' else state['context_prediction_errors']
 
     def reward_valence(self, reward):
+        new_reward = []
         for ri, r in enumerate(reward):
             if r > 0:
-                reward[ri] = (1-self.valence_factor)*r.detach() if self.training == 'torch' else (1-self.valence_factor)*r
+                new_reward.append((1-self.valence_factor)*r)
             elif r < 0:
-                reward[ri] = self.valence_factor*r.detach() if self.training == 'torch' else self.valence_factor*r
+                new_reward.append(self.valence_factor*r)
             else:
-                reward[ri] = 0
-        return reward
+                new_reward.append(r)
+        return torch.stack(new_reward) if self.training == 'torch' else new_reward
     
     def update_model(self, state):
         
         self.update_prediction_errors(state)
 
         if self.__class__.__name__ != 'ActorCritic':
-            self.update_q_values(state)
+            self.update_q_values(state) #AFTER: q_values: factual_lr, counterfactual_lr (no detach)
 
         if 'Relative' in self.__class__.__name__:
             self.update_context_values(state)
@@ -259,11 +260,11 @@ class RLToolbox:
             self.update_c_values(state)
             
         if self.__class__.__name__ == 'ActorCritic' or 'Hybrid' in self.__class__.__name__:
-            self.update_w_values(state)
-            self.update_v_values(state)
+            self.update_w_values(state) #AFTER: w_values: factual_actor_lr, counterfactual_actor_lr (No detach)
+            self.update_v_values(state) #AFTER: v_values: critic_lr (No detach)
         
         if 'Hybrid' in self.__class__.__name__:
-            self.update_h_values(state)
+            self.update_h_values(state) #Nothing?
     
     def reset_datalists(self):
 
@@ -387,7 +388,7 @@ class RLToolbox:
         learning_data, transfer_data = data
         learning_states, learning_actions, learning_rewards = learning_data
         transfer_states, transfer_actions = transfer_data
-
+        
         # Training loop
         if not self.multiprocessing:
             loop = tqdm.tqdm(range(self.training_epochs), leave=True)
@@ -408,7 +409,7 @@ class RLToolbox:
                 state = {'rewards': reward, 'action': action, 'state_id': state_id}
                                 
                 if transform_reward:
-                    state['rewards'] = self.reward_valence(state['rewards'])
+                    state['rewards'] = self.reward_valence(state['rewards']) #R -> R' (attached)
                 
                 if context_reward:
                     state['context_reward'] = torch.mean(reward)
@@ -417,7 +418,7 @@ class RLToolbox:
                 state = self.fit_forward(state)
 
                 # Compute loss
-                action_values = torch.divide(state[value_type], self.temperature)
+                action_values = torch.divide(state[value_type], self.temperature) 
                 loss = loss_fn(action_values, action)
 
                 # Backward pass
@@ -432,7 +433,7 @@ class RLToolbox:
                 self.clamp_parameters(bounds)
 
                 # Track loss
-                losses.append(loss.detach().numpy())
+                losses.append(loss.detach().item())
 
             #Inter-phase processing  
             self.combine_values()
@@ -461,17 +462,12 @@ class RLToolbox:
                 self.clamp_parameters(bounds)
             
                 # Track loss
-                losses.append(loss.detach().numpy())
+                losses.append(loss.detach().item())
 
             all_losses.append(np.sum(losses))
             if not self.multiprocessing:
                 loop.update(1)
                 loop.set_postfix_str(f'loss: {all_losses[-1]:.0f}')
-
-        #Extract parameters into a dictionary
-        fitted_params = {}
-        for name, param in self.named_parameters():
-            fitted_params[name] = param.item()
         
         return np.sum(losses), fitted_params
     

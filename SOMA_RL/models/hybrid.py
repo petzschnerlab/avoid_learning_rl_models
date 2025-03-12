@@ -60,7 +60,7 @@ class Hybrid2012(RLToolbox, nn.Module):
     
     def compute_prediction_error(self, state):
         if self.training == 'torch':
-            state['q_prediction_errors'] = state['rewards'] - state['q_values']
+            state['q_prediction_errors'] = state['rewards'] - state['q_values'].detach()
             state['v_prediction_errors'] = state['rewards'][state['action']] - state['v_values']
         else:
             state['q_prediction_errors'] = [state['rewards'][i] - state['q_values'][i] for i in range(len(state['rewards']))]
@@ -102,14 +102,18 @@ class Hybrid2012(RLToolbox, nn.Module):
             state = self.select_action(state)
         self.update_task_data(state, phase=phase)
 
+    def fit_model_update(self, state):
+        state = self.compute_prediction_error(state)
+        self.update_model(state)
+
     def fit_forward(self, state, phase = 'learning'):
         if phase == 'learning':
             state = self.get_q_value(state)
             state = self.get_v_value(state)
             state = self.get_w_value(state)
             state = self.get_h_values(state)
-            state = self.compute_prediction_error(state)
             if not self.training == 'torch':
+                state = self.compute_prediction_error(state)
                 self.update_model(state)
         else:
             state = self.get_final_q_values(state)
@@ -267,14 +271,18 @@ class Hybrid2021(RLToolbox, nn.Module):
             state = self.select_action(state)
         self.update_task_data(state, phase=phase)
 
+    def fit_model_update(self, state):
+        state = self.compute_prediction_error(state)
+        self.update_model(state)
+
     def fit_forward(self, state, phase = 'learning'):
         if phase == 'learning':
             state = self.get_q_value(state)
             state = self.get_v_value(state)
             state = self.get_w_value(state)
             state = self.get_h_values(state)
-            state = self.compute_prediction_error(state)
             if not self.training == 'torch':
+                state = self.compute_prediction_error(state)
                 self.update_model(state)
         else:
             state = self.get_final_q_values(state)
