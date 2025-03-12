@@ -43,8 +43,6 @@ if __name__ == "__main__":
               'Hybrid2012+bias', #Standard
               'Hybrid2021+bias+decay'] #Standard
     
-    models = ['QLearning']
-
     fixed, _ = get_priors()
     bounds = {'QLearning':      {'temperature': (0.1, 1)},
               'ActorCritic':    {'temperature': (0.1, 1)},
