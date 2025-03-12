@@ -120,7 +120,6 @@ class RLPipeline:
                         'Relative': 'q_values', 
                         'Hybrid2012': 'h_values',
                         'Hybrid2021': 'h_values',
-                        'QRelative': 'm_values', 
                         'wRelative': 'q_values'}
         
         value_label = value_labels[model_name]

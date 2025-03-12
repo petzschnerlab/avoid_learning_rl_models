@@ -20,7 +20,7 @@ if __name__ == "__main__":
     '''
     Supported models: 
         QLearning, ActorCritic
-        Relative, wRelative, QRelative
+        Relative, wRelative
         Hybrid2012, Hybrid2021
 
     Standard models:
@@ -32,7 +32,7 @@ if __name__ == "__main__":
         Hybrid2021+bias+decay: Standard Hybrid 2021 Model (Geana et al., 2021)
 
     Optional Parameters: You can add optional parameters to models by adding them to the model name using a + sign
-        +bias: Adds a valence bias to the model (e.g. wRelative+bias), only usable with wRelative, QRelative, Hybrid2012, and Hybrid2021
+        +bias: Adds a valence bias to the model (e.g. wRelative+bias), only usable with wRelative, Hybrid2012, and Hybrid2021
         +novel: Adds a free parameter for the novel stimulus (e.g. QLearning+novel), useable with all models
         +decay: Adds a decay parameter to the model (e.g. QLearning+decay), useable with all models
     '''
@@ -60,10 +60,10 @@ if __name__ == "__main__":
     generate_params = {'learning_filename':         'SOMA_RL/data/pain_learning_processed.csv',
                        'transfer_filename':         'SOMA_RL/data/pain_transfer_processed.csv',
                        'models':                    models,
-                       'parameters':                'normal',
+                       'parameters':                'random',
                        'fixed':                     fixed,
                        'bounds':                    bounds,
-                       'number_of_runs':            10,
+                       'number_of_runs':            1,
                        'multiprocessing':           True,
                        'number_of_participants':    0,
                        }

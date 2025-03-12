@@ -16,7 +16,7 @@ if __name__ == "__main__":
     '''
     Supported models: 
         QLearning, ActorCritic
-        Relative, wRelative, QRelative
+        Relative, wRelative
         Hybrid2012, Hybrid2021
 
     Standard models:
@@ -28,7 +28,7 @@ if __name__ == "__main__":
         Hybrid2021+bias+decay: Standard Hybrid 2021 Model (Geana et al., 2021)
 
     Optional Parameters: You can add optional parameters to models by adding them to the model name using a + sign
-        +bias: Adds a valence bias to the model (e.g. wRelative+bias), only usable with wRelative, QRelative, Hybrid2012, and Hybrid2021
+        +bias: Adds a valence bias to the model (e.g. wRelative+bias), only usable with wRelative, Hybrid2012, and Hybrid2021
         +novel: Adds a free parameter for the novel stimulus (e.g. QLearning+novel), useable with all models
         +decay: Adds a decay parameter to the model (e.g. QLearning+decay), useable with all models
     '''
@@ -41,15 +41,17 @@ if __name__ == "__main__":
 
               'Relative', #Standard
               'Relative+novel', #Standard + novel
+
               'wRelative+bias+decay', #Standard
               'wRelative+bias+decay+novel', #Standard + novel
 
               'Hybrid2012+bias', #Standard w/o bias
               'Hybrid2012+bias+novel', #Standard + novel
+
               'Hybrid2021+bias+decay', #Standard w/o bias
               'Hybrid2021+bias+decay+novel'] #Standard + novel
     
-    models = ['QLearning']
+    models = ['QLearning+novel']
 
     training_params = {'training':              'torch',
                        'training_epochs':       100,
@@ -64,7 +66,7 @@ if __name__ == "__main__":
                   'random_params':              'normal',
                   'fixed':                      fixed,
                   'bounds':                     bounds,
-                  'number_of_runs':             10,
+                  'number_of_runs':             1,
                   'multiprocessing':            True,
                  }
     fit_params.update(training_params)

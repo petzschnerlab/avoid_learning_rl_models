@@ -24,13 +24,11 @@ class RLToolbox:
             return 'q_values'
         elif model_name == 'ActorCritic':
             return 'w_values'
-        elif model_name == 'QRelative':
-            return 'm_values'
         elif model_name == 'Hybrid2012' or model_name == 'Hybrid2021':
             return 'h_values'
         
     def get_context_reward(self, model_name):
-        if model_name == 'Relative' or model_name == 'wRelative' or model_name == 'QRelative':
+        if model_name == 'Relative' or model_name == 'wRelative':
             return True
         else:
             return False
@@ -165,17 +163,13 @@ class RLToolbox:
         if 'Hybrid' in self.__class__.__name__:
             self.q_prediction_errors[state['state_id']] = state['q_prediction_errors'].detach() if self.training == 'torch' else state['prediction_errors']
             self.v_prediction_errors[state['state_id']] = state['v_prediction_errors'].detach() if self.training == 'torch' else state['prediction_errors']
-
-        elif 'QRelative' == self.__class__.__name__:
-            self.q_prediction_errors[state['state_id']] = state['q_prediction_errors'].detach() if self.training == 'torch' else state['prediction_errors']
-            self.c_prediction_errors[state['state_id']] = state['c_prediction_errors'].detach() if self.training == 'torch' else state['prediction_errors']
         else:
             self.prediction_errors[state['state_id']] = state['prediction_errors'].detach() if self.training == 'torch' else state['prediction_errors']
 
     def update_q_values(self, state):
         if self.training == 'torch':
             learning_rates = torch.stack([self.factual_lr, self.counterfactual_lr]) if state['action'] == 0 else torch.stack([self.counterfactual_lr, self.factual_lr])
-            if 'Hybrid' in self.__class__.__name__ or 'QRelative' == self.__class__.__name__:
+            if 'Hybrid' in self.__class__.__name__:
                 prediction_errors = state['q_prediction_errors']
             elif 'Relative' == self.__class__.__name__:
                 prediction_errors = state['prediction_errors']
@@ -184,7 +178,7 @@ class RLToolbox:
             self.q_values[state['state_id']] = state['q_values'].detach() + (learning_rates * prediction_errors)
         else:
             learning_rates = [self.factual_lr, self.counterfactual_lr] if state['action'] == 0 else [self.counterfactual_lr, self.factual_lr]
-            prediction_errors = state['q_prediction_errors'] if 'Hybrid' in self.__class__.__name__ or 'QRelative' == self.__class__.__name__ else state['prediction_errors']
+            prediction_errors = state['q_prediction_errors'] if 'Hybrid' in self.__class__.__name__ else state['prediction_errors']
             self.q_values[state['state_id']] = [state['q_values'][i] + (learning_rates[i] * prediction_errors[i]) for i in range(len(state['q_values']))]
 
     def update_w_values(self, state):
@@ -258,11 +252,6 @@ class RLToolbox:
         if 'Relative' in self.__class__.__name__:
             self.update_context_values(state)
             self.update_context_prediction_errors(state)
-
-        if self.__class__.__name__ == 'QRelative':
-            self.update_context_values(state)
-            self.update_context_prediction_errors(state)
-            self.update_c_values(state)
             
         if self.__class__.__name__ == 'ActorCritic' or 'Hybrid' in self.__class__.__name__:
             self.update_w_values(state)
@@ -278,9 +267,6 @@ class RLToolbox:
             if 'Hybrid' in self.__class__.__name__:
                 self.q_prediction_errors[s] = [0]*len(self.q_prediction_errors[s])
                 self.v_prediction_errors[s] = [0]*len(self.v_prediction_errors[s])
-            elif 'QRelative' == self.__class__.__name__:
-                self.q_prediction_errors[s] = [0]*len(self.q_prediction_errors[s])
-                self.c_prediction_errors[s] = [0]*len(self.c_prediction_errors[s])
             else:
                 self.prediction_errors[s] = [0]*len(self.prediction_errors[s])
 
@@ -290,11 +276,6 @@ class RLToolbox:
             if 'Relative' in self.__class__.__name__:
                 self.context_values[s] = [0]*len(self.context_values[s])
                 self.context_prediction_errors[s] = [0]*len(self.context_prediction_errors[s])
-
-            if self.__class__.__name__ == 'QRelative':
-                self.context_values[s] = [0]*len(self.context_values[s])
-                self.context_prediction_errors[s] = [0]*len(self.context_prediction_errors[s])
-                self.c_values[s] = [0]*len(self.c_values[s])
 
             if self.__class__.__name__ == 'ActorCritic' or 'Hybrid' in self.__class__.__name__: 
                 self.w_values[s] = [0.01]*len(self.w_values[s])
@@ -308,9 +289,6 @@ class RLToolbox:
             if 'Hybrid' in self.__class__.__name__:
                 self.q_prediction_errors[s] = torch.zeros(len(self.q_prediction_errors[s]))
                 self.v_prediction_errors[s] = torch.zeros(len(self.v_prediction_errors[s]))
-            elif 'QRelative' == self.__class__.__name__:
-                self.q_prediction_errors[s] = torch.zeros(len(self.q_prediction_errors[s]))
-                self.c_prediction_errors[s] = torch.zeros(len(self.c_prediction_errors[s]))
             else:
                 self.prediction_errors[s] = torch.zeros(len(self.prediction_errors[s]))
 
@@ -320,11 +298,6 @@ class RLToolbox:
             if 'Relative' in self.__class__.__name__:
                 self.context_values[s] = torch.zeros(len(self.context_values[s]))
                 self.context_prediction_errors[s] = torch.zeros(len(self.context_prediction_errors[s]))
-
-            if self.__class__.__name__ == 'QRelative':
-                self.context_values[s] = torch.zeros(len(self.context_values[s]))
-                self.context_prediction_errors[s] = torch.zeros(len(self.context_prediction_errors[s]))
-                self.c_values[s] = torch.zeros(len(self.c_values[s]))
 
             if self.__class__.__name__ == 'ActorCritic' or 'Hybrid' in self.__class__.__name__:
                 self.w_values[s] = torch.full((len(self.w_values[s]),), 0.01)  # Initializes all values to 0.01
@@ -348,9 +321,6 @@ class RLToolbox:
             self.combine_q_values()
             self.combine_v_values()
             self.combine_w_values()
-        elif 'QRelative' == self.__class__.__name__:
-            self.combine_q_values()
-            self.combine_c_values()
         else:
             self.combine_q_values()
 

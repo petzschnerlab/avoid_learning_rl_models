@@ -2,7 +2,7 @@ import random as rnd
 import numpy as np
 
 from models.standard import QLearning, ActorCritic
-from models.relative import Relative, wRelative, QRelative
+from models.relative import Relative, wRelative
 from models.hybrid import Hybrid2012, Hybrid2021
 
 class RLModel:
@@ -143,15 +143,6 @@ class RLModel:
                                             'novel_value',
                                             'decay_factor']
         
-        model_parameters['QRelative'] = ['factual_lr',
-                                        'counterfactual_lr',
-                                        'contextual_lr',
-                                        'temperature',
-                                        'mixing_factor',
-                                        'valence_reward',
-                                        'novel_value',
-                                        'decay_factor']
-        
         model_parameters['wRelative'] = ['factual_lr',
                                         'counterfactual_lr',
                                         'contextual_lr',
@@ -234,7 +225,6 @@ class RLModel:
                          'ActorCritic': ActorCritic,
                          'Relative': Relative,
                          'wRelative': wRelative,
-                         'QRelative': QRelative,
                          'Hybrid2012': Hybrid2012,
                          'Hybrid2021': Hybrid2021}
         
