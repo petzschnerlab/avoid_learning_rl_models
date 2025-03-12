@@ -378,7 +378,6 @@ class RLToolbox:
 
             # Learning phase
             for trial, (state_id, action, reward) in enumerate(zip(learning_states.copy(), learning_actions.copy(), learning_rewards.copy())):
-                state_id = 'State AB'
                 action = torch.tensor(action, dtype=torch.long, requires_grad=False)
                 reward = torch.tensor(reward, dtype=torch.float32, requires_grad=False)
 
