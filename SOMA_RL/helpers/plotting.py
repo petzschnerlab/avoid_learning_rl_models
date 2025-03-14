@@ -147,8 +147,10 @@ def plot_fits_by_run_number(fit_data_path):
     fig, axs = plt.subplots(number_of_rows, number_of_columns, figsize=(5*number_of_columns, 5*number_of_rows))
     for n, model in enumerate(best_fits):
         row, col = n//5, n%5
-        ax = axs[row, col] if len(best_fits) > 5 else axs[n]
-        ax = axs if len(best_fits) == 1 else ax
+        if len(best_fits) == 1:
+            ax = axs
+        else:
+            ax = axs[row, col] if len(best_fits) > 5 else axs[n]
         ax.plot([int(x) for x in best_fits[model].keys()], list(best_fits[model].values()), marker='o')
         ax.axvline(x=average_best_run, color='red', linestyle='--', alpha=.5)
         ax.set_title(model)

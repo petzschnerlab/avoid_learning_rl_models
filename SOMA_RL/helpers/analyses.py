@@ -510,6 +510,29 @@ def run_fit_simulations(learning_filename, transfer_filename, fit_data, models, 
             else:
                 choice_rates[group][model_name] = pd.concat((choice_rates[group][model_name], participant_data), ignore_index=True)
 
+    #for accuracy, combine nested files (group, model_name)
+    accuracy_data = None
+    choice_data = None
+    for group in accuracy:
+        for model in accuracy[group]:
+
+            group_model_accuracy = accuracy[group][model].copy()
+            group_model_accuracy.insert(0, 'group', [group]*len(group_model_accuracy))
+            group_model_accuracy.insert(0, 'model', [model]*len(group_model_accuracy))
+
+            group_model_choice = choice_rates[group][model].copy()
+            group_model_choice.insert(0, 'group', [group]*len(group_model_choice))
+            group_model_choice.insert(0, 'model', [model]*len(group_model_choice))
+
+            if accuracy_data is None:
+                accuracy_data = group_model_accuracy
+                choice_data = group_model_choice
+            else:
+                accuracy_data = pd.concat((accuracy_data, group_model_accuracy), ignore_index=True)
+                choice_data = pd.concat((choice_data, group_model_choice), ignore_index=True)
+    accuracy_data.to_csv('SOMA_RL/fits/modelsimulation_accuracy_data.csv', index=False)
+    choice_data.to_csv('SOMA_RL/fits/modelsimulation_choice_data.csv', index=False)
+
     #Delete all files
     for f in files:
         os.remove(os.path.join('SOMA_RL','fits','temp',f))
