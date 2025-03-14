@@ -158,7 +158,7 @@ def plot_fits_by_run_number(fit_data_path):
 
     plt.tight_layout()
     #Save plot 
-    plt.savefig(fit_data_path.replace('.pkl', '.png'))
+    plt.savefig(fit_data_path.replace('full_fit_data.pkl', 'fit-by-runs.png'))
 
 def plot_model_fits(confusion_matrix):
     
@@ -176,7 +176,7 @@ def plot_model_fits(confusion_matrix):
             ax.text(j, i, np.round(confusion_matrix.iloc[i, j], 2), ha='center', va='center', color='black')
     cax.set_clim(0, 100)
     plt.tight_layout()
-    plt.savefig(f'SOMA_RL/plots/model_fits.png')
+    plt.savefig(f'SOMA_RL/plots/model_recovery.png')
 
 def plot_parameter_fits(models, fit_data, fixed=None, bounds=None):
     #Create a dictionary with model being keys and pd.dataframe empty as value

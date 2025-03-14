@@ -15,9 +15,9 @@ from models.rl_models import RLModel
 from helpers.dataloader import DataLoader
 from helpers.tasks import AvoidanceLearningTask
 from helpers.pipeline import RLPipeline, mp_run_fit, mp_run_simulations, mp_progress
-from helpers.plotting import plot_simulations, plot_parameter_fits, plot_model_fits, plot_rainclouds
+from helpers.plotting import plot_simulations, plot_parameter_fits, plot_model_fits, plot_rainclouds, plot_fits_by_run_number
 from helpers.statistics import Statistics
-from helpers.report import Report
+
 
 def run_fit_empirical(learning_filename, 
                       transfer_filename, 
@@ -78,6 +78,8 @@ def run_fit_empirical(learning_filename,
     fit_data = run_fit_comparison(dataloader, 
                                   models, 
                                   dataloader.get_group_ids())
+    
+    plot_fits_by_run_number('SOMA_RL/fits/full_fit_data.pkl')
     
     linear_results, ttest_results = run_fit_analyses(fit_data)
     
@@ -406,11 +408,11 @@ def run_fit_comparison(dataloader, models, group_ids, recovery='parameter'):
     #Turn nested dictionary into dataframe
     group_AIC = pd.DataFrame(group_AIC)
     group_AIC['best_model'] = group_AIC.idxmin(axis=1)
-    group_AIC.to_csv('SOMA_RL/plots/group_AIC.csv')
+    group_AIC.to_csv('SOMA_RL/fits/group_AIC.csv')
 
     group_BIC = pd.DataFrame(group_BIC)
     group_BIC['best_model'] = group_BIC.idxmin(axis=1)
-    group_BIC.to_csv('SOMA_RL/plots/group_BIC.csv')
+    group_BIC.to_csv('SOMA_RL/fits/group_BIC.csv')
 
     print('AIC REPORT')
     print('==========')

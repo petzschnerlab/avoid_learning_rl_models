@@ -1,4 +1,5 @@
 import os
+import shutil
 import time
 import pandas as pd
 import numpy as np
@@ -158,6 +159,20 @@ class RLPipeline:
             values.to_csv(f'SOMA_RL/fits/temp/{model.model_name}_{group}_{participant_id}_values_sim_results.csv', index=False)
             choice_rates.to_csv(f'SOMA_RL/fits/temp/{model.model_name}_{group}_{participant_id}_choice_sim_results.csv', index=False)        
 # Functions
+def export_fits(path):
+    shutil.copy('SOMA_RL/fits/fit_data.pkl', path)
+    shutil.copy('SOMA_RL/fits/fit_data_full.pkl', path)
+    shutil.copy('SOMA_RL/fits/fit-by-runs.png', path)
+    shutil.copy('SOMA_RL/fits/group_AIC.csv', path)
+    shutil.copy('SOMA_RL/fits/group_BIC.csv', path)
+    shutil.copy('SOMA_RL/plots/acutepain_model_simulations.png', path)
+    shutil.copy('SOMA_RL/plots/chronicpain_model_simulations.png', path)
+    shutil.copy('SOMA_RL/plots/nopain_model_simulations.png', path)
+
+def export_recovery(path):
+    shutil.copytree('SOMA_RL/plots/correlations', path)
+    shutil.copy('SOMA_RL/plots/model_recovery.png', path)
+
 def mp_run_fit(args):
     pipeline = args[0]
     pipeline.run_fit(args[1:])

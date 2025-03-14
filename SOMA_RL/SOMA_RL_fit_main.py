@@ -2,6 +2,7 @@ import random as rnd
 
 from helpers.analyses import run_fit_empirical
 from helpers.priors import get_priors
+from helpers.pipeline import export_fits
 
 if __name__ == "__main__":
 
@@ -51,8 +52,6 @@ if __name__ == "__main__":
               'Hybrid2021+bias+decay', #Standard w/o bias
               'Hybrid2021+bias+decay+novel'] #Standard + novel
     
-    models = ['QLearning+novel']
-
     training_params = {'training':              'torch',
                        'training_epochs':       100,
                        'optimizer_lr':          0.001,
@@ -66,9 +65,10 @@ if __name__ == "__main__":
                   'random_params':              'normal',
                   'fixed':                      fixed,
                   'bounds':                     bounds,
-                  'number_of_runs':             1,
+                  'number_of_runs':             10,
                   'multiprocessing':            True,
                  }
     fit_params.update(training_params)
 
-    run_fit_empirical(**fit_params)            
+    run_fit_empirical(**fit_params)
+    export_fits(path="SOMA_RL/reports")           

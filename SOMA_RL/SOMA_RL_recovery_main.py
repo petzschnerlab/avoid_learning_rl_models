@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 
 from helpers.analyses import run_recovery
 from helpers.priors import get_priors
+from helpers.pipeline import export_recovery
 
 if __name__ == "__main__":
 
@@ -69,3 +70,4 @@ if __name__ == "__main__":
 
     run_recovery(**generate_params, recovery='parameter')
     run_recovery(**generate_params, recovery='model')
+    export_recovery(path="SOMA_RL/reports")
