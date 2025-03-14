@@ -160,6 +160,12 @@ class RLPipeline:
             choice_rates.to_csv(f'SOMA_RL/fits/temp/{model.model_name}_{group}_{participant_id}_choice_sim_results.csv', index=False)        
 # Functions
 def export_fits(path):
+    #Clear path directory
+    if os.path.exists(path):
+        shutil.rmtree(path)
+    os.makedirs(path, exist_ok=True)
+
+    #Copy files
     shutil.copy('SOMA_RL/fits/fit_data.pkl', path)
     shutil.copy('SOMA_RL/fits/full_fit_data.pkl', path)
     shutil.copy('SOMA_RL/fits/fit-by-runs.png', path)
@@ -172,16 +178,16 @@ def export_fits(path):
     shutil.copy('SOMA_RL/stats/pain_fits_ttest_results.csv', path)
     shutil.copy('SOMA_RL/fits/modelsimulation_accuracy_data.csv', path)
     shutil.copy('SOMA_RL/fits/modelsimulation_choice_data.csv', path)
-    if os.path.exists(f'{path}/parameter_fits'):
-        shutil.rmtree(f'{path}/parameter_fits')
     shutil.copytree('SOMA_RL/plots/fits/', f'{path}/parameter_fits')
-    if os.path.exists(f'{path}/model_fits'):
-        shutil.rmtree(f'{path}/model_fits')
-    shutil.copytree('SOMA_RL/plots/model_behaviours', path)
+    shutil.copytree('SOMA_RL/plots/model_behaviours/', f'{path}/model_behaviours')
 
 def export_recovery(path):
-    if os.path.exists(f'{path}/corellations'):
-        shutil.rmtree(f'{path}/corellations')
+    #Clear path directory
+    if os.path.exists(path):
+        shutil.rmtree(path)
+    os.makedirs(path, exist_ok=True)
+
+    #Copy files
     shutil.copytree('SOMA_RL/plots/correlations', f'{path}/correlations')
     shutil.copy('SOMA_RL/plots/model_recovery.png', path)
 
