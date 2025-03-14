@@ -192,19 +192,29 @@ class wRelative(RLToolbox, nn.Module):
         return state
     
     def compute_prediction_error(self, state):
-        state['prediction_errors'] = [state['rewards'][i] - (state['context_value'][0] * self.mixing_factor) - state['q_values'][i] for i in range(len(state['rewards']))]
-        state['context_prediction_errors'] = state['context_reward'] - state['context_value']
+        if self.training == 'torch':
+            state['prediction_errors'] = state['rewards'] - (state['context_value'] * self.mixing_factor) - state['q_values'].detach()
+            state['context_prediction_errors'] = state['context_reward'] - state['context_value'].detach()
+        else:
+            state['prediction_errors'] = [state['rewards'][i] - (state['context_value'][0] * self.mixing_factor) - state['q_values'][i] for i in range(len(state['rewards']))]
+            state['context_prediction_errors'] = state['context_reward'] - state['context_value']
         return state
-    
+
     def select_action(self, state):
 
-        transformed_q_values = np.exp(np.divide(state['q_values'], self.temperature))
-        probability_q_values = (transformed_q_values/np.sum(transformed_q_values)).cumsum()
-        state['action'] = np.where(probability_q_values >= rnd.random())[0][0]
+        if self.training == 'torch':
+            transformed_q_values = torch.exp(torch.div(state['q_values'], self.temperature))
+            probability_q_values = torch.cumsum(transformed_q_values/torch.sum(transformed_q_values), dim=0)
+            state['action'] = torch.where(probability_q_values >= rnd.random())[0][0]
+        else:
+            transformed_q_values = np.exp(np.divide(state['q_values'], self.temperature))
+            probability_q_values = (transformed_q_values/np.sum(transformed_q_values)).cumsum()
+            state['action'] = np.where(probability_q_values >= rnd.random())[0][0]
+            
         if 'correct_action' in state.keys():
             state['accuracy'] = int(state['action'] == state['correct_action'])
 
-        return state          
+        return state              
 
     #Run trial functions
     def forward(self, state, phase = 'learning'):
