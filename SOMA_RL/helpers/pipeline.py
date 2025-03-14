@@ -183,7 +183,7 @@ def mp_progress(num_files, filepath='SOMA_RL/fits/temp', divide_by=1, multiply_b
                 last_count = n_files
         time.sleep(1)
     if progress_bar:
-        loop.update(int((num_files-start_file_count)-last_count))
+        loop.update(int(((num_files/divide_by)-start_file_count)-last_count))
         
 '''
 
