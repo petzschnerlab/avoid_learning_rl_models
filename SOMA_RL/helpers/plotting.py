@@ -113,7 +113,7 @@ def plot_simulations(accuracy, prediction_errors, values, choice_rates, models, 
             ax[3, i].scatter(['High\nReward', 'Low\nReward', 'Low\nPunish', 'High\nPunish', 'Novel'], list(emp_choice_rates.values()), color='grey', marker='D', alpha=.5)
         ax[3, i].set_ylim([0, 100])
         if i == 0:
-            ax[3, i].set_ylabel('Choice rate (%)')
+            ax[3, i].set_ylabel('Choice Rate (%)')
         ax[3, i].spines['top'].set_visible(False)
         ax[3, i].spines['right'].set_visible(False)
 
@@ -200,7 +200,7 @@ def plot_simulations_behaviours(accuracy, choice_rates, models, groups, dataload
                 ax[1, gi].scatter(['High\nReward', 'Low\nReward', 'Low\nPunish', 'High\nPunish', 'Novel'], list(emp_choice_groups[group].values()), color='grey', marker='D', alpha=0.5)
 
             ax[1, gi].set_ylim([0, 100])
-            ax[1, gi].set_ylabel('Choice rate (%)')
+            ax[1, gi].set_ylabel('Choice Rate (%)')
             ax[1, gi].spines['top'].set_visible(False)
             ax[1, gi].spines['right'].set_visible(False)
 
