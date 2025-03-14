@@ -204,7 +204,7 @@ class RLModel:
                              'counterfactual_actor_lr': (0.01, .99),
                              'critic_lr': (0.01, .99),
                              'contextual_lr': (0.01, .99),
-                             'temperature': (0.01, 5),
+                             'temperature': (0.1, 5),
                              'mixing_factor': (0, 1),
                              'noise_factor': (0, 1),
                              'valence_factor': (0, 1),
