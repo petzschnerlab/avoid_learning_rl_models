@@ -371,6 +371,8 @@ class RLToolbox:
         loss_fn = nn.CrossEntropyLoss()
         all_losses = []
 
+        best_fit = np.inf
+        fitted_params = None
         for epoch in range(self.training_epochs):
             # Reset data lists
             self.reset_datalists_torch()
@@ -445,11 +447,11 @@ class RLToolbox:
                 loop.update(1)
                 loop.set_postfix_str(f'loss: {all_losses[-1]:.0f}')
 
-        fitted_params = {}
-        for name, param in self.named_parameters():
-            fitted_params[name] = param.item()
+            if np.sum(losses) < best_fit:
+                best_fit = np.sum(losses)
+                fitted_params = {name: param.item() for name, param in self.named_parameters()}
         
-        return np.sum(losses), fitted_params
+        return best_fit, fitted_params
     
     def fit(self, data, bounds):
 
