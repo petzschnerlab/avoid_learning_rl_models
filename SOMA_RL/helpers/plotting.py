@@ -130,29 +130,31 @@ def plot_fits_by_run_number(fit_data_path):
 
     min_run, max_run = fit_data[list(fit_data.keys())[0]]['run'].min()+1, fit_data[list(fit_data.keys())[0]]['run'].max()+1
     best_run = {model: [] for model in fit_data}
-    best_fits = {model: {f'Run {run}': [] for run in range(min_run, max_run)} for model in fit_data}
+    best_fits = {model: {f'{run}': [] for run in range(min_run, max_run+1)} for model in fit_data}
     for model in fit_data:
         model_data = fit_data[model].copy()
         model_data['run'] += 1
-        for run in range(min_run, max_run):
-            #Find data where run equals or is less than run
+        for run in range(min_run, max_run+1):
             run_data = model_data[model_data['run'] <= run].reset_index(drop=True)
             run_sums = run_data.groupby('run').agg('sum').reset_index()
-            best_fits[model][f'Run {run}'] = run_sums['fit'].min()
+            best_fits[model][f'{run}'] = run_sums['fit'].min()
         best_run[model] = list(best_fits[model].keys())[list(best_fits[model].values()).index(min(best_fits[model].values()))]
-    average_best_run = f"Run {int(np.ceil(np.mean([int(best_run[model].split(' ')[1]) for model in best_run])))}"
+    average_best_run = int(np.median([int(best_run[model]) for model in best_run]))
 
     #Create a subplot for each model and plot the fits by run number
-    fig, axs = plt.subplots(len(best_fits)//4, len(best_fits)//3, figsize=(5*(len(best_fits)//3), (5*(len(best_fits)//4))))
+    number_of_rows = len(best_fits)//5 if len(best_fits) > 5 else 1
+    number_of_columns = 5 if len(best_fits) > 5 else len(best_fits)
+    fig, axs = plt.subplots(number_of_rows, number_of_columns, figsize=(5*number_of_columns, 5*number_of_rows))
     for n, model in enumerate(best_fits):
-        row, col = n//4, n%4
-        ax = axs[row, col] if len(best_fits) > 1 else axs
-        ax.plot(list(best_fits[model].keys()), list(best_fits[model].values()), marker='o')
+        row, col = n//5, n%5
+        ax = axs[row, col] if len(best_fits) > 5 else axs[n]
+        ax = axs if len(best_fits) == 1 else ax
+        ax.plot([int(x) for x in best_fits[model].keys()], list(best_fits[model].values()), marker='o')
         ax.axvline(x=average_best_run, color='red', linestyle='--', alpha=.5)
         ax.set_title(model)
         ax.set_xlabel('Run Number')
         ax.set_ylabel('Best Fit')
-    fig.text(0.01, 0.001, f'Red dashed line indicates the averaged run where the models reached their best fits.', ha='left')
+    fig.text(0.01, 0.001, f'Red dashed line indicates the median run where the models reached their best fits.', ha='left')
 
     plt.tight_layout()
     #Save plot 
