@@ -206,7 +206,7 @@ def plot_simulations_behaviours(accuracy, choice_rates, models, groups, dataload
 
         #Metaplot settings
         fig.tight_layout()
-        fig.savefig(os.path.join('SOMA_RL','plots',f"{m}_model_behaviours.png"))
+        fig.savefig(os.path.join('SOMA_RL','plots', 'model_behaviours', f"{m}_model_behaviours.png"))
 
 def plot_fits_by_run_number(fit_data_path):
     #Load pickle file fit_data_path
