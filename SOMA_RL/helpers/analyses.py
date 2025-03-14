@@ -15,7 +15,7 @@ from models.rl_models import RLModel
 from helpers.dataloader import DataLoader
 from helpers.tasks import AvoidanceLearningTask
 from helpers.pipeline import RLPipeline, mp_run_fit, mp_run_simulations, mp_progress
-from helpers.plotting import plot_simulations, plot_parameter_fits, plot_model_fits, plot_rainclouds, plot_fits_by_run_number
+from helpers.plotting import plot_simulations, plot_simulations_behaviours, plot_parameter_fits, plot_model_fits, plot_rainclouds, plot_fits_by_run_number
 from helpers.statistics import Statistics
 
 
@@ -530,6 +530,8 @@ def run_fit_simulations(learning_filename, transfer_filename, fit_data, models, 
             else:
                 accuracy_data = pd.concat((accuracy_data, group_model_accuracy), ignore_index=True)
                 choice_data = pd.concat((choice_data, group_model_choice), ignore_index=True)
+    accuracy_model = {model: {group: accuracy[group][model] for group in accuracy} for model in models}
+    choice_rates_model = {model: {group: choice_rates[group][model] for group in choice_rates} for model in models}
     accuracy_data.to_csv('SOMA_RL/fits/modelsimulation_accuracy_data.csv', index=False)
     choice_data.to_csv('SOMA_RL/fits/modelsimulation_choice_data.csv', index=False)
 
@@ -540,6 +542,7 @@ def run_fit_simulations(learning_filename, transfer_filename, fit_data, models, 
     #Plot simulations 
     for group in accuracy:
         plot_simulations(accuracy[group], prediction_errors[group], values[group], choice_rates[group], models, group, dataloader)
+    plot_simulations_behaviours(accuracy_model, choice_rates_model, models, accuracy.keys(), dataloader)
 
 def generate_simulated_data(models, parameters, learning_filename=None, transfer_filename=None, task_design=None, fixed=None, bounds=None, datasets_to_generate=1, number_of_participants=0, multiprocessing=False, clear_data=True):
     '''

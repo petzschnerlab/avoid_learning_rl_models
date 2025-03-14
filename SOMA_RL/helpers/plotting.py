@@ -108,7 +108,7 @@ def plot_simulations(accuracy, prediction_errors, values, choice_rates, models, 
 
         #Plot choice rates        
         ax[3, i].bar(['High\nReward', 'Low\nReward', 'Low\nPunish', 'High\nPunish', 'Novel'], choice_rates[m].mean(axis=0), color=colors, alpha = .5)
-        ax[3, i].errorbar(['High\nReward', 'Low\nReward', 'Low\nPunish', 'High\nPunish', 'Novel'], choice_rates[m].mean(axis=0), yerr=choice_rates[m].sem(), fmt='.', color='grey')
+        ax[3, i].errorbar(['High\nReward', 'Low\nReward', 'Low\nPunish', 'High\nPunish', 'Novel'], choice_rates[m].mean(axis=0), yerr=choice_rates[m].sem()* stats.t.ppf(0.975, number_of_participants-1), fmt='.', color='grey')
         if dataloader is not None:
             ax[3, i].scatter(['High\nReward', 'Low\nReward', 'Low\nPunish', 'High\nPunish', 'Novel'], list(emp_choice_rates.values()), color='grey', marker='D', alpha=.5)
         ax[3, i].set_ylim([0, 100])
@@ -122,6 +122,91 @@ def plot_simulations(accuracy, prediction_errors, values, choice_rates, models, 
     fig.suptitle(f"{group.title()}", x=0.001, y=.999, ha='left', fontsize=16)
     fig.savefig(os.path.join('SOMA_RL','plots',f"{group.replace(' ','')}_model_simulations.png"))
 
+def plot_simulations_behaviours(accuracy, choice_rates, models, groups, dataloader=None):
+    colors = ['#33A02C', '#B2DF8A', '#FB9A99', '#E31A1C', '#D3D3D3']
+    bi_colors = ['#B2DF8A', '#FB9A99']
+
+    if dataloader is not None:
+
+        #Get empirical learning curves 
+        empirical_data = copy.copy(dataloader.get_data()[0])
+        emp_accuracy = empirical_data.groupby(['context_val_name','trial_number', 'pain_group'], observed=False)['accuracy'].mean().reset_index()
+        emp_accuracy_group = {}
+        for group in groups:
+            group_accuracy = emp_accuracy[emp_accuracy['pain_group'] == group].copy()
+            group_accuracy.drop('pain_group', axis=1, inplace=True)
+            emp_accuracy_group[group] = group_accuracy
+            
+        #Get empirical choice rates
+        empirical_data = copy.copy(dataloader.get_data()[1])
+        empirical_data['stim_id'] = empirical_data['state'].apply(lambda x: x.split(' ')[1])
+        emp_choice_groups = {}
+        for group in groups:
+            emp_choice_rate = {}
+            for stimulus in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'N']:
+                stimulus_data = empirical_data.loc[empirical_data['stim_id'].apply(lambda x: stimulus in x)].copy()
+                stimulus_data = stimulus_data[stimulus_data['pain_group'] == group].copy()
+                stimulus_data.loc[:,'stim_index'] = stimulus_data.loc[:,'stim_id'].apply(lambda x: 0 if stimulus == x[0] else 1)
+                stimulus_data['stim_chosen'] = stimulus_data.apply(lambda x: int(x['action'] == x['stim_index']), axis=1)
+                emp_choice_rate[stimulus] = int((stimulus_data['stim_chosen'].sum()/len(stimulus_data))*100)
+            pairs = [['A','C'],['B','D'],['E','G'],['F','H']]
+            emp_choice_rates = {}
+            for pair in pairs:
+                emp_choice_rates[pair[0]] = (emp_choice_rate[pair[0]] + emp_choice_rate[pair[1]])/2
+            emp_choice_rates['N'] = emp_choice_rate['N']
+            emp_choice_groups[group] = emp_choice_rates
+                    
+    # Iterate over each model
+    for i, m in enumerate(models):
+        
+        # Create a figure with subplots for each group
+        fig, ax = plt.subplots(2, len(groups), figsize=(5 * len(groups), 10))
+
+        for gi, group in enumerate(['no pain', 'acute pain', 'chronic pain']):
+            number_of_participants = accuracy[m][group]['run'].nunique()
+
+            # Plot accuracy
+            model_accuracy = accuracy[m][group].groupby(['context', 'trial_total', 'run'], observed=False).mean().reset_index()
+            model_accuracy['context'] = pd.Categorical(model_accuracy['context'], categories=['Reward', 'Loss Avoid'], ordered=True)
+
+            for ci, context in enumerate(['Reward', 'Loss Avoid']):
+                CIs = model_accuracy.groupby(['context', 'trial_total'], observed=False)['accuracy'].sem() * stats.t.ppf(0.975, number_of_participants-1)
+                averaged_accuracy = model_accuracy.groupby(['context', 'trial_total'], observed=False).mean().reset_index()
+                context_accuracy = averaged_accuracy[averaged_accuracy['context'] == context]['accuracy'].reset_index(drop=True).astype(float) * 100
+                context_CIs = CIs[CIs.index.get_level_values('context') == context].reset_index(drop=True) * 100
+                
+                ax[0, gi].fill_between(context_accuracy.index, context_accuracy - context_CIs, context_accuracy + context_CIs, alpha=0.2, color=bi_colors[ci], edgecolor='none')
+                ax[0, gi].plot(context_accuracy, color=bi_colors[ci], alpha=0.8, label=context.replace('Loss Avoid', 'Punish'))
+
+                if dataloader is not None:
+                    trials = emp_accuracy_group[group][emp_accuracy_group[group]['context_val_name'] == context]['trial_number']
+                    accuracies = emp_accuracy_group[group][emp_accuracy_group[group]['context_val_name'] == context]['accuracy']
+                    ax[0, gi].plot(trials, accuracies, color=bi_colors[ci], linestyle='dashed', alpha=0.5)
+            
+            ax[0, gi].set_title(f'{group.title()}')
+            ax[0, gi].set_ylim([25, 100])
+            if gi == len(groups) - 1:
+                ax[0, gi].legend(loc='lower right', frameon=False)
+            ax[0, gi].set_ylabel('Accuracy (%)')
+            ax[0, gi].set_xlabel('Trial')
+            ax[0, gi].spines['top'].set_visible(False)
+            ax[0, gi].spines['right'].set_visible(False)
+
+            # Plot choice rates
+            ax[1, gi].bar(['High\nReward', 'Low\nReward', 'Low\nPunish', 'High\nPunish', 'Novel'], choice_rates[m][group].mean(axis=0), color=colors, alpha=0.5)
+            ax[1, gi].errorbar(['High\nReward', 'Low\nReward', 'Low\nPunish', 'High\nPunish', 'Novel'], choice_rates[m][group].mean(axis=0), yerr=choice_rates[m][group].sem()*stats.t.ppf(0.975, number_of_participants-1), fmt='.', color='grey')
+            
+            if dataloader is not None:
+                ax[1, gi].scatter(['High\nReward', 'Low\nReward', 'Low\nPunish', 'High\nPunish', 'Novel'], list(emp_choice_groups[group].values()), color='grey', marker='D', alpha=0.5)
+
+            ax[1, gi].set_ylim([0, 100])
+            ax[1, gi].set_ylabel('Choice rate (%)')
+            ax[1, gi].spines['top'].set_visible(False)
+            ax[1, gi].spines['right'].set_visible(False)
+
+        #Metaplot settings
+        fig.tight_layout()
+        fig.savefig(os.path.join('SOMA_RL','plots',f"{m}_model_behaviours.png"))
 
 def plot_fits_by_run_number(fit_data_path):
     #Load pickle file fit_data_path

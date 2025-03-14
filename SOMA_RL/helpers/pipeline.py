@@ -175,8 +175,13 @@ def export_fits(path):
     if os.path.exists(f'{path}/parameter_fits'):
         shutil.rmtree(f'{path}/parameter_fits')
     shutil.copytree('SOMA_RL/plots/fits/', f'{path}/parameter_fits')
+    if os.path.exists(f'{path}/model_fits'):
+        shutil.rmtree(f'{path}/model_fits')
+    shutil.copytree('SOMA_RL/plots/model_behaviours', path)
 
 def export_recovery(path):
+    if os.path.exists(f'{path}/corellations'):
+        shutil.rmtree(f'{path}/corellations')
     shutil.copytree('SOMA_RL/plots/correlations', f'{path}/correlations')
     shutil.copy('SOMA_RL/plots/model_recovery.png', path)
 
