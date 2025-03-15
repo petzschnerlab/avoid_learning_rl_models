@@ -62,7 +62,7 @@ class Relative(RLToolbox, nn.Module):
         if self.training == 'torch':
             transformed_q_values = torch.exp(torch.div(state['q_values'], self.temperature))
             probability_q_values = torch.cumsum(transformed_q_values/torch.sum(transformed_q_values), dim=0)
-            state['action'] = torch.where(probability_q_values >= rnd.random())[0][0]
+            state['action'] = self.torch_select_action(probability_q_values)
         else:
             transformed_q_values = np.exp(np.divide(state['q_values'], self.temperature))
             probability_q_values = (transformed_q_values/np.sum(transformed_q_values)).cumsum()
@@ -205,7 +205,7 @@ class wRelative(RLToolbox, nn.Module):
         if self.training == 'torch':
             transformed_q_values = torch.exp(torch.div(state['q_values'], self.temperature))
             probability_q_values = torch.cumsum(transformed_q_values/torch.sum(transformed_q_values), dim=0)
-            state['action'] = torch.where(probability_q_values >= rnd.random())[0][0]
+            state['action'] = self.torch_select_action(probability_q_values)
         else:
             transformed_q_values = np.exp(np.divide(state['q_values'], self.temperature))
             probability_q_values = (transformed_q_values/np.sum(transformed_q_values)).cumsum()

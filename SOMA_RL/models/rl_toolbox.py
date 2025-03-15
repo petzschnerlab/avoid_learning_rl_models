@@ -7,6 +7,7 @@ import tqdm
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import random as rnd
 
 class RLToolbox:
 
@@ -156,6 +157,28 @@ class RLToolbox:
             w_initial_decayed = [w*(self.decay_factor) for w in w_initial]
             w_values = [w_final_decayed[i].values[0] + w_initial_decayed[i].values[0] for i in range(len(w_final))]
         return w_values
+
+    def torch_select_action(self, probabilities):
+        number_of_tries = 0
+        while True:
+            random_number = rnd.random()
+            action = torch.where(probabilities >= random_number)
+            
+            if len(action[0]) > 0:
+                return action[0][0]
+            else:
+                #Debugging
+                number_of_tries += 1
+                print('*******************************')
+                print(f'Action selection failed {number_of_tries} times, trying again...')
+                print(f'Probabilities: {probabilities}')
+                print(f'Random number: {random_number}')
+                print(f'Action: {action}')
+
+                if number_of_tries > 10:                
+                    filename = f'SOMA_RL/fits/temp/ERROR_{self.model_name}_{self.participant_id}_Run{self.run}_fit_results.csv'
+                    pd.DataFrame(probabilities).to_csv(filename)
+                    raise ValueError(f'Action selection failed too many times, check the error file, {filename}, for more information')
 
     #Update functions
     def update_prediction_errors(self, state):

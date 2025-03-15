@@ -330,6 +330,7 @@ def run_fit_comparison(dataloader, models, group_ids, recovery='parameter'):
 
     #Load all data in the fit data
     files = os.listdir('SOMA_RL/fits/temp')
+    files = [f for f in files if 'ERROR' not in f]
     fit_data = {model: pd.DataFrame(columns=columns[model.split('+')[0]]) for model in models}
     full_fit_data = {model: pd.DataFrame(columns=columns[model.split('+')[0]]) for model in models}
     for f in files:

@@ -73,7 +73,7 @@ class Hybrid2012(RLToolbox, nn.Module):
         if self.training == 'torch':
             transformed_h_values = torch.exp(torch.div(state['h_values'], self.temperature))
             probability_h_values = torch.cumsum(transformed_h_values/torch.sum(transformed_h_values), dim=0)
-            state['action'] = torch.where(probability_h_values >= rnd.random())[0][0]
+            state['action'] = self.torch_select_action(probability_h_values)
         else:
             transformed_h_values = np.exp(np.divide(state['h_values'], self.temperature))
             probability_h_values = (transformed_h_values/np.sum(transformed_h_values)).cumsum()
@@ -240,7 +240,7 @@ class Hybrid2021(RLToolbox, nn.Module):
             probability_h_values = transformed_h_values/torch.sum(transformed_h_values)
             uniform_dist = torch.ones(len(probability_h_values))/len(probability_h_values)
             probability_h_values = torch.cumsum(((1-self.noise_factor)*probability_h_values) + (self.noise_factor*uniform_dist), dim=0)
-            state['action'] = torch.where(probability_h_values >= rnd.random())[0][0]
+            state['action'] = self.torch_select_action(probability_h_values)
             state['h_values'] = probability_h_values
         else:
             state['h_values'] = [(state['w_values'][i] * (1-self.mixing_factor)) + (state['q_values'][i] * self.mixing_factor) for i in range(len(state['w_values']))]

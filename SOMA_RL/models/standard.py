@@ -50,21 +50,11 @@ class QLearning(RLToolbox, nn.Module):
         if self.training == 'torch':
             transformed_q_values = torch.exp(torch.div(torch.tensor(state['q_values']), self.temperature))
             probability_q_values = torch.cumsum(transformed_q_values/torch.sum(transformed_q_values), 0)
-            state['action'] = torch.where(probability_q_values >= rnd.random())[0][0]
+            state['action'] = self.torch_select_action(probability_q_values)
         else:
             transformed_q_values = np.exp(np.divide(state['q_values'], self.temperature))
             probability_q_values = (transformed_q_values/np.sum(transformed_q_values)).cumsum()
             state['action'] = np.where(probability_q_values >= rnd.random())[0][0]
-        if 'correct_action' in state.keys():
-            state['accuracy'] = int(state['action'] == state['correct_action'])
-
-        return state
-    
-    def select_action_torch(self, state):
-
-        transformed_q_values = torch.exp(torch.div(torch.tensor(state['q_values']), self.temperature))
-        probability_q_values = torch.cumsum(transformed_q_values/torch.sum(transformed_q_values), 0)
-        state['action'] = torch.where(probability_q_values >= rnd.random())[0][0]
         if 'correct_action' in state.keys():
             state['accuracy'] = int(state['action'] == state['correct_action'])
 
