@@ -68,7 +68,6 @@ class RLPipeline:
         self.task.rl_model.participant_id = participant_id
         self.task.rl_model.run = run
         data = self.dataloader.get_data_dict()
-        model_name = self.task.rl_model.__class__.__name__
         pain_group = data['learning']['pain_group'].values[0]
 
         #Extract participant data
@@ -182,8 +181,8 @@ def export_fits(path):
     shutil.copytree('SOMA_RL/plots/model_behaviours/', f'{path}/model_behaviours')
 
 def export_recovery(path):
-    if os.path.exists(f'{path}/corellations'):
-        shutil.rmtree(f'{path}/corellations')
+    if os.path.exists(f'{path}/correlations'):
+        shutil.rmtree(f'{path}/correlations')
     shutil.copytree('SOMA_RL/plots/correlations', f'{path}/correlations')
     shutil.copy('SOMA_RL/plots/model_recovery.png', path)
 
