@@ -373,6 +373,12 @@ def run_fit_comparison(dataloader, models, group_ids, recovery='parameter'):
     # =============== REPORT FIT ================ #
     # =========================================== #
 
+    # Get number of samples per participant
+    data = dataloader.get_data()
+    number_trials_learning = data[0].groupby(['participant', 'pain_group']).size().reset_index(name='counts')
+    number_trials_transfer = data[1].groupby(['participant', 'pain_group']).size().reset_index(name='counts')
+    number_trials = number_trials_learning['counts'].values[0] + number_trials_transfer['counts'].values[0]
+
     group_AIC = {m: {} for m in models}
     group_BIC = {m: {} for m in models}
     for model_name in models:
@@ -380,17 +386,19 @@ def run_fit_comparison(dataloader, models, group_ids, recovery='parameter'):
         #Compute AIC and BIC
         for group in group_ids:
             group_fit = fit_data[model_name][fit_data[model_name]['pain_group'] == group]
-            total_NLL = np.sum(group_fit["fit"])
+            participant_NLL = group_fit["fit"]
             number_params = len(group_fit.columns) - 4 # TODO: Check if this is always correct
-            number_samples = dataloader.get_num_samples_by_group(group)
-            group_AIC[model_name][group] = 2*number_params + 2*total_NLL
-            group_BIC[model_name][group] = np.log(number_samples)*number_params + 2*total_NLL
-                    
-        total_NLL = np.sum(fit_data[model_name]["fit"])
-        number_params = len(fit_data[model_name].columns) - 3
-        number_samples = dataloader.get_num_samples()
-        AIC = 2*number_params + 2*total_NLL
-        BIC = np.log(number_samples)*number_params + 2*total_NLL
+            participant_AIC = 2*number_params + 2*participant_NLL
+            participant_BIC = np.log(number_trials)*number_params + 2*participant_NLL
+            group_AIC[model_name][group] = np.mean(participant_AIC)
+            group_BIC[model_name][group] = np.mean(participant_BIC)
+
+        number_params = len(fit_data[model_name].columns) - 4
+        participant_NLL = fit_data[model_name]["fit"]
+        participant_AIC = 2*number_params + 2*participant_NLL
+        participant_BIC = np.log(number_trials)*number_params + 2*participant_NLL
+        AIC = np.mean(participant_AIC)
+        BIC = np.mean(participant_BIC)
         group_AIC[model_name]['full'] = AIC
         group_BIC[model_name]['full'] = BIC
 
