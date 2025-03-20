@@ -63,7 +63,8 @@ def run_fit_empirical(learning_filename,
     print('--------------------------------------------------------')
     
     dataloader = run_fit(learning_filename, 
-                         transfer_filename, models, 
+                         transfer_filename, 
+                         models, 
                          number_of_participants=number_of_participants, 
                          fixed=fixed,
                          bounds=bounds,
@@ -228,16 +229,19 @@ def run_fit_analyses(fit_data):
 
 def create_confusion_matrix(dataloader, fit_data):
     confusion_matrix = pd.DataFrame(index=fit_data.keys(), columns=fit_data.keys()) #Rows = model fit, Columns = generated model
-    number_samples = dataloader.get_num_samples_by_group('simulated')
+
+    data = dataloader.get_data()
+    number_trials_learning = data[0].groupby(['participant', 'pain_group']).size().reset_index(name='counts')
+    number_trials_transfer = data[1].groupby(['participant', 'pain_group']).size().reset_index(name='counts')
+    number_trials = number_trials_learning['counts'].values[0] + number_trials_transfer['counts'].values[0]
+    
     for model in fit_data:
         number_params = RLModel(model).get_n_parameters()
         model_fit = fit_data[model].copy()
         for gen_model in fit_data:
-            fit = model_fit[model_fit['model'] == gen_model]['fit'].mean()
-            BIC = np.log(number_samples)*number_params + 2*fit
-            confusion_matrix.loc[model, gen_model] = np.exp(-0.5 * BIC)
-    confusion_matrix = confusion_matrix.div(confusion_matrix.sum(axis=0), axis=1)
-    confusion_matrix = (confusion_matrix*100).round(0).astype(int)
+            fit = model_fit[model_fit['model'] == gen_model]['fit']
+            BIC = np.mean(np.log(number_trials)*number_params + 2*fit)
+            confusion_matrix.loc[model, gen_model] = BIC
             
     return confusion_matrix
             

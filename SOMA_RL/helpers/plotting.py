@@ -227,8 +227,10 @@ def plot_fits_by_run_number(fit_data_path):
     average_best_run = int(np.median([int(best_run[model]) for model in best_run]))
 
     #Create a subplot for each model and plot the fits by run number
-    number_of_rows = len(best_fits)//5 if len(best_fits) > 5 else 1
-    number_of_columns = 5 if len(best_fits) > 5 else len(best_fits)
+    num_subplots = len(fit_data)
+    number_of_columns = min(num_subplots, 5)
+    number_of_rows = int(np.ceil(num_subplots / number_of_columns))
+
     fig, axs = plt.subplots(number_of_rows, number_of_columns, figsize=(5*number_of_columns, 5*number_of_rows))
     for n, model in enumerate(best_fits):
         row, col = n//5, n%5
