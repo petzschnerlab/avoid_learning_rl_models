@@ -257,12 +257,11 @@ def plot_model_fits(confusion_matrix):
     confusion_matrix = confusion_matrix - confusion_matrix.min().min()
     confusion_matrix = confusion_matrix / confusion_matrix.max().max() * 200 - 100
 
-    #Extract the min and max colour of matplotlib RdBu
     cmap = plt.get_cmap('RdBu')
     green = [0.596078431372549, 0.8117647058823529, 0.5843137254901961, 1]
     red = [0.9411764705882353, 0.5490196078431373, 0.5529411764705883, 1]
     white = [1, 1, 1, 1]
-    custom_cmap = cmap.from_list('custom_RdBu', [green, white, red], 20)
+    custom_cmap = cmap.from_list('custom_cmap', [green, white, red], 20)
       
     #Plot confusion matrix
     fig, ax = plt.subplots(1, 1, figsize=(10, 10))
