@@ -228,7 +228,7 @@ def run_fit_analyses(fit_data):
     return linear_results, ttest_results
 
 def create_confusion_matrix(dataloader, fit_data):
-    confusion_matrix = pd.DataFrame(index=fit_data.keys(), columns=fit_data.keys()) #Rows = model fit, Columns = generated model
+    confusion_matrix = pd.DataFrame(index=fit_data.keys(), columns=fit_data.keys(), dtype=float) #Rows = model fit, Columns = generated model
 
     data = dataloader.get_data()
     number_trials_learning = data[0].groupby(['participant', 'pain_group']).size().reset_index(name='counts')

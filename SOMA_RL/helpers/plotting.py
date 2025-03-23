@@ -249,21 +249,44 @@ def plot_fits_by_run_number(fit_data_path):
     #Save plot 
     plt.savefig(fit_data_path.replace('full_fit_data.pkl', 'fit-by-runs.png'))
 
+def rename_models(model_name):
+    return model_name.split('+')[0].replace('Hybrid2', 'Hybrid 2').replace('ActorCritic', 'Actor Critic').replace('QLearning', 'Q Learning')
+
 def plot_model_fits(confusion_matrix):
-    
+
+    confusion_matrix = confusion_matrix - confusion_matrix.min().min()
+    confusion_matrix = confusion_matrix / confusion_matrix.max().max() * 200 - 100
+
+    #Extract the min and max colour of matplotlib RdBu
+    cmap = plt.get_cmap('RdBu')
+    green = [0.596078431372549, 0.8117647058823529, 0.5843137254901961, 1]
+    red = [0.9411764705882353, 0.5490196078431373, 0.5529411764705883, 1]
+    white = [1, 1, 1, 1]
+    custom_cmap = cmap.from_list('custom_RdBu', [green, white, red], 20)
+      
     #Plot confusion matrix
     fig, ax = plt.subplots(1, 1, figsize=(10, 10))
-    cax = ax.matshow(confusion_matrix, cmap='viridis')
-    fig.colorbar(cax)
+    cax = ax.matshow(confusion_matrix, cmap=custom_cmap, alpha=1)
+    cbar = ax.figure.colorbar(cax, ax=ax, fraction=0.046, pad=0.04)
     ax.set_xticks(np.arange(len(confusion_matrix.columns)))
     ax.set_yticks(np.arange(len(confusion_matrix.index)))
-    ax.set_xticklabels(confusion_matrix.columns)
-    ax.set_yticklabels(confusion_matrix.index)
-
+    ax.set_xticklabels([rename_models(col) for col in confusion_matrix.columns])
+    ax.set_yticklabels([rename_models(ind) for ind in confusion_matrix.index])
+    cbar.set_label('Normalized BIC')
     for i in range(len(confusion_matrix.index)):
         for j in range(len(confusion_matrix.columns)):
-            ax.text(j, i, np.round(confusion_matrix.iloc[i, j], 2), ha='center', va='center', color='black')
-    cax.set_clim(0, 100)
+            if confusion_matrix.iloc[i, j] == confusion_matrix.iloc[:, j].min():
+                ax.add_patch(plt.Rectangle((j-0.5, i-0.5), 1, 1, fill=False, edgecolor='black', lw=2))
+    for j in range(len(confusion_matrix.columns)):
+        bfi = confusion_matrix.iloc[:, j].idxmin()
+        i = confusion_matrix.index.get_loc(bfi)
+        ax.text(j, i, np.round(confusion_matrix.iloc[i, j],2), ha='center', va='center', color='black', fontweight='bold')
+    for i in range(len(confusion_matrix.index)):
+        for j in range(len(confusion_matrix.columns)):
+            if confusion_matrix.iloc[i, j] != confusion_matrix.iloc[:, j].min():
+                ax.text(j, i, np.round(confusion_matrix.iloc[i, j],2), ha='center', va='center', color='black')
+    
+    plt.setp(ax.get_xticklabels(), rotation=45, ha='left')
     plt.tight_layout()
     plt.savefig(f'SOMA_RL/plots/model_recovery.png')
 
