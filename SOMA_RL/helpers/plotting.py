@@ -221,7 +221,7 @@ def plot_fits_by_run_number(fit_data_path):
         model_data['run'] += 1
         for run in range(min_run, max_run+1):
             run_data = model_data[model_data['run'] <= run].reset_index(drop=True)
-            run_sums = run_data.groupby('run').agg('sum').reset_index()
+            run_sums = run_data.groupby('run').agg({'fit': 'mean'}).reset_index()
             best_fits[model][f'{run}'] = run_sums['fit'].min()
         best_run[model] = list(best_fits[model].keys())[list(best_fits[model].values()).index(min(best_fits[model].values()))]
     average_best_run = int(np.median([int(best_run[model]) for model in best_run]))
@@ -242,11 +242,9 @@ def plot_fits_by_run_number(fit_data_path):
         ax.axvline(x=average_best_run, color='red', linestyle='--', alpha=.5)
         ax.set_title(model)
         ax.set_xlabel('Run Number')
-        ax.set_ylabel('Best Fit')
-    fig.text(0.01, 0.001, f'Red dashed line indicates the median run where the models reached their best fits.', ha='left')
+        ax.set_ylabel('Negative Log Likelihood')
 
     plt.tight_layout()
-    #Save plot 
     plt.savefig(fit_data_path.replace('full_fit_data.pkl', 'fit-by-runs.png'))
 
 def rename_models(model_name):
