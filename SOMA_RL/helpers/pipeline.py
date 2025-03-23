@@ -162,7 +162,9 @@ class RLPipeline:
 # Functions
 def export_fits(path):
     shutil.copy('SOMA_RL/fits/fit_data.pkl', path)
+    os.rename('SOMA_RL/fits/fit_data.pkl', 'SOMA_RL/fits/fit_data_FIT.pkl')
     shutil.copy('SOMA_RL/fits/full_fit_data.pkl', path)
+    os.rename('SOMA_RL/fits/full_fit_data.pkl', 'SOMA_RL/fits/full_fit_data_FIT.pkl')
     shutil.copy('SOMA_RL/fits/fit-by-runs.png', path)
     shutil.copy('SOMA_RL/fits/group_AIC.csv', path)
     shutil.copy('SOMA_RL/fits/group_BIC.csv', path)
@@ -181,6 +183,10 @@ def export_fits(path):
     shutil.copytree('SOMA_RL/plots/model_behaviours/', f'{path}/model_behaviours')
 
 def export_recovery(path):
+    shutil.copy('SOMA_RL/fits/fit_data.pkl', path)
+    os.rename('SOMA_RL/fits/fit_data.pkl', 'SOMA_RL/fits/fit_data_RECOVERY.pkl')
+    shutil.copy('SOMA_RL/fits/full_fit_data.pkl', path)
+    os.rename('SOMA_RL/fits/full_fit_data.pkl', 'SOMA_RL/fits/full_fit_data_RECOVERY.pkl')
     if os.path.exists(f'{path}/correlations'):
         shutil.rmtree(f'{path}/correlations')
     shutil.copytree('SOMA_RL/plots/correlations', f'{path}/correlations')
