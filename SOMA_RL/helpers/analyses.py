@@ -15,7 +15,7 @@ from models.rl_models import RLModel
 from helpers.dataloader import DataLoader
 from helpers.tasks import AvoidanceLearningTask
 from helpers.pipeline import RLPipeline, mp_run_fit, mp_run_simulations, mp_progress
-from helpers.plotting import plot_simulations, plot_simulations_behaviours, plot_parameter_fits, plot_model_fits, plot_rainclouds, plot_fits_by_run_number, plot_fit_distributions
+from helpers.plotting import plot_simulations, plot_simulations_behaviours, plot_parameter_fits, plot_model_fits, plot_parameter_rainclouds, plot_fits_by_run_number, plot_fit_distributions
 from helpers.statistics import Statistics
 
 
@@ -80,9 +80,9 @@ def run_fit_empirical(learning_filename,
                                   models, 
                                   dataloader.get_group_ids())
     
-    plot_fits_by_run_number('SOMA_RL/fits/full_fit_data.pkl')
+    plot_fits_by_run_number(fit_data)
     
-    linear_results, ttest_results = run_fit_analyses(fit_data)
+    run_fit_analyses(copy.deepcopy(fit_data))
     
     run_fit_simulations(learning_filename, 
                         transfer_filename, 
@@ -188,7 +188,7 @@ def run_recovery(models,
                             bounds=bounds)
 
 def run_fit_analyses(fit_data):
-
+    
     linear_results = None
     ttest_results = None
     for model in fit_data:
@@ -232,9 +232,7 @@ def run_fit_analyses(fit_data):
     ttest_results.to_csv('SOMA_RL/stats/pain_fits_ttest_results.csv', index=False)
 
     for model in fit_data:
-        plot_rainclouds(f'{model}-model-fits', fit_data[model])
-
-    return linear_results, ttest_results
+        plot_parameter_rainclouds(f'{model}-model-fits', fit_data[model])
 
 def create_confusion_matrix(dataloader, fit_data):
     confusion_matrix = pd.DataFrame(index=fit_data.keys(), columns=fit_data.keys(), dtype=float) #Rows = model fit, Columns = generated model
@@ -734,8 +732,6 @@ def determine_parameter_outliers(fit_data, dataloader):
     #Save participant_outliers
     with open('SOMA_RL/fits/parameter_outlier_results.pkl', 'wb') as f:
         pickle.dump(outlier_results, f)
-
-    return outlier_results
     
 def add_outlier_data(dataloader, outlier_results):
     

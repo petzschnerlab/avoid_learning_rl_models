@@ -21,7 +21,7 @@ class RLToolbox:
             setattr(self, key, methods[key])
 
     def get_value_type(self, model_name):
-        if model_name == 'QLearning' or model_name == 'Relative' or model_name == 'wRelative':
+        if model_name == 'QLearning' or model_name == 'Relative':
             return 'q_values'
         elif model_name == 'ActorCritic':
             return 'w_values'
@@ -29,7 +29,7 @@ class RLToolbox:
             return 'h_values'
         
     def get_context_reward(self, model_name):
-        if model_name == 'Relative' or model_name == 'wRelative':
+        if model_name == 'Relative':
             return True
         else:
             return False

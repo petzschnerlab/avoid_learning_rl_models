@@ -121,8 +121,7 @@ class RLPipeline:
                         'ActorCritic': 'w_values', 
                         'Relative': 'q_values', 
                         'Hybrid2012': 'h_values',
-                        'Hybrid2021': 'h_values',
-                        'wRelative': 'q_values'}
+                        'Hybrid2021': 'h_values'}
         
         value_label = value_labels[model_name]
 
@@ -161,36 +160,86 @@ class RLPipeline:
             choice_rates.to_csv(f'SOMA_RL/fits/temp/{model.model_name}_{group}_{participant_id}_choice_sim_results.csv', index=False)        
 # Functions
 def export_fits(path):
-    shutil.copy('SOMA_RL/fits/fit_data.pkl', path)
-    os.rename(f'{path}/fit_data.pkl', f'{path}/fit_data_FIT.pkl')
-    shutil.copy('SOMA_RL/fits/full_fit_data.pkl', path)
-    os.rename(f'{path}/full_fit_data.pkl', f'{path}/full_fit_data_FIT.pkl')
-    shutil.copy('SOMA_RL/fits/fit-by-runs.png', path)
-    shutil.copy('SOMA_RL/fits/group_AIC.csv', path)
-    shutil.copy('SOMA_RL/fits/group_BIC.csv', path)
-    shutil.copy('SOMA_RL/plots/acutepain_model_simulations.png', path)
-    shutil.copy('SOMA_RL/plots/chronicpain_model_simulations.png', path)
-    shutil.copy('SOMA_RL/plots/nopain_model_simulations.png', path)
-    shutil.copy('SOMA_RL/stats/pain_fits_linear_results.csv', path)
-    shutil.copy('SOMA_RL/stats/pain_fits_ttest_results.csv', path)
-    shutil.copy('SOMA_RL/fits/modelsimulation_accuracy_data.csv', path)
-    shutil.copy('SOMA_RL/fits/modelsimulation_choice_data.csv', path)
-    if os.path.exists(f'{path}/parameter_fits'):
-        shutil.rmtree(f'{path}/parameter_fits')
-    shutil.copytree('SOMA_RL/plots/fits/', f'{path}/parameter_fits')
-    if os.path.exists(f'{path}/model_behaviours'):
-        shutil.rmtree(f'{path}/model_behaviours')
-    shutil.copytree('SOMA_RL/plots/model_behaviours/', f'{path}/model_behaviours')
+
+    files_to_move = [
+        'SOMA_RL/fits/fit_data.pkl',
+        'SOMA_RL/fits/full_fit_data.pkl',
+        'SOMA_RL/fits/modelsimulation_accuracy_data.csv',
+        'SOMA_RL/fits/modelsimulation_choice_data.csv',
+        'SOMA_RL/fits/parameter_outlier_results.pkl'
+        'SOMA_RL/fits/group_AIC.csv',
+        'SOMA_RL/fits/group_BIC.csv',
+
+        'SOMA_RL/plots/fit-by-runs.png',
+        'SOMA_RL/plots/acutepain_model_simulations.png',
+        'SOMA_RL/plots/chronicpain_model_simulations.png',
+        'SOMA_RL/plots/nopain_model_simulations.png',
+        'SOMA_RL/plots/model_fits_distributions.png',
+        
+        'SOMA_RL/stats/pain_fits_linear_results.csv',
+        'SOMA_RL/stats/pain_fits_ttest_results.csv',
+    ]
+
+    files_to_rename = [
+        ['SOMA_RL/fits/fit_data.pkl',       'SOMA_RL/fits/fit_data_FIT.pkl'],
+        ['SOMA_RL/fits/full_fit_data.pkl',  'SOMA_RL/fits/full_fit_data_FIT.pkl'],
+    ]
+
+    folders_to_move = [
+        ['SOMA_RL/plots/model_behaviours/', f'{path}/model_behaviours'],
+        ['SOMA_RL/plots/fits/',             f'{path}/parameter_fits'],
+    ]
+
+    # Conduct the file operations
+    for file_to_move in files_to_move:
+        if os.path.exists(file_to_move):
+            shutil.copy(file_to_move, path)
+
+    for old_name, new_name in files_to_rename:
+        if os.path.exists(old_name):
+            if os.path.exists(new_name):
+                os.remove(new_name)
+            os.rename(old_name, new_name)
+
+    for folder_to_move in folders_to_move:
+        if os.path.exists(folder_to_move[0]):
+            if os.path.exists(folder_to_move[1]):
+                shutil.rmtree(folder_to_move[1])
+            shutil.copytree(folder_to_move[0], folder_to_move[1])
 
 def export_recovery(path):
-    shutil.copy('SOMA_RL/fits/fit_data.pkl', path)
-    os.rename(f'{path}/fit_data.pkl', f'{path}/fit_data_RECOVERY.pkl')
-    shutil.copy('SOMA_RL/fits/full_fit_data.pkl', path)
-    os.rename(f'{path}/full_fit_data.pkl', f'{path}/full_fit_data_RECOVERY.pkl')
-    if os.path.exists(f'{path}/correlations'):
-        shutil.rmtree(f'{path}/correlations')
-    shutil.copytree('SOMA_RL/plots/correlations', f'{path}/correlations')
-    shutil.copy('SOMA_RL/plots/model_recovery.png', path)
+
+    files_to_move = [
+        'SOMA_RL/fits/fit_data.pkl',
+        'SOMA_RL/fits/full_fit_data.pkl',
+        'SOMA_RL/plots/model_recovery.png'
+    ]
+
+    files_to_rename = [
+        ['SOMA_RL/fits/fit_data.pkl',       'SOMA_RL/fits/fit_data_RECOVERY.pkl'],
+        ['SOMA_RL/fits/full_fit_data.pkl',  'SOMA_RL/fits/full_fit_data_RECOVERY.pkl']
+    ]
+
+    folders_to_move = [
+        ['SOMA_RL/plots/correlations',      f'{path}/correlations']
+    ]
+
+    # Conduct the file operations
+    for file_to_move in files_to_move:
+        if os.path.exists(file_to_move):
+            shutil.copy(file_to_move, path)
+
+    for old_name, new_name in files_to_rename:
+        if os.path.exists(old_name):
+            if os.path.exists(new_name):
+                os.remove(new_name)
+            os.rename(old_name, new_name)
+
+    for folder_to_move in folders_to_move:
+        if os.path.exists(folder_to_move[0]):
+            if os.path.exists(folder_to_move[1]):
+                shutil.rmtree(folder_to_move[1])
+            shutil.copytree(folder_to_move[0], folder_to_move[1])
 
 def mp_run_fit(args):
     pipeline = args[0]

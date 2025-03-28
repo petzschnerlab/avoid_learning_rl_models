@@ -208,10 +208,7 @@ def plot_simulations_behaviours(accuracy, choice_rates, models, groups, dataload
         fig.tight_layout()
         fig.savefig(os.path.join('SOMA_RL','plots', 'model_behaviours', f"{m}_model_behaviours.png"))
 
-def plot_fits_by_run_number(fit_data_path):
-    #Load pickle file fit_data_path
-    with open(fit_data_path, 'rb') as f:
-        fit_data = pickle.load(f)
+def plot_fits_by_run_number(fit_data):
 
     min_run, max_run = fit_data[list(fit_data.keys())[0]]['run'].min()+1, fit_data[list(fit_data.keys())[0]]['run'].max()+1
     best_run = {model: [] for model in fit_data}
@@ -245,7 +242,7 @@ def plot_fits_by_run_number(fit_data_path):
         ax.set_ylabel('Negative Log Likelihood')
 
     plt.tight_layout()
-    plt.savefig(fit_data_path.replace('full_fit_data.pkl', 'fit-by-runs.png'))
+    plt.savefig('SOMA_RL/plots/fit-by-runs.png')
 
 def rename_models(model_name):
     return model_name.split('+')[0].replace('Hybrid2', 'Hybrid 2').replace('ActorCritic', 'Actor Critic').replace('QLearning', 'Q Learning')
@@ -330,8 +327,7 @@ def plot_parameter_fits(models, fit_data, fixed=None, bounds=None):
         if not os.path.exists('SOMA_RL/plots/correlations'):
             os.makedirs('SOMA_RL/plots/correlations')
         plt.savefig(f'SOMA_RL/plots/correlations/{model}_correlation_plot.png')
-
-def plot_rainclouds(save_name: str, model_data: pd.DataFrame = None) -> None:
+def plot_parameter_rainclouds(save_name: str, model_data: pd.DataFrame = None) -> None:
 
     """
     Create raincloud plots of the data
@@ -362,10 +358,12 @@ def plot_rainclouds(save_name: str, model_data: pd.DataFrame = None) -> None:
     plot_labels = data.columns[3:]
     num_subplots = len(plot_labels)
     
-    fig, ax = plt.subplots(1, num_subplots, figsize=(5*num_subplots, 5))
-    for group_index, group in enumerate(plot_labels):
-        if group != '':
-            group_data = data[group].reset_index()
+    number_of_columns = min(num_subplots, 3)
+    number_of_rows = int(np.ceil(num_subplots / number_of_columns))
+    fig, axs = plt.subplots(number_of_rows, number_of_columns, figsize=(5*number_of_columns, 5*number_of_rows))
+    for pi, parameter in enumerate(plot_labels):
+        if parameter != '':
+            group_data = data[parameter].reset_index()
         else:
             group_data = data.reset_index()
         group_data[condition_name] = pd.Categorical(group_data[condition_name], condition_values)
@@ -375,15 +373,34 @@ def plot_rainclouds(save_name: str, model_data: pd.DataFrame = None) -> None:
         _, t_scores = compute_n_and_t(group_data, condition_name)
 
         #Get descriptive statistics for the group
-        group_data = group_data.set_index(condition_name)[group].astype(float)
+        group_data = group_data.set_index(condition_name)[parameter].astype(float)
+        if parameter not in ['novel_value', 'mixing_factor', 'valence_factor']: # Exclude parameters that are not to be log-transformed
+            if group_data.min() <= 0: 
+                group_data = group_data - group_data.min() + 1  # Shift the parameter to be positive if it has non-positive values
+            group_data = np.log(group_data)  # Log-transform the parameter to reduce skewness
 
         #Create plot
-        raincloud_plot(data=group_data, ax=ax[group_index], t_scores=t_scores)
+        row, col = pi//3, pi%3
+        if num_subplots == 1:
+            ax = axs
+        else:
+            ax = axs[row, col] if num_subplots > 3 else axs[pi]
+        raincloud_plot(data=group_data, ax=ax, t_scores=t_scores)
 
         #Create horizontal line for the mean the same width
-        ax[group_index].set_xticks(x_values, x_labels)
-        ax[group_index].set_xlabel('')
-        ax[group_index].set_ylabel(group.replace('_', ' ').replace('lr', 'learning rate').title())
+        ax.set_xticks(x_values, x_labels)
+        ax.set_xlabel('')
+        y_label = parameter.replace('_', ' ').replace('lr', 'learning rate').title()
+        y_label = f'Log-Transformed {y_label}' if parameter not in ['novel_value', 'mixing_factor', 'valence_factor'] else f'{y_label}'
+        ax.set_ylabel(y_label)
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        plt.tight_layout()
+    
+    for pi in range(num_subplots, (number_of_rows*number_of_columns)):
+        row, col = pi//3, pi%3
+        ax = axs[row, col] if num_subplots > 3 else axs[pi]
+        fig.delaxes(ax)
 
     #Save the plot
     plt.savefig(f'SOMA_RL/plots/fits/{save_name}.png')
@@ -499,11 +516,20 @@ def plot_fit_distributions(fit_data):
         skewness = pd.Series(BICs).skew()
 
         #Plot histogram and fitted normal distribution
-        ax[i].hist(BICs, bins=10, density=True, alpha=0.33, color='green')
-        ax[i].axvline(np.mean(BICs), color='green', linestyle='dashed', linewidth=1)
-        ax[i].plot(x, y, color='green', linewidth=2, label=None)
-        ax[i].set_title(f'{model}\nKurtosis: {kurtosis:.2f}, Skewness: {skewness:.2f}')
-        ax[i].set_xlabel('BIC')
-        ax[i].set_ylabel('Proportion')
+        if len(models) > 1:
+            ax[i].hist(BICs, bins=10, density=True, alpha=0.33, color='green')
+            ax[i].axvline(np.mean(BICs), color='green', linestyle='dashed', linewidth=1)
+            ax[i].plot(x, y, color='green', linewidth=2, label=None)
+            ax[i].set_title(f'{model}\nKurtosis: {kurtosis:.2f}, Skewness: {skewness:.2f}')
+            ax[i].set_xlabel('BIC')
+            ax[i].set_ylabel('Proportion')
+        else:
+            ax.hist(BICs, bins=10, density=True, alpha=0.33, color='green')
+            ax.axvline(np.mean(BICs), color='green', linestyle='dashed', linewidth=1)
+            ax.plot(x, y, color='green', linewidth=2, label=None)
+            ax.set_title(f'{model}\nKurtosis: {kurtosis:.2f}, Skewness: {skewness:.2f}')
+            ax.set_xlabel('BIC')
+            ax.set_ylabel('Proportion')
     plt.tight_layout()
     plt.savefig('SOMA_RL/plots/model_fits_distributions.png')
+    plt.close()

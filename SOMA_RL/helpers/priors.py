@@ -30,17 +30,6 @@ def fixed_priors():
             'novel_value': .50, # Custom
         },
 
-        'wRelative': {  # From Williams et al., in prep
-            'factual_lr': 0.19, # From Palminteri et al., 2015
-            'counterfactual_lr': 0.15, # From Palminteri et al., 2015
-            'contextual_lr': 0.33, # From Palminteri et al., 2015
-            'temperature': 0.05, # From Palminteri et al., 2015
-            'mixing_factor': 0.7, # From Gold et al., 2012
-            'valence_factor': 0.33, # From Geana et al., 2021:
-            'decay_factor': 0.08, # From Geana et al., 2021:
-            'novel_value': .50, # Custom
-        },
-
         'Hybrid2012': {  # From Geana et al., 2021:
             'factual_lr': 0.49,
             'counterfactual_lr': 0.49,
