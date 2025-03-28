@@ -178,6 +178,7 @@ def export_fits(path):
         
         'SOMA_RL/stats/pain_fits_linear_results.csv',
         'SOMA_RL/stats/pain_fits_ttest_results.csv',
+        'SOMA_RL/stats/pain_fits_posthoc_results.csv',
     ]
 
     files_to_rename = [

@@ -191,6 +191,7 @@ def run_fit_analyses(fit_data):
     
     linear_results = None
     ttest_results = None
+    posthoc_results = None
     for model in fit_data:
         model_data = fit_data[model]
         fit_parameters = model_data.columns[4:]
@@ -220,6 +221,8 @@ def run_fit_analyses(fit_data):
             comparisons = [['no pain', 'acute pain'], ['no pain', 'chronic pain']]
             model_data = model_data.rename(columns={'participant': 'participant_id'})
             ttest_model = statistics.planned_ttests(parameter, 'pain_group', comparisons, model_data)
+            posthoc_model = statistics.post_hoc_tests(parameter, 'pain_group', model_data)
+
             ttest_result = ttest_model['model_summary']
             ttest_result.insert(0, 'parameter', parameter)
             ttest_result.insert(0, 'model', model)
@@ -228,8 +231,17 @@ def run_fit_analyses(fit_data):
             else:
                 ttest_results = pd.concat((ttest_results, ttest_result), ignore_index=True)
 
+            posthoc_result = posthoc_model.reset_index()
+            posthoc_result.insert(0, 'parameter', parameter)
+            posthoc_result.insert(0, 'model', model)
+            if posthoc_results is None:
+                posthoc_results = posthoc_result
+            else:
+                posthoc_results = pd.concat((posthoc_results, posthoc_result), ignore_index=True)
+
     linear_results.to_csv('SOMA_RL/stats/pain_fits_linear_results.csv', index=False)
     ttest_results.to_csv('SOMA_RL/stats/pain_fits_ttest_results.csv', index=False)
+    posthoc_results.to_csv('SOMA_RL/stats/pain_fits_posthoc_results.csv', index=False)
 
     for model in fit_data:
         plot_parameter_rainclouds(f'{model}-model-fits', fit_data[model])

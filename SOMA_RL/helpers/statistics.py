@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import statsmodels.formula.api as smf
 import scipy as sp
+import statsmodels.api as sm
 
 
 class Statistics:
@@ -221,3 +222,42 @@ class Statistics:
             raise ValueError('test_type must be either independent or paired')
     
         return d
+
+    def post_hoc_tests(self, metric: str, factor: str, data: pd.DataFrame) -> pd.DataFrame:
+
+        """
+        Perform post-hoc tests on the data
+
+        Parameters
+        ----------
+        metric : str
+            The metric to perform the post-hoc tests on
+        factor : str
+            The factor to perform the post-hoc tests on
+        data : pd.DataFrame
+            The data to perform the post-hoc tests on
+
+        Returns
+        -------
+        pd.DataFrame
+            The post-hoc test results
+        """
+        
+        #Create combined factor
+        if type(factor) is list:
+            data['factor'] = data.apply(lambda x: ' & '.join([str(x[f]) for f in factor]), axis=1)
+            factor = 'factor'
+
+        #Remove any nans
+        if data[metric].astype(float).isnull().sum() > 0:
+            data = data.dropna(subset=[metric])
+
+        #Run the post-hoc tests
+        tukey = sm.stats.multicomp.pairwise_tukeyhsd(data[metric].astype(float), data[factor].astype("string"))._results_table.data
+        tukey_table = pd.DataFrame(tukey[1:], columns=tukey[0])
+        tukey_table['factor'] = tukey_table.apply(lambda x: str(x['group1']) + ' vs ' + str(x['group2']), axis=1)
+        tukey_table = tukey_table.drop(columns=['group1', 'group2'])
+        tukey_table.set_index('factor', inplace=True)
+        tukey_table = tukey_table.drop(columns=['lower', 'upper'])
+
+        return tukey_table
