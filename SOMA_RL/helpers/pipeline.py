@@ -1,4 +1,5 @@
 import os
+import shutil
 import time
 import pandas as pd
 import numpy as np
@@ -19,8 +20,11 @@ class RLPipeline:
         Dictionary containing task design parameters
     """
 
-    def __init__(self, model, dataloader=None, task=None):
+    def __init__(self, model, dataloader=None, task=None, training='torch', training_epochs=1000, optimizer_lr=0.01, multiprocessing=False):
 
+        #Set parameters
+        self.training = training
+    
         #Get parameters
         self.dataloader = dataloader
         if dataloader is None:
@@ -32,6 +36,10 @@ class RLPipeline:
             task.task_design = self.task_design
         self.task = task
         self.task.initiate_model(model.get_model())
+        self.task.rl_model.training = training
+        self.task.rl_model.training_epochs = training_epochs
+        self.task.rl_model.optimizer_lr = optimizer_lr
+        self.task.rl_model.multiprocessing = multiprocessing
 
     def simulate(self, data):
 
@@ -46,14 +54,20 @@ class RLPipeline:
 
     def fit(self, data, bounds):
 
-        return self.task.rl_model.fit(data, bounds)
+        if self.training == 'torch':
+            fit_results, fitted_params = self.task.rl_model.fit_torch(data, bounds)
+        else:
+            fit_results, fitted_params = self.task.rl_model.fit(data, bounds)
+
+        return fit_results, fitted_params
         
     def run_fit(self, args):
 
         #Extract args
         columns, participant_id, run = args
+        self.task.rl_model.participant_id = participant_id
+        self.task.rl_model.run = run
         data = self.dataloader.get_data_dict()
-        model_name = self.task.rl_model.__class__.__name__
         pain_group = data['learning']['pain_group'].values[0]
 
         #Extract participant data
@@ -70,7 +84,8 @@ class RLPipeline:
         fit_results, fitted_params = self.fit(data, bounds=self.task.rl_model.bounds)
 
         #Store fit results
-        participant_fitted = [participant_id, pain_group, run, float(fit_results.fun)]
+        fit_results = fit_results if self.training == 'torch' else fit_results.fun
+        participant_fitted = [participant_id, pain_group, run, float(fit_results)]
         participant_fitted.extend([float(fitted_params[key]) for key in columns[4:] if key in fitted_params])
 
         #Save to csv file
@@ -106,9 +121,7 @@ class RLPipeline:
                         'ActorCritic': 'w_values', 
                         'Relative': 'q_values', 
                         'Hybrid2012': 'h_values',
-                        'Hybrid2021': 'h_values',
-                        'QRelative': 'm_values', 
-                        'wRelative': 'q_values'}
+                        'Hybrid2021': 'h_values'}
         
         value_label = value_labels[model_name]
 
@@ -125,7 +138,7 @@ class RLPipeline:
 
         #Save task data
         if generate_data:
-            unique_id = np.random.randint(0, 1000000) 
+            unique_id = np.random.randint(0, 1000000) if participant_id == None else participant_id
             while f"{model.model_name}_{unique_id}" in os.listdir(f'SOMA_RL/data/generated/'):
                 unique_id = np.random.randint(0, 1000000)
             simulation_name = f"{model.model_name}_{unique_id}"
@@ -146,6 +159,88 @@ class RLPipeline:
             values.to_csv(f'SOMA_RL/fits/temp/{model.model_name}_{group}_{participant_id}_values_sim_results.csv', index=False)
             choice_rates.to_csv(f'SOMA_RL/fits/temp/{model.model_name}_{group}_{participant_id}_choice_sim_results.csv', index=False)        
 # Functions
+def export_fits(path):
+
+    files_to_move = [
+        'SOMA_RL/fits/fit_data.pkl',
+        'SOMA_RL/fits/full_fit_data.pkl',
+        'SOMA_RL/fits/modelsimulation_accuracy_data.csv',
+        'SOMA_RL/fits/modelsimulation_choice_data.csv',
+        'SOMA_RL/fits/parameter_outlier_results.pkl'
+        'SOMA_RL/fits/group_AIC.csv',
+        'SOMA_RL/fits/group_BIC.csv',
+
+        'SOMA_RL/plots/fit-by-runs.png',
+        'SOMA_RL/plots/acutepain_model_simulations.png',
+        'SOMA_RL/plots/chronicpain_model_simulations.png',
+        'SOMA_RL/plots/nopain_model_simulations.png',
+        'SOMA_RL/plots/model_fits_distributions.png',
+        
+        'SOMA_RL/stats/pain_fits_linear_results.csv',
+        'SOMA_RL/stats/pain_fits_ttest_results.csv',
+    ]
+
+    files_to_rename = [
+        ['SOMA_RL/fits/fit_data.pkl',       'SOMA_RL/fits/fit_data_FIT.pkl'],
+        ['SOMA_RL/fits/full_fit_data.pkl',  'SOMA_RL/fits/full_fit_data_FIT.pkl'],
+    ]
+
+    folders_to_move = [
+        ['SOMA_RL/plots/model_behaviours/', f'{path}/model_behaviours'],
+        ['SOMA_RL/plots/fits/',             f'{path}/parameter_fits'],
+    ]
+
+    # Conduct the file operations
+    for file_to_move in files_to_move:
+        if os.path.exists(file_to_move):
+            shutil.copy(file_to_move, path)
+
+    for old_name, new_name in files_to_rename:
+        if os.path.exists(old_name):
+            if os.path.exists(new_name):
+                os.remove(new_name)
+            os.rename(old_name, new_name)
+
+    for folder_to_move in folders_to_move:
+        if os.path.exists(folder_to_move[0]):
+            if os.path.exists(folder_to_move[1]):
+                shutil.rmtree(folder_to_move[1])
+            shutil.copytree(folder_to_move[0], folder_to_move[1])
+
+def export_recovery(path):
+
+    files_to_move = [
+        'SOMA_RL/fits/fit_data.pkl',
+        'SOMA_RL/fits/full_fit_data.pkl',
+        'SOMA_RL/plots/model_recovery.png'
+    ]
+
+    files_to_rename = [
+        ['SOMA_RL/fits/fit_data.pkl',       'SOMA_RL/fits/fit_data_RECOVERY.pkl'],
+        ['SOMA_RL/fits/full_fit_data.pkl',  'SOMA_RL/fits/full_fit_data_RECOVERY.pkl']
+    ]
+
+    folders_to_move = [
+        ['SOMA_RL/plots/correlations',      f'{path}/correlations']
+    ]
+
+    # Conduct the file operations
+    for file_to_move in files_to_move:
+        if os.path.exists(file_to_move):
+            shutil.copy(file_to_move, path)
+
+    for old_name, new_name in files_to_rename:
+        if os.path.exists(old_name):
+            if os.path.exists(new_name):
+                os.remove(new_name)
+            os.rename(old_name, new_name)
+
+    for folder_to_move in folders_to_move:
+        if os.path.exists(folder_to_move[0]):
+            if os.path.exists(folder_to_move[1]):
+                shutil.rmtree(folder_to_move[1])
+            shutil.copytree(folder_to_move[0], folder_to_move[1])
+
 def mp_run_fit(args):
     pipeline = args[0]
     pipeline.run_fit(args[1:])
@@ -162,8 +257,8 @@ def mp_progress(num_files, filepath='SOMA_RL/fits/temp', divide_by=1, multiply_b
     last_count = 0
     start_file_count = len(os.listdir(filepath))
     if progress_bar:
-        loop = tqdm.tqdm(range(int((num_files-start_file_count)/divide_by))) if progress_bar else None
-    while n_files*multiply_by < (num_files-start_file_count):
+        loop = tqdm.tqdm(total=int((num_files-start_file_count)/divide_by))
+    while n_files*multiply_by < ((num_files/divide_by)-start_file_count):
         if progress_bar:
             n_files = (np.floor(len(os.listdir(filepath))/divide_by)*multiply_by)-start_file_count
             if n_files > last_count:
@@ -171,7 +266,7 @@ def mp_progress(num_files, filepath='SOMA_RL/fits/temp', divide_by=1, multiply_b
                 last_count = n_files
         time.sleep(1)
     if progress_bar:
-        loop.update(int((num_files-start_file_count)-last_count))
+        loop.update(int(((num_files/divide_by)-start_file_count)-last_count))
         
 '''
 

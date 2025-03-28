@@ -108,12 +108,12 @@ def plot_simulations(accuracy, prediction_errors, values, choice_rates, models, 
 
         #Plot choice rates        
         ax[3, i].bar(['High\nReward', 'Low\nReward', 'Low\nPunish', 'High\nPunish', 'Novel'], choice_rates[m].mean(axis=0), color=colors, alpha = .5)
-        ax[3, i].errorbar(['High\nReward', 'Low\nReward', 'Low\nPunish', 'High\nPunish', 'Novel'], choice_rates[m].mean(axis=0), yerr=choice_rates[m].sem(), fmt='.', color='grey')
+        ax[3, i].errorbar(['High\nReward', 'Low\nReward', 'Low\nPunish', 'High\nPunish', 'Novel'], choice_rates[m].mean(axis=0), yerr=choice_rates[m].sem()* stats.t.ppf(0.975, number_of_participants-1), fmt='.', color='grey')
         if dataloader is not None:
             ax[3, i].scatter(['High\nReward', 'Low\nReward', 'Low\nPunish', 'High\nPunish', 'Novel'], list(emp_choice_rates.values()), color='grey', marker='D', alpha=.5)
         ax[3, i].set_ylim([0, 100])
         if i == 0:
-            ax[3, i].set_ylabel('Choice rate (%)')
+            ax[3, i].set_ylabel('Choice Rate (%)')
         ax[3, i].spines['top'].set_visible(False)
         ax[3, i].spines['right'].set_visible(False)
 
@@ -122,59 +122,167 @@ def plot_simulations(accuracy, prediction_errors, values, choice_rates, models, 
     fig.suptitle(f"{group.title()}", x=0.001, y=.999, ha='left', fontsize=16)
     fig.savefig(os.path.join('SOMA_RL','plots',f"{group.replace(' ','')}_model_simulations.png"))
 
+def plot_simulations_behaviours(accuracy, choice_rates, models, groups, dataloader=None):
+    colors = ['#33A02C', '#B2DF8A', '#FB9A99', '#E31A1C', '#D3D3D3']
+    bi_colors = ['#B2DF8A', '#FB9A99']
 
-def plot_fits_by_run_number(fit_data_path):
-    #Load pickle file fit_data_path
-    with open(fit_data_path, 'rb') as f:
-        fit_data = pickle.load(f)
+    if dataloader is not None:
+
+        #Get empirical learning curves 
+        empirical_data = copy.copy(dataloader.get_data()[0])
+        emp_accuracy = empirical_data.groupby(['context_val_name','trial_number', 'pain_group'], observed=False)['accuracy'].mean().reset_index()
+        emp_accuracy_group = {}
+        for group in groups:
+            group_accuracy = emp_accuracy[emp_accuracy['pain_group'] == group].copy()
+            group_accuracy.drop('pain_group', axis=1, inplace=True)
+            emp_accuracy_group[group] = group_accuracy
+            
+        #Get empirical choice rates
+        empirical_data = copy.copy(dataloader.get_data()[1])
+        empirical_data['stim_id'] = empirical_data['state'].apply(lambda x: x.split(' ')[1])
+        emp_choice_groups = {}
+        for group in groups:
+            emp_choice_rate = {}
+            for stimulus in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'N']:
+                stimulus_data = empirical_data.loc[empirical_data['stim_id'].apply(lambda x: stimulus in x)].copy()
+                stimulus_data = stimulus_data[stimulus_data['pain_group'] == group].copy()
+                stimulus_data.loc[:,'stim_index'] = stimulus_data.loc[:,'stim_id'].apply(lambda x: 0 if stimulus == x[0] else 1)
+                stimulus_data['stim_chosen'] = stimulus_data.apply(lambda x: int(x['action'] == x['stim_index']), axis=1)
+                emp_choice_rate[stimulus] = int((stimulus_data['stim_chosen'].sum()/len(stimulus_data))*100)
+            pairs = [['A','C'],['B','D'],['E','G'],['F','H']]
+            emp_choice_rates = {}
+            for pair in pairs:
+                emp_choice_rates[pair[0]] = (emp_choice_rate[pair[0]] + emp_choice_rate[pair[1]])/2
+            emp_choice_rates['N'] = emp_choice_rate['N']
+            emp_choice_groups[group] = emp_choice_rates
+                    
+    # Iterate over each model
+    for i, m in enumerate(models):
+        
+        # Create a figure with subplots for each group
+        fig, ax = plt.subplots(2, len(groups), figsize=(5 * len(groups), 10))
+
+        for gi, group in enumerate(['no pain', 'acute pain', 'chronic pain']):
+            number_of_participants = accuracy[m][group]['run'].nunique()
+
+            # Plot accuracy
+            model_accuracy = accuracy[m][group].groupby(['context', 'trial_total', 'run'], observed=False).mean().reset_index()
+            model_accuracy['context'] = pd.Categorical(model_accuracy['context'], categories=['Reward', 'Loss Avoid'], ordered=True)
+
+            for ci, context in enumerate(['Reward', 'Loss Avoid']):
+                CIs = model_accuracy.groupby(['context', 'trial_total'], observed=False)['accuracy'].sem() * stats.t.ppf(0.975, number_of_participants-1)
+                averaged_accuracy = model_accuracy.groupby(['context', 'trial_total'], observed=False).mean().reset_index()
+                context_accuracy = averaged_accuracy[averaged_accuracy['context'] == context]['accuracy'].reset_index(drop=True).astype(float) * 100
+                context_CIs = CIs[CIs.index.get_level_values('context') == context].reset_index(drop=True) * 100
+                
+                ax[0, gi].fill_between(context_accuracy.index, context_accuracy - context_CIs, context_accuracy + context_CIs, alpha=0.2, color=bi_colors[ci], edgecolor='none')
+                ax[0, gi].plot(context_accuracy, color=bi_colors[ci], alpha=0.8, label=context.replace('Loss Avoid', 'Punish'))
+
+                if dataloader is not None:
+                    trials = emp_accuracy_group[group][emp_accuracy_group[group]['context_val_name'] == context]['trial_number']
+                    accuracies = emp_accuracy_group[group][emp_accuracy_group[group]['context_val_name'] == context]['accuracy']
+                    ax[0, gi].plot(trials, accuracies, color=bi_colors[ci], linestyle='dashed', alpha=0.5)
+            
+            ax[0, gi].set_title(f'{group.title()}')
+            ax[0, gi].set_ylim([25, 100])
+            if gi == len(groups) - 1:
+                ax[0, gi].legend(loc='lower right', frameon=False)
+            ax[0, gi].set_ylabel('Accuracy (%)')
+            ax[0, gi].set_xlabel('Trial')
+            ax[0, gi].spines['top'].set_visible(False)
+            ax[0, gi].spines['right'].set_visible(False)
+
+            # Plot choice rates
+            ax[1, gi].bar(['High\nReward', 'Low\nReward', 'Low\nPunish', 'High\nPunish', 'Novel'], choice_rates[m][group].mean(axis=0), color=colors, alpha=0.5)
+            ax[1, gi].errorbar(['High\nReward', 'Low\nReward', 'Low\nPunish', 'High\nPunish', 'Novel'], choice_rates[m][group].mean(axis=0), yerr=choice_rates[m][group].sem()*stats.t.ppf(0.975, number_of_participants-1), fmt='.', color='grey')
+            
+            if dataloader is not None:
+                ax[1, gi].scatter(['High\nReward', 'Low\nReward', 'Low\nPunish', 'High\nPunish', 'Novel'], list(emp_choice_groups[group].values()), color='grey', marker='D', alpha=0.5)
+
+            ax[1, gi].set_ylim([0, 100])
+            ax[1, gi].set_ylabel('Choice Rate (%)')
+            ax[1, gi].spines['top'].set_visible(False)
+            ax[1, gi].spines['right'].set_visible(False)
+
+        #Metaplot settings
+        fig.tight_layout()
+        fig.savefig(os.path.join('SOMA_RL','plots', 'model_behaviours', f"{m}_model_behaviours.png"))
+
+def plot_fits_by_run_number(fit_data):
 
     min_run, max_run = fit_data[list(fit_data.keys())[0]]['run'].min()+1, fit_data[list(fit_data.keys())[0]]['run'].max()+1
     best_run = {model: [] for model in fit_data}
-    best_fits = {model: {f'Run {run}': [] for run in range(min_run, max_run)} for model in fit_data}
+    best_fits = {model: {f'{run}': [] for run in range(min_run, max_run+1)} for model in fit_data}
     for model in fit_data:
         model_data = fit_data[model].copy()
         model_data['run'] += 1
-        for run in range(min_run, max_run):
-            #Find data where run equals or is less than run
+        for run in range(min_run, max_run+1):
             run_data = model_data[model_data['run'] <= run].reset_index(drop=True)
-            run_sums = run_data.groupby('run').agg('sum').reset_index()
-            best_fits[model][f'Run {run}'] = run_sums['fit'].min()
+            run_sums = run_data.groupby('run').agg({'fit': 'mean'}).reset_index()
+            best_fits[model][f'{run}'] = run_sums['fit'].min()
         best_run[model] = list(best_fits[model].keys())[list(best_fits[model].values()).index(min(best_fits[model].values()))]
-    average_best_run = f"Run {int(np.ceil(np.mean([int(best_run[model].split(' ')[1]) for model in best_run])))}"
+    average_best_run = int(np.median([int(best_run[model]) for model in best_run]))
 
     #Create a subplot for each model and plot the fits by run number
-    fig, axs = plt.subplots(len(best_fits)//4, len(best_fits)//3, figsize=(5*(len(best_fits)//3), (5*(len(best_fits)//4))))
+    num_subplots = len(fit_data)
+    number_of_columns = min(num_subplots, 5)
+    number_of_rows = int(np.ceil(num_subplots / number_of_columns))
+
+    fig, axs = plt.subplots(number_of_rows, number_of_columns, figsize=(5*number_of_columns, 5*number_of_rows))
     for n, model in enumerate(best_fits):
-        row, col = n//4, n%4
-        ax = axs[row, col] if len(best_fits) > 1 else axs
-        ax.plot(list(best_fits[model].keys()), list(best_fits[model].values()), marker='o')
+        row, col = n//5, n%5
+        if len(best_fits) == 1:
+            ax = axs
+        else:
+            ax = axs[row, col] if len(best_fits) > 5 else axs[n]
+        ax.plot([int(x) for x in best_fits[model].keys()], list(best_fits[model].values()), marker='o')
         ax.axvline(x=average_best_run, color='red', linestyle='--', alpha=.5)
         ax.set_title(model)
         ax.set_xlabel('Run Number')
-        ax.set_ylabel('Best Fit')
-    fig.text(0.01, 0.001, f'Red dashed line indicates the averaged run where the models reached their best fits.', ha='left')
+        ax.set_ylabel('Negative Log Likelihood')
 
     plt.tight_layout()
-    #Save plot 
-    plt.savefig(fit_data_path.replace('.pkl', '.png'))
+    plt.savefig('SOMA_RL/plots/fit-by-runs.png')
+
+def rename_models(model_name):
+    return model_name.split('+')[0].replace('Hybrid2', 'Hybrid 2').replace('ActorCritic', 'Actor Critic').replace('QLearning', 'Q Learning')
 
 def plot_model_fits(confusion_matrix):
-    
+
+    confusion_matrix = confusion_matrix - confusion_matrix.min().min()
+    confusion_matrix = confusion_matrix / confusion_matrix.max().max() * 200 - 100
+
+    cmap = plt.get_cmap('RdBu')
+    green = [0.596078431372549, 0.8117647058823529, 0.5843137254901961, 1]
+    red = [0.9411764705882353, 0.5490196078431373, 0.5529411764705883, 1]
+    white = [1, 1, 1, 1]
+    custom_cmap = cmap.from_list('custom_cmap', [green, white, red], 20)
+      
     #Plot confusion matrix
     fig, ax = plt.subplots(1, 1, figsize=(10, 10))
-    cax = ax.matshow(confusion_matrix, cmap='viridis')
-    fig.colorbar(cax)
+    cax = ax.matshow(confusion_matrix, cmap=custom_cmap, alpha=1)
+    cbar = ax.figure.colorbar(cax, ax=ax, fraction=0.046, pad=0.04)
     ax.set_xticks(np.arange(len(confusion_matrix.columns)))
     ax.set_yticks(np.arange(len(confusion_matrix.index)))
-    ax.set_xticklabels(confusion_matrix.columns)
-    ax.set_yticklabels(confusion_matrix.index)
-
+    ax.set_xticklabels([rename_models(col) for col in confusion_matrix.columns])
+    ax.set_yticklabels([rename_models(ind) for ind in confusion_matrix.index])
+    cbar.set_label('Normalized BIC')
     for i in range(len(confusion_matrix.index)):
         for j in range(len(confusion_matrix.columns)):
-            ax.text(j, i, np.round(confusion_matrix.iloc[i, j], 2), ha='center', va='center', color='black')
-    cax.set_clim(0, 100)
+            if confusion_matrix.iloc[i, j] == confusion_matrix.iloc[:, j].min():
+                ax.add_patch(plt.Rectangle((j-0.5, i-0.5), 1, 1, fill=False, edgecolor='black', lw=2))
+    for j in range(len(confusion_matrix.columns)):
+        bfi = confusion_matrix.iloc[:, j].idxmin()
+        i = confusion_matrix.index.get_loc(bfi)
+        ax.text(j, i, np.round(confusion_matrix.iloc[i, j],2), ha='center', va='center', color='black', fontweight='bold')
+    for i in range(len(confusion_matrix.index)):
+        for j in range(len(confusion_matrix.columns)):
+            if confusion_matrix.iloc[i, j] != confusion_matrix.iloc[:, j].min():
+                ax.text(j, i, np.round(confusion_matrix.iloc[i, j],2), ha='center', va='center', color='black')
+    
+    plt.setp(ax.get_xticklabels(), rotation=45, ha='left')
     plt.tight_layout()
-    plt.savefig(f'SOMA_RL/plots/model_fits.png')
+    plt.savefig(f'SOMA_RL/plots/model_recovery.png')
 
 def plot_parameter_fits(models, fit_data, fixed=None, bounds=None):
     #Create a dictionary with model being keys and pd.dataframe empty as value
@@ -219,8 +327,7 @@ def plot_parameter_fits(models, fit_data, fixed=None, bounds=None):
         if not os.path.exists('SOMA_RL/plots/correlations'):
             os.makedirs('SOMA_RL/plots/correlations')
         plt.savefig(f'SOMA_RL/plots/correlations/{model}_correlation_plot.png')
-
-def plot_rainclouds(save_name: str, model_data: pd.DataFrame = None) -> None:
+def plot_parameter_rainclouds(save_name: str, model_data: pd.DataFrame = None) -> None:
 
     """
     Create raincloud plots of the data
@@ -251,10 +358,12 @@ def plot_rainclouds(save_name: str, model_data: pd.DataFrame = None) -> None:
     plot_labels = data.columns[3:]
     num_subplots = len(plot_labels)
     
-    fig, ax = plt.subplots(1, num_subplots, figsize=(5*num_subplots, 5))
-    for group_index, group in enumerate(plot_labels):
-        if group != '':
-            group_data = data[group].reset_index()
+    number_of_columns = min(num_subplots, 3)
+    number_of_rows = int(np.ceil(num_subplots / number_of_columns))
+    fig, axs = plt.subplots(number_of_rows, number_of_columns, figsize=(5*number_of_columns, 5*number_of_rows))
+    for pi, parameter in enumerate(plot_labels):
+        if parameter != '':
+            group_data = data[parameter].reset_index()
         else:
             group_data = data.reset_index()
         group_data[condition_name] = pd.Categorical(group_data[condition_name], condition_values)
@@ -264,15 +373,34 @@ def plot_rainclouds(save_name: str, model_data: pd.DataFrame = None) -> None:
         _, t_scores = compute_n_and_t(group_data, condition_name)
 
         #Get descriptive statistics for the group
-        group_data = group_data.set_index(condition_name)[group].astype(float)
+        group_data = group_data.set_index(condition_name)[parameter].astype(float)
+        if parameter not in ['novel_value', 'mixing_factor', 'valence_factor']: # Exclude parameters that are not to be log-transformed
+            if group_data.min() <= 0: 
+                group_data = group_data - group_data.min() + 1  # Shift the parameter to be positive if it has non-positive values
+            group_data = np.log(group_data)  # Log-transform the parameter to reduce skewness
 
         #Create plot
-        raincloud_plot(data=group_data, ax=ax[group_index], t_scores=t_scores)
+        row, col = pi//3, pi%3
+        if num_subplots == 1:
+            ax = axs
+        else:
+            ax = axs[row, col] if num_subplots > 3 else axs[pi]
+        raincloud_plot(data=group_data, ax=ax, t_scores=t_scores)
 
         #Create horizontal line for the mean the same width
-        ax[group_index].set_xticks(x_values, x_labels)
-        ax[group_index].set_xlabel('')
-        ax[group_index].set_ylabel(group.replace('_', ' ').replace('lr', 'learning rate').title())
+        ax.set_xticks(x_values, x_labels)
+        ax.set_xlabel('')
+        y_label = parameter.replace('_', ' ').replace('lr', 'learning rate').title()
+        y_label = f'Log-Transformed {y_label}' if parameter not in ['novel_value', 'mixing_factor', 'valence_factor'] else f'{y_label}'
+        ax.set_ylabel(y_label)
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        plt.tight_layout()
+    
+    for pi in range(num_subplots, (number_of_rows*number_of_columns)):
+        row, col = pi//3, pi%3
+        ax = axs[row, col] if num_subplots > 3 else axs[pi]
+        fig.delaxes(ax)
 
     #Save the plot
     plt.savefig(f'SOMA_RL/plots/fits/{save_name}.png')
@@ -366,3 +494,42 @@ def compute_n_and_t(data: pd.DataFrame, splitting_column: str) -> tuple:
         t_scores = [stats.t.ppf(0.975, s-1) for s in sample_sizes]
 
     return sample_sizes, t_scores
+
+def plot_fit_distributions(fit_data):
+    models = fit_data.keys()
+    fig, ax = plt.subplots(1, len(models), figsize=(5*len(models), 5))
+    for i, model in enumerate(models):
+        model_data = fit_data[model]['fit'].values
+        
+        #Fit transformation
+        number_samples = 480
+        number_params = len(fit_data[model].columns) - 4
+        BICs = np.log(number_samples) * number_params + 2 * model_data
+
+        #Determine distribution
+        mu, std = np.mean(BICs), np.std(BICs)
+        x = np.linspace(min(BICs), max(BICs), 100)
+        y = (1/(std * np.sqrt(2 * np.pi))) * np.exp(-0.5 * ((x - mu) / std)**2) # TODO: Redo distrubution
+
+        #Compute kurtosis and skewness
+        kurtosis = pd.Series(BICs).kurtosis()
+        skewness = pd.Series(BICs).skew()
+
+        #Plot histogram and fitted normal distribution
+        if len(models) > 1:
+            ax[i].hist(BICs, bins=10, density=True, alpha=0.33, color='green')
+            ax[i].axvline(np.mean(BICs), color='green', linestyle='dashed', linewidth=1)
+            ax[i].plot(x, y, color='green', linewidth=2, label=None)
+            ax[i].set_title(f'{model}\nKurtosis: {kurtosis:.2f}, Skewness: {skewness:.2f}')
+            ax[i].set_xlabel('BIC')
+            ax[i].set_ylabel('Proportion')
+        else:
+            ax.hist(BICs, bins=10, density=True, alpha=0.33, color='green')
+            ax.axvline(np.mean(BICs), color='green', linestyle='dashed', linewidth=1)
+            ax.plot(x, y, color='green', linewidth=2, label=None)
+            ax.set_title(f'{model}\nKurtosis: {kurtosis:.2f}, Skewness: {skewness:.2f}')
+            ax.set_xlabel('BIC')
+            ax.set_ylabel('Proportion')
+    plt.tight_layout()
+    plt.savefig('SOMA_RL/plots/model_fits_distributions.png')
+    plt.close()

@@ -1,6 +1,8 @@
 import random as rnd
 import numpy as np
 import pandas as pd
+import torch 
+
 
 class AvoidanceLearningTask:
 
@@ -64,14 +66,6 @@ class AvoidanceLearningTask:
 
             self.rl_model.initial_w_values = pd.DataFrame([self.rl_model.w_values[self.rl_model.states[0]][0]]*9).T
             self.rl_model.initial_w_values.columns = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'N']
-
-        if self.rl_model.__class__.__name__ == 'QRelative':
-            self.rl_model.context_values = {state: [0] for state in states}
-            self.rl_model.context_prediction_errors = {state: [0] for state in states}
-            self.rl_model.q_prediction_errors = {state: [0]*learning_dimensions[1] for state in states}
-            self.rl_model.c_prediction_errors = {state: [0]*learning_dimensions[1] for state in states}
-            self.rl_model.c_values = {state: [0]*learning_dimensions[1] for state in states}
-            self.rl_model.m_values = {state:[0]*learning_dimensions[1] for state in states}
     
     def update_task_data(self, state, phase='learning'):
         
@@ -118,33 +112,59 @@ class AvoidanceLearningTask:
         self.compute_choice_rate()
 
     def combine_q_values(self):
-
-        stimuli = ['A','B','C','D','E','F','G','H']
-        self.rl_model.final_q_values = pd.DataFrame(np.array([self.rl_model.q_values[state] for state in self.rl_model.q_values.keys()]).flatten()).T
-        self.rl_model.final_q_values.columns = stimuli
-        self.rl_model.final_q_values['N'] = 0
+        if self.rl_model.training == 'torch':
+            final_q_values = {state.replace('State ', '')[i]: values[i].detach()
+                            for state, values in self.rl_model.q_values.items() 
+                            for i in range(2)}
+            final_q_values['N'] = torch.tensor(0.) if self.rl_model.novel_value is None else self.rl_model.novel_value
+            self.rl_model.final_q_values = final_q_values
+        else:
+            stimuli = ['A','B','C','D','E','F','G','H']
+            self.rl_model.final_q_values = pd.DataFrame(np.array([self.rl_model.q_values[state] for state in self.rl_model.q_values.keys()]).flatten()).T
+            self.rl_model.final_q_values.columns = stimuli
+            self.rl_model.final_q_values['N'] = 0 if self.rl_model.novel_value is None else self.rl_model.novel_value
 
     def combine_v_values(self):
-
-        stimuli = ['A','B','C','D','E','F','G','H']
-        v_array = np.array([[self.rl_model.v_values[state]]*2 for state in self.rl_model.v_values.keys()])
-        self.rl_model.final_v_values = pd.DataFrame(v_array.flatten()).T
-        self.rl_model.final_v_values.columns = stimuli
-        self.rl_model.final_v_values['N'] = 0
+        if self.rl_model.training == 'torch':
+            final_v_values = {state.replace('State ', '')[i]: values.detach()
+                            for state, values in self.rl_model.v_values.items()
+                            for i in range(2)}
+            final_v_values['N'] = torch.tensor(0.) if self.rl_model.novel_value is None else self.rl_model.novel_value
+            self.rl_model.final_v_values = final_v_values
+        else:
+            stimuli = ['A','B','C','D','E','F','G','H']
+            v_array = np.array([[self.rl_model.v_values[state]]*2 for state in self.rl_model.v_values.keys()])
+            self.rl_model.final_v_values = pd.DataFrame(v_array.flatten()).T
+            self.rl_model.final_v_values.columns = stimuli
+            self.rl_model.final_v_values['N'] = 0 if self.rl_model.novel_value is None else self.rl_model.novel_value
 
     def combine_w_values(self):
 
-        stimuli = ['A','B','C','D','E','F','G','H']
-        self.rl_model.final_w_values = pd.DataFrame(np.array([self.rl_model.w_values[state] for state in self.rl_model.w_values.keys()]).flatten()).T
-        self.rl_model.final_w_values.columns = stimuli
-        self.rl_model.final_w_values['N'] = 0
+        if self.rl_model.training == 'torch':
+            final_w_values = {state.replace('State ', '')[i]: values[i].detach()
+                            for state, values in self.rl_model.w_values.items() 
+                            for i in range(2)}
+            final_w_values['N'] = torch.tensor(0.) if self.rl_model.novel_value is None else self.rl_model.novel_value
+            self.rl_model.final_w_values = final_w_values
+        else:
+            stimuli = ['A','B','C','D','E','F','G','H']
+            self.rl_model.final_w_values = pd.DataFrame(np.array([self.rl_model.w_values[state] for state in self.rl_model.w_values.keys()]).flatten()).T
+            self.rl_model.final_w_values.columns = stimuli
+            self.rl_model.final_w_values['N'] = 0 if self.rl_model.novel_value is None else self.rl_model.novel_value
 
     def combine_c_values(self):
-
-        stimuli = ['A','B','C','D','E','F','G','H']
-        self.rl_model.final_c_values = pd.DataFrame(np.array([self.rl_model.c_values[state] for state in self.rl_model.c_values.keys()]).flatten()).T
-        self.rl_model.final_c_values.columns = stimuli
-        self.rl_model.final_c_values['N'] = 0
+        
+        if self.rl_model.training == 'torch':
+            final_c_values = {state.replace('State ', '')[i]: values[i].detach()
+                            for state, values in self.rl_model.c_values.items() 
+                            for i in range(2)}
+            final_c_values['N'] = torch.tensor(0.) if self.rl_model.novel_value is None else self.rl_model.novel_value
+            self.rl_model.final_c_values = final_c_values
+        else:
+            stimuli = ['A','B','C','D','E','F','G','H']
+            self.rl_model.final_c_values = pd.DataFrame(np.array([self.rl_model.c_values[state] for state in self.rl_model.c_values.keys()]).flatten()).T
+            self.rl_model.final_c_values.columns = stimuli
+            self.rl_model.final_c_values['N'] = 0 if self.rl_model.novel_value is None else self.rl_model.novel_value
 
     def initiate_model(self, rl_model):
 
@@ -193,12 +213,6 @@ class AvoidanceLearningTask:
             self.task_learning_data_columns += ['v_prediction_errors']
             self.task_learning_data_columns.remove('prediction_errors')
             self.task_transfer_data_columns += ['w_values']
-
-        if 'QRelative' == self.rl_model.__class__.__name__:
-            self.task_learning_data_columns += ['c_values']
-            self.task_learning_data_columns += ['m_values']
-            self.task_transfer_data_columns += ['m_values']
-            self.task_transfer_data_columns.remove('q_values')
             
         self.create_model_lists(states=states,
                                 learning_dimensions=[number_of_learning_trials, 2],

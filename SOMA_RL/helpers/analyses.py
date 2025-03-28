@@ -15,9 +15,9 @@ from models.rl_models import RLModel
 from helpers.dataloader import DataLoader
 from helpers.tasks import AvoidanceLearningTask
 from helpers.pipeline import RLPipeline, mp_run_fit, mp_run_simulations, mp_progress
-from helpers.plotting import plot_simulations, plot_parameter_fits, plot_model_fits, plot_rainclouds
+from helpers.plotting import plot_simulations, plot_simulations_behaviours, plot_parameter_fits, plot_model_fits, plot_parameter_rainclouds, plot_fits_by_run_number, plot_fit_distributions
 from helpers.statistics import Statistics
-from helpers.report import Report
+
 
 def run_fit_empirical(learning_filename, 
                       transfer_filename, 
@@ -28,7 +28,10 @@ def run_fit_empirical(learning_filename,
                       random_params=False, 
                       number_of_runs=1, 
                       generated=False, 
-                      multiprocessing=False):
+                      multiprocessing=False,
+                      training='torch',
+                      training_epochs=1000,
+                      optimizer_lr=0.01):
 
     #Report each of the inputs
     print('Running Empirical Fit with the following parameters:')
@@ -41,6 +44,9 @@ def run_fit_empirical(learning_filename,
     print(f'Number of Runs: {number_of_runs}')
     print(f'Generated: {generated}')
     print(f'Multiprocessing: {multiprocessing}')
+    print(f'Training: {training}')
+    print(f'Training Epochs: {training_epochs}')
+    print(f'Optimizer Learning Rate: {optimizer_lr}')
 
     if fixed is not None:
         print('\nParameter Overwrites:')
@@ -57,20 +63,26 @@ def run_fit_empirical(learning_filename,
     print('--------------------------------------------------------')
     
     dataloader = run_fit(learning_filename, 
-                         transfer_filename, models, 
+                         transfer_filename, 
+                         models, 
                          number_of_participants=number_of_participants, 
                          fixed=fixed,
                          bounds=bounds,
                          random_params=random_params, 
                          number_of_runs=number_of_runs, 
                          generated=generated, 
-                         multiprocessing=multiprocessing)
+                         multiprocessing=multiprocessing,
+                         training=training,
+                         training_epochs=training_epochs,
+                         optimizer_lr=optimizer_lr)
     
     fit_data = run_fit_comparison(dataloader, 
                                   models, 
                                   dataloader.get_group_ids())
     
-    linear_results, ttest_results = run_fit_analyses(fit_data)
+    plot_fits_by_run_number(fit_data)
+    
+    run_fit_analyses(copy.deepcopy(fit_data))
     
     run_fit_simulations(learning_filename, 
                         transfer_filename, 
@@ -93,8 +105,11 @@ def run_recovery(models,
                  number_of_participants=0, 
                  multiprocessing=False, 
                  clear_data=True, 
-                 recovery='parameter'):
-    
+                 recovery='parameter',
+                 training='torch',
+                 training_epochs=1000,
+                 optimizer_lr=0.01):
+
     #Report each of the inputs
     print('Running Generation and Fit with the following parameters:')
     print('--------------------------------------------------------')
@@ -108,6 +123,10 @@ def run_recovery(models,
     print(f'Number of Participants: {number_of_participants}')
     print(f'Multiprocessing: {multiprocessing}')
     print(f'Clear Data: {clear_data}')
+    print(f'Recovery: {recovery}')
+    print(f'Training: {training}')
+    print(f'Training Epochs: {training_epochs}')
+    print(f'Optimizer Learning Rate: {optimizer_lr}')
 
     if fixed is not None:
         print('\nParameter Overwrites:')
@@ -147,7 +166,10 @@ def run_recovery(models,
                                      fixed=fixed, 
                                      bounds=bounds, 
                                      multiprocessing=multiprocessing, 
-                                     recovery=recovery)
+                                     recovery=recovery,
+                                     training=training,
+                                     training_epochs=training_epochs,
+                                     optimizer_lr=optimizer_lr)
     
     fit_data = run_fit_comparison(dataloader=dataloader, 
                                   models=models, 
@@ -166,7 +188,7 @@ def run_recovery(models,
                             bounds=bounds)
 
 def run_fit_analyses(fit_data):
-
+    
     linear_results = None
     ttest_results = None
     for model in fit_data:
@@ -177,6 +199,14 @@ def run_fit_analyses(fit_data):
             
             #turn pain_group in model_data into a category
             model_data['pain_group'] = pd.Categorical(model_data['pain_group'], categories=['no pain', 'acute pain', 'chronic pain'])
+
+            #Log-Transform when needed
+            if parameter not in ['novel_factor', 'mixing_factor', 'valence_factor']: # Exclude parameters that are not to be log-transformed
+                if model_data[parameter].min() <= 0: 
+                    model_data[parameter] = model_data[parameter] - model_data[parameter].min() + 1  # Shift the parameter to be positive if it has non-positive values
+                model_data[parameter] = np.log(model_data[parameter])  # Log-transform the parameter to reduce skewness
+
+            #Run linear model
             linear_model = statistics.linear_model_categorical(f'{parameter} ~ pain_group', model_data)
             linear_result = linear_model['model_summary']
             linear_result.insert(0, 'parameter', parameter)
@@ -186,6 +216,7 @@ def run_fit_analyses(fit_data):
             else:
                 linear_results = pd.concat((linear_results, linear_result), ignore_index=True)
 
+            #Run planned ttest
             comparisons = [['no pain', 'acute pain'], ['no pain', 'chronic pain']]
             model_data = model_data.rename(columns={'participant': 'participant_id'})
             ttest_model = statistics.planned_ttests(parameter, 'pain_group', comparisons, model_data)
@@ -201,22 +232,23 @@ def run_fit_analyses(fit_data):
     ttest_results.to_csv('SOMA_RL/stats/pain_fits_ttest_results.csv', index=False)
 
     for model in fit_data:
-        plot_rainclouds(f'{model}-model-fits', fit_data[model])
-
-    return linear_results, ttest_results
+        plot_parameter_rainclouds(f'{model}-model-fits', fit_data[model])
 
 def create_confusion_matrix(dataloader, fit_data):
-    confusion_matrix = pd.DataFrame(index=fit_data.keys(), columns=fit_data.keys()) #Rows = model fit, Columns = generated model
-    number_samples = dataloader.get_num_samples_by_group('simulated')
+    confusion_matrix = pd.DataFrame(index=fit_data.keys(), columns=fit_data.keys(), dtype=float) #Rows = model fit, Columns = generated model
+
+    data = dataloader.get_data()
+    number_trials_learning = data[0].groupby(['participant', 'pain_group']).size().reset_index(name='counts')
+    number_trials_transfer = data[1].groupby(['participant', 'pain_group']).size().reset_index(name='counts')
+    number_trials = number_trials_learning['counts'].values[0] + number_trials_transfer['counts'].values[0]
+    
     for model in fit_data:
         number_params = RLModel(model).get_n_parameters()
         model_fit = fit_data[model].copy()
         for gen_model in fit_data:
-            fit = model_fit[model_fit['model'] == gen_model]['fit'].mean()
-            BIC = np.log(number_samples)*number_params + 2*fit
-            confusion_matrix.loc[model, gen_model] = np.exp(-0.5 * BIC)
-    confusion_matrix = confusion_matrix.div(confusion_matrix.sum(axis=0), axis=1)
-    confusion_matrix = (confusion_matrix*100).round(0).astype(int)
+            fit = model_fit[model_fit['model'] == gen_model]['fit']
+            BIC = np.mean(np.log(number_trials)*number_params + 2*fit)
+            confusion_matrix.loc[model, gen_model] = BIC
             
     return confusion_matrix
             
@@ -232,28 +264,30 @@ def run_fit(learning_filename,
             generated=False, 
             clear_data=True, 
             progress_bar=True, 
-            multiprocessing=False):
-
+            multiprocessing=False,
+            training='torch',
+            training_epochs=1000,
+            optimizer_lr=0.01):
+    
     #Delete any existing files
     if clear_data:
         for f in os.listdir('SOMA_RL/fits/temp'):
             os.remove(os.path.join('SOMA_RL','fits','temp',f))
 
     #Run fits
-    if progress_bar:
-        print('\n')
-        participant_ids = DataLoader(learning_filename.replace('XX', models[0]), transfer_filename.replace('XX', models[0]), number_of_participants, generated=generated).get_participant_ids()
-        model_runs = len(models)**2 if 'XX' in learning_filename else len(models)
-        print(f"Number of participants: {len(participant_ids)}, Number of models: {model_runs}, Number of runs: {number_of_runs}, Total fits: {len(participant_ids)*model_runs*number_of_runs}")
-        loop = tqdm.tqdm(range(len(participant_ids)*model_runs*number_of_runs)) if not multiprocessing else None
     inputs = []
     columns = RLModel().get_model_columns()
     data_names = models if 'XX' in learning_filename else ['']
-    for data_model_name in data_names:  
+    for data_index, data_model_name in enumerate(data_names):  
         current_learning_filename = learning_filename.replace('XX', data_model_name)
         current_transfer_filename = transfer_filename.replace('XX', data_model_name)
         dataloader = DataLoader(current_learning_filename, current_transfer_filename, number_of_participants, generated=generated)
         participant_ids = dataloader.get_participant_ids()
+        if progress_bar and data_index == 0:
+            print('\n')
+            model_runs = len(models)**2 if 'XX' in learning_filename else len(models)
+            print(f"Number of participants: {len(participant_ids)}, Number of models: {model_runs}, Number of runs: {number_of_runs}, Total fits: {len(participant_ids)*model_runs*number_of_runs}")
+            loop = tqdm.tqdm(range(len(participant_ids)*model_runs*number_of_runs)) if not multiprocessing else None
         for participant in participant_ids:
             p_dataloader = copy.copy(dataloader)
             p_dataloader.filter_participant_data(participant)  
@@ -261,7 +295,7 @@ def run_fit(learning_filename,
                 for run in range(number_of_runs):
                     model = RLModel(model_name, random_params=random_params, fixed=fixed, bounds=bounds)
                     task = AvoidanceLearningTask()
-                    pipeline = RLPipeline(model, p_dataloader, task)
+                    pipeline = RLPipeline(model, p_dataloader, task, training, training_epochs, optimizer_lr, multiprocessing)
                     if multiprocessing:
                         inputs.append((pipeline, columns[model_name.split('+')[0]], participant, run))
                     else:
@@ -307,6 +341,7 @@ def run_fit_comparison(dataloader, models, group_ids, recovery='parameter'):
 
     #Load all data in the fit data
     files = os.listdir('SOMA_RL/fits/temp')
+    files = [f for f in files if 'ERROR' not in f]
     fit_data = {model: pd.DataFrame(columns=columns[model.split('+')[0]]) for model in models}
     full_fit_data = {model: pd.DataFrame(columns=columns[model.split('+')[0]]) for model in models}
     for f in files:
@@ -334,6 +369,12 @@ def run_fit_comparison(dataloader, models, group_ids, recovery='parameter'):
                 fit_data[model_name] = pd.concat((fit_data[model_name], best_participant_data), ignore_index=True)
                 full_fit_data[model_name] = pd.concat((full_fit_data[model_name], participant_data), ignore_index=True)
 
+    #Plot fit distributions
+    plot_fit_distributions(fit_data)
+
+    #Determine participants with outlier fits
+    determine_parameter_outliers(fit_data, dataloader)
+
     #Save fit data as a pickle file
     with open('SOMA_RL/fits/full_fit_data.pkl', 'wb') as f:
         pickle.dump(full_fit_data, f)
@@ -349,6 +390,12 @@ def run_fit_comparison(dataloader, models, group_ids, recovery='parameter'):
     # =============== REPORT FIT ================ #
     # =========================================== #
 
+    # Get number of samples per participant
+    data = dataloader.get_data()
+    number_trials_learning = data[0].groupby(['participant', 'pain_group']).size().reset_index(name='counts')
+    number_trials_transfer = data[1].groupby(['participant', 'pain_group']).size().reset_index(name='counts')
+    number_trials = number_trials_learning['counts'].values[0] + number_trials_transfer['counts'].values[0]
+
     group_AIC = {m: {} for m in models}
     group_BIC = {m: {} for m in models}
     for model_name in models:
@@ -356,17 +403,19 @@ def run_fit_comparison(dataloader, models, group_ids, recovery='parameter'):
         #Compute AIC and BIC
         for group in group_ids:
             group_fit = fit_data[model_name][fit_data[model_name]['pain_group'] == group]
-            total_NLL = np.sum(group_fit["fit"])
-            number_params = len(group_fit.columns) - 3
-            number_samples = dataloader.get_num_samples_by_group(group)
-            group_AIC[model_name][group] = 2*number_params + 2*total_NLL
-            group_BIC[model_name][group] = np.log(number_samples)*number_params + 2*total_NLL
-                    
-        total_NLL = np.sum(fit_data[model_name]["fit"])
-        number_params = len(fit_data[model_name].columns) - 3
-        number_samples = dataloader.get_num_samples()
-        AIC = 2*number_params + 2*total_NLL
-        BIC = np.log(number_samples)*number_params + 2*total_NLL
+            participant_NLL = group_fit["fit"]
+            number_params = len(group_fit.columns) - 4 # TODO: Check if this is always correct
+            participant_AIC = 2*number_params + 2*participant_NLL
+            participant_BIC = np.log(number_trials)*number_params + 2*participant_NLL
+            group_AIC[model_name][group] = np.mean(participant_AIC)
+            group_BIC[model_name][group] = np.mean(participant_BIC)
+
+        number_params = len(fit_data[model_name].columns) - 4
+        participant_NLL = fit_data[model_name]["fit"]
+        participant_AIC = 2*number_params + 2*participant_NLL
+        participant_BIC = np.log(number_trials)*number_params + 2*participant_NLL
+        AIC = np.mean(participant_AIC)
+        BIC = np.mean(participant_BIC)
         group_AIC[model_name]['full'] = AIC
         group_BIC[model_name]['full'] = BIC
 
@@ -385,11 +434,11 @@ def run_fit_comparison(dataloader, models, group_ids, recovery='parameter'):
     #Turn nested dictionary into dataframe
     group_AIC = pd.DataFrame(group_AIC)
     group_AIC['best_model'] = group_AIC.idxmin(axis=1)
-    group_AIC.to_csv('SOMA_RL/plots/group_AIC.csv')
+    group_AIC.to_csv('SOMA_RL/fits/group_AIC.csv')
 
     group_BIC = pd.DataFrame(group_BIC)
     group_BIC['best_model'] = group_BIC.idxmin(axis=1)
-    group_BIC.to_csv('SOMA_RL/plots/group_BIC.csv')
+    group_BIC.to_csv('SOMA_RL/fits/group_BIC.csv')
 
     print('AIC REPORT')
     print('==========')
@@ -436,7 +485,7 @@ def run_fit_simulations(learning_filename, transfer_filename, fit_data, models, 
             p_dataloader.filter_participant_data(participant) 
             model = RLModel(model_name, participant_params)
             task = AvoidanceLearningTask()
-            pipeline = RLPipeline(model, p_dataloader, task)
+            pipeline = RLPipeline(model, p_dataloader, task, training='None')
             if multiprocessing:
                 inputs.append((pipeline, columns, participant, group, n))
             else:
@@ -487,6 +536,31 @@ def run_fit_simulations(learning_filename, transfer_filename, fit_data, models, 
             else:
                 choice_rates[group][model_name] = pd.concat((choice_rates[group][model_name], participant_data), ignore_index=True)
 
+    #for accuracy, combine nested files (group, model_name)
+    accuracy_data = None
+    choice_data = None
+    for group in accuracy:
+        for model in accuracy[group]:
+
+            group_model_accuracy = accuracy[group][model].copy()
+            group_model_accuracy.insert(0, 'group', [group]*len(group_model_accuracy))
+            group_model_accuracy.insert(0, 'model', [model]*len(group_model_accuracy))
+
+            group_model_choice = choice_rates[group][model].copy()
+            group_model_choice.insert(0, 'group', [group]*len(group_model_choice))
+            group_model_choice.insert(0, 'model', [model]*len(group_model_choice))
+
+            if accuracy_data is None:
+                accuracy_data = group_model_accuracy
+                choice_data = group_model_choice
+            else:
+                accuracy_data = pd.concat((accuracy_data, group_model_accuracy), ignore_index=True)
+                choice_data = pd.concat((choice_data, group_model_choice), ignore_index=True)
+    accuracy_model = {model: {group: accuracy[group][model] for group in accuracy} for model in models}
+    choice_rates_model = {model: {group: choice_rates[group][model] for group in choice_rates} for model in models}
+    accuracy_data.to_csv('SOMA_RL/fits/modelsimulation_accuracy_data.csv', index=False)
+    choice_data.to_csv('SOMA_RL/fits/modelsimulation_choice_data.csv', index=False)
+
     #Delete all files
     for f in files:
         os.remove(os.path.join('SOMA_RL','fits','temp',f))
@@ -494,14 +568,9 @@ def run_fit_simulations(learning_filename, transfer_filename, fit_data, models, 
     #Plot simulations 
     for group in accuracy:
         plot_simulations(accuracy[group], prediction_errors[group], values[group], choice_rates[group], models, group, dataloader)
-
-    #Debug print
-    print('')
-
-    return None
+    plot_simulations_behaviours(accuracy_model, choice_rates_model, models, accuracy.keys(), dataloader)
 
 def generate_simulated_data(models, parameters, learning_filename=None, transfer_filename=None, task_design=None, fixed=None, bounds=None, datasets_to_generate=1, number_of_participants=0, multiprocessing=False, clear_data=True):
-
     '''
     Parameters
     ----------
@@ -555,11 +624,11 @@ def generate_simulated_data(models, parameters, learning_filename=None, transfer
             model_parameters = parameters[model_name] if not random_params else None
             model = RLModel(model_name, model_parameters, random_params=parameters, fixed=fixed, bounds=bounds)
             task = AvoidanceLearningTask(task_design)
-            pipeline = RLPipeline(model, dataloader=p_dataloader, task=task)
+            pipeline = RLPipeline(model, dataloader=p_dataloader, task=task, training='scipy')
             if multiprocessing:
-                inputs.append((pipeline, columns, 'simulation', 'simulation', run, 'generate_data=True'))
+                inputs.append((pipeline, columns, run, 'simulation', run, 'generate_data=True'))
             else:
-                pipeline.run_simulations((columns, 'simulation', 'simulation', run), generate_data=True)
+                pipeline.run_simulations((columns, run, 'simulation', run), generate_data=True)
                 loop.update(1)
 
     #Run all generations in parallel
@@ -599,7 +668,7 @@ def generate_simulated_data(models, parameters, learning_filename=None, transfer
         model_learning.to_csv(f'SOMA_RL/data/generated/{model}_generated_learning.csv', index=False)
         model_transfer.to_csv(f'SOMA_RL/data/generated/{model}_generated_transfer.csv', index=False)
 
-def run_generative_fits(models, number_of_runs=1, datasets_to_generate=1, fixed=None, bounds=None, multiprocessing=False, recovery='parameter'):
+def run_generative_fits(models, number_of_runs=1, datasets_to_generate=1, fixed=None, bounds=None, multiprocessing=False, recovery='parameter', training='torch', training_epochs=1000, optimizer_lr=0.01):
 
     #Find all files in SOMA_RL/data/generated that are not folders
     for f in os.listdir('SOMA_RL/fits/temp'):
@@ -622,11 +691,90 @@ def run_generative_fits(models, number_of_runs=1, datasets_to_generate=1, fixed=
                         'clear_data':         False,
                         'progress_bar':       True,
                         'number_of_files':    num_files,
-                        'multiprocessing':    multiprocessing}
+                        'multiprocessing':    multiprocessing,
+                        'training':           training,
+                        'training_epochs':    training_epochs,
+                        'optimizer_lr':       optimizer_lr}
 
         print(f'\nFitting model: {model}')
         dataloader = run_fit(**fit_params)
     
     return dataloader
 
+def determine_parameter_outliers(fit_data, dataloader):
+
+    outliers = {model: {} for model in fit_data}
+    participant_outliers = {model: {} for model in fit_data}
+    model_outliers = {model: {} for model in fit_data}
+    model_params = {model: [] for model in fit_data}
+    for model in fit_data:
+        model_data = fit_data[model].copy()
+        parameter_bounds = RLModel(model).bounds[model.split('+')[0]]
+        outliers[model] = {param: [] for param in parameter_bounds}
+
+        for param in parameter_bounds:
+            parameter_data = model_data[['participant', 'fit', param]]
+            parameter_outliers = parameter_data[(parameter_data[param] == parameter_bounds[param][0]) | (parameter_data[param] == parameter_bounds[param][1])]
+            outliers[model][param] = parameter_outliers
+        model_params[model] = len(parameter_bounds)
+        participant_outliers[model] = pd.concat([outliers[model][param]['participant'] for param in outliers[model]]).value_counts().sort_values(ascending=False)
+        model_outliers[model] = participant_outliers[model].value_counts().sort_index()
+
+    #Convert to DataFrame for easier viewing
+    outliers_summary = pd.DataFrame(model_outliers).T
+    outliers_summary = outliers_summary.fillna(0).astype(int)
+    outliers_summary['total'] = outliers_summary.sum(axis=1)
+
+    #Join dataframes into a dictionary
+    outlier_results = {'participant_outliers': participant_outliers, 'model_outliers': model_outliers, 'outliers_summary': outliers_summary, 'model_params': model_params}
+    outlier_results = add_outlier_data(dataloader, outlier_results)
+
+    #Save participant_outliers
+    with open('SOMA_RL/fits/parameter_outlier_results.pkl', 'wb') as f:
+        pickle.dump(outlier_results, f)
     
+def add_outlier_data(dataloader, outlier_results):
+    
+    proportion_violations = 0.5
+    model_params = outlier_results['model_params']
+    participant_outliers = outlier_results['participant_outliers']
+    outlier_data = {model: [] for model in participant_outliers}
+    for model in participant_outliers:
+        count_violations = int(np.round(model_params[model] * proportion_violations, 0))
+        model_outliers = participant_outliers[model][participant_outliers[model] > count_violations]
+        model_participant_data = pd.DataFrame(columns=['participant', 'accuracy', 'A', 'B', 'E', 'F', 'N'])
+        for participant in model_outliers.index:
+            participant_choice_rate = {}
+            participant_dataloader = copy.copy(dataloader)
+            participant_dataloader.filter_participant_data(participant)
+            participant_learning, participant_transfer = participant_dataloader.get_data()
+
+            #Compute choice rate
+            participant_transfer['stim1'] = participant_transfer['state'].apply(lambda x: x[-2])
+            participant_transfer['stim2'] = participant_transfer['state'].apply(lambda x: x[-1])
+            stims = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'N']
+            stim_pairs = [['A', 'C'], ['B', 'D'], ['E', 'G'], ['F', 'H']]
+            for stim in stims:
+                stim_transfer = participant_transfer[(participant_transfer['stim1'] == stim) | (participant_transfer['stim2'] == stim)]
+                stim_transfer['stim_chosen'] = stim_transfer.apply(lambda x: x['stim1'] if x['action'] == 0 else x['stim2'], axis=1)
+                participant_choice_rate[stim] = stim_transfer['stim_chosen'].value_counts(normalize=True).get(stim, 0)
+            reduced_choice_rate = {}
+            for pair in stim_pairs:
+                reduced_choice_rate[pair[0]] = (participant_choice_rate[pair[0]] + participant_choice_rate[pair[1]])/2
+            reduced_choice_rate['N'] = participant_choice_rate['N']
+
+            #Create participant dataframe
+            participant_data = pd.DataFrame({'participant': participant}, index=[0])
+            participant_data['accuracy'] = float(1-participant_learning['action'].mean())
+            for stim in reduced_choice_rate:
+                participant_data[stim] = reduced_choice_rate[stim]
+
+            #Append to model dataframe
+            model_participant_data = pd.concat((model_participant_data, participant_data))
+        
+        #Append to
+        outlier_data[model] = model_participant_data
+    
+    outlier_results['outlier_data'] = outlier_data
+
+    return outlier_results      

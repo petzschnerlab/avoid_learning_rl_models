@@ -2,7 +2,7 @@ import random as rnd
 import numpy as np
 
 from models.standard import QLearning, ActorCritic
-from models.relative import Relative, wRelative, QRelative
+from models.relative import Relative
 from models.hybrid import Hybrid2012, Hybrid2021
 
 class RLModel:
@@ -42,7 +42,9 @@ class RLModel:
                 if not self.model.optional_parameters.get(opt_key, True) and param_key in self.model.parameters:
                     self.model.parameters.pop(param_key)
                     self.model.bounds.pop(param_key)
-
+            if not self.model.optional_parameters['novel']:
+                self.model.novel_value = None
+            
             #Reorder optional parameters so that they are always in same order
             parameter_keys = [key for key in self.model.parameters.keys() if key not in linked_keys.values()]
             if self.model.optional_parameters['bias']:
@@ -140,24 +142,6 @@ class RLModel:
                                             'valence_factor',
                                             'novel_value',
                                             'decay_factor']
-        
-        model_parameters['QRelative'] = ['factual_lr',
-                                        'counterfactual_lr',
-                                        'contextual_lr',
-                                        'temperature',
-                                        'mixing_factor',
-                                        'valence_reward',
-                                        'novel_value',
-                                        'decay_factor']
-        
-        model_parameters['wRelative'] = ['factual_lr',
-                                        'counterfactual_lr',
-                                        'contextual_lr',
-                                        'temperature',
-                                        'mixing_factor',
-                                        'valence_factor',
-                                        'novel_value',
-                                        'decay_factor']
     
         return model_parameters
     
@@ -211,7 +195,7 @@ class RLModel:
                              'counterfactual_actor_lr': (0.01, .99),
                              'critic_lr': (0.01, .99),
                              'contextual_lr': (0.01, .99),
-                             'temperature': (0.01, 5),
+                             'temperature': (0.1, 5),
                              'mixing_factor': (0, 1),
                              'noise_factor': (0, 1),
                              'valence_factor': (0, 1),
@@ -231,8 +215,6 @@ class RLModel:
         model_classes = {'QLearning': QLearning,
                          'ActorCritic': ActorCritic,
                          'Relative': Relative,
-                         'wRelative': wRelative,
-                         'QRelative': QRelative,
                          'Hybrid2012': Hybrid2012,
                          'Hybrid2021': Hybrid2021}
         
