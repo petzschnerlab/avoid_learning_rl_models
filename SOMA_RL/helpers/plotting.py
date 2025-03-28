@@ -477,3 +477,33 @@ def compute_n_and_t(data: pd.DataFrame, splitting_column: str) -> tuple:
         t_scores = [stats.t.ppf(0.975, s-1) for s in sample_sizes]
 
     return sample_sizes, t_scores
+
+def plot_fit_distributions(fit_data):
+    models = fit_data.keys()
+    fig, ax = plt.subplots(1, len(models), figsize=(5*len(models), 5))
+    for i, model in enumerate(models):
+        model_data = fit_data[model]['fit'].values
+        
+        #Fit transformation
+        number_samples = 480
+        number_params = len(fit_data[model].columns) - 4
+        BICs = np.log(number_samples) * number_params + 2 * model_data
+
+        #Determine distribution
+        mu, std = np.mean(BICs), np.std(BICs)
+        x = np.linspace(min(BICs), max(BICs), 100)
+        y = (1/(std * np.sqrt(2 * np.pi))) * np.exp(-0.5 * ((x - mu) / std)**2) # TODO: Redo distrubution
+
+        #Compute kurtosis and skewness
+        kurtosis = pd.Series(BICs).kurtosis()
+        skewness = pd.Series(BICs).skew()
+
+        #Plot histogram and fitted normal distribution
+        ax[i].hist(BICs, bins=10, density=True, alpha=0.33, color='green')
+        ax[i].axvline(np.mean(BICs), color='green', linestyle='dashed', linewidth=1)
+        ax[i].plot(x, y, color='green', linewidth=2, label=None)
+        ax[i].set_title(f'{model}\nKurtosis: {kurtosis:.2f}, Skewness: {skewness:.2f}')
+        ax[i].set_xlabel('BIC')
+        ax[i].set_ylabel('Proportion')
+    plt.tight_layout()
+    plt.savefig('SOMA_RL/plots/model_fits_distributions.png')

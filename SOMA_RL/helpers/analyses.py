@@ -15,7 +15,7 @@ from models.rl_models import RLModel
 from helpers.dataloader import DataLoader
 from helpers.tasks import AvoidanceLearningTask
 from helpers.pipeline import RLPipeline, mp_run_fit, mp_run_simulations, mp_progress
-from helpers.plotting import plot_simulations, plot_simulations_behaviours, plot_parameter_fits, plot_model_fits, plot_rainclouds, plot_fits_by_run_number
+from helpers.plotting import plot_simulations, plot_simulations_behaviours, plot_parameter_fits, plot_model_fits, plot_rainclouds, plot_fits_by_run_number, plot_fit_distributions
 from helpers.statistics import Statistics
 
 
@@ -199,6 +199,14 @@ def run_fit_analyses(fit_data):
             
             #turn pain_group in model_data into a category
             model_data['pain_group'] = pd.Categorical(model_data['pain_group'], categories=['no pain', 'acute pain', 'chronic pain'])
+
+            #Log-Transform when needed
+            if parameter not in ['novel_factor', 'mixing_factor', 'valence_factor']: # Exclude parameters that are not to be log-transformed
+                if model_data[parameter].min() <= 0: 
+                    model_data[parameter] = model_data[parameter] - model_data[parameter].min() + 1  # Shift the parameter to be positive if it has non-positive values
+                model_data[parameter] = np.log(model_data[parameter])  # Log-transform the parameter to reduce skewness
+
+            #Run linear model
             linear_model = statistics.linear_model_categorical(f'{parameter} ~ pain_group', model_data)
             linear_result = linear_model['model_summary']
             linear_result.insert(0, 'parameter', parameter)
@@ -208,6 +216,7 @@ def run_fit_analyses(fit_data):
             else:
                 linear_results = pd.concat((linear_results, linear_result), ignore_index=True)
 
+            #Run planned ttest
             comparisons = [['no pain', 'acute pain'], ['no pain', 'chronic pain']]
             model_data = model_data.rename(columns={'participant': 'participant_id'})
             ttest_model = statistics.planned_ttests(parameter, 'pain_group', comparisons, model_data)
@@ -361,6 +370,12 @@ def run_fit_comparison(dataloader, models, group_ids, recovery='parameter'):
             else:
                 fit_data[model_name] = pd.concat((fit_data[model_name], best_participant_data), ignore_index=True)
                 full_fit_data[model_name] = pd.concat((full_fit_data[model_name], participant_data), ignore_index=True)
+
+    #Plot fit distributions
+    plot_fit_distributions(fit_data)
+
+    #Determine participants with outlier fits
+    determine_parameter_outliers(fit_data, dataloader)
 
     #Save fit data as a pickle file
     with open('SOMA_RL/fits/full_fit_data.pkl', 'wb') as f:
@@ -688,4 +703,82 @@ def run_generative_fits(models, number_of_runs=1, datasets_to_generate=1, fixed=
     
     return dataloader
 
+def determine_parameter_outliers(fit_data, dataloader):
+
+    outliers = {model: {} for model in fit_data}
+    participant_outliers = {model: {} for model in fit_data}
+    model_outliers = {model: {} for model in fit_data}
+    model_params = {model: [] for model in fit_data}
+    for model in fit_data:
+        model_data = fit_data[model].copy()
+        parameter_bounds = RLModel(model).bounds[model.split('+')[0]]
+        outliers[model] = {param: [] for param in parameter_bounds}
+
+        for param in parameter_bounds:
+            parameter_data = model_data[['participant', 'fit', param]]
+            parameter_outliers = parameter_data[(parameter_data[param] == parameter_bounds[param][0]) | (parameter_data[param] == parameter_bounds[param][1])]
+            outliers[model][param] = parameter_outliers
+        model_params[model] = len(parameter_bounds)
+        participant_outliers[model] = pd.concat([outliers[model][param]['participant'] for param in outliers[model]]).value_counts().sort_values(ascending=False)
+        model_outliers[model] = participant_outliers[model].value_counts().sort_index()
+
+    #Convert to DataFrame for easier viewing
+    outliers_summary = pd.DataFrame(model_outliers).T
+    outliers_summary = outliers_summary.fillna(0).astype(int)
+    outliers_summary['total'] = outliers_summary.sum(axis=1)
+
+    #Join dataframes into a dictionary
+    outlier_results = {'participant_outliers': participant_outliers, 'model_outliers': model_outliers, 'outliers_summary': outliers_summary, 'model_params': model_params}
+    outlier_results = add_outlier_data(dataloader, outlier_results)
+
+    #Save participant_outliers
+    with open('SOMA_RL/fits/parameter_outlier_results.pkl', 'wb') as f:
+        pickle.dump(outlier_results, f)
+
+    return outlier_results
     
+def add_outlier_data(dataloader, outlier_results):
+    
+    proportion_violations = 0.5
+    model_params = outlier_results['model_params']
+    participant_outliers = outlier_results['participant_outliers']
+    outlier_data = {model: [] for model in participant_outliers}
+    for model in participant_outliers:
+        count_violations = int(np.round(model_params[model] * proportion_violations, 0))
+        model_outliers = participant_outliers[model][participant_outliers[model] > count_violations]
+        model_participant_data = pd.DataFrame(columns=['participant', 'accuracy', 'A', 'B', 'E', 'F', 'N'])
+        for participant in model_outliers.index:
+            participant_choice_rate = {}
+            participant_dataloader = copy.copy(dataloader)
+            participant_dataloader.filter_participant_data(participant)
+            participant_learning, participant_transfer = participant_dataloader.get_data()
+
+            #Compute choice rate
+            participant_transfer['stim1'] = participant_transfer['state'].apply(lambda x: x[-2])
+            participant_transfer['stim2'] = participant_transfer['state'].apply(lambda x: x[-1])
+            stims = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'N']
+            stim_pairs = [['A', 'C'], ['B', 'D'], ['E', 'G'], ['F', 'H']]
+            for stim in stims:
+                stim_transfer = participant_transfer[(participant_transfer['stim1'] == stim) | (participant_transfer['stim2'] == stim)]
+                stim_transfer['stim_chosen'] = stim_transfer.apply(lambda x: x['stim1'] if x['action'] == 0 else x['stim2'], axis=1)
+                participant_choice_rate[stim] = stim_transfer['stim_chosen'].value_counts(normalize=True).get(stim, 0)
+            reduced_choice_rate = {}
+            for pair in stim_pairs:
+                reduced_choice_rate[pair[0]] = (participant_choice_rate[pair[0]] + participant_choice_rate[pair[1]])/2
+            reduced_choice_rate['N'] = participant_choice_rate['N']
+
+            #Create participant dataframe
+            participant_data = pd.DataFrame({'participant': participant}, index=[0])
+            participant_data['accuracy'] = float(1-participant_learning['action'].mean())
+            for stim in reduced_choice_rate:
+                participant_data[stim] = reduced_choice_rate[stim]
+
+            #Append to model dataframe
+            model_participant_data = pd.concat((model_participant_data, participant_data))
+        
+        #Append to
+        outlier_data[model] = model_participant_data
+    
+    outlier_results['outlier_data'] = outlier_data
+
+    return outlier_results      
