@@ -388,6 +388,9 @@ def run_fit_comparison(dataloader, models, group_ids, recovery='parameter'):
     #Determine participants with outlier fits
     determine_parameter_outliers(fit_data, dataloader)
 
+    #Run analyses on the fit data
+    compute_criterions(dataloader, fit_data, models, group_ids, recovery=recovery)
+
     #Save fit data as a pickle file
     if recovery is None: 
         with open(f'SOMA_RL/fits/full_fit_data.pkl', 'wb') as f:
@@ -406,6 +409,10 @@ def run_fit_comparison(dataloader, models, group_ids, recovery='parameter'):
     for f in files:
         os.remove(os.path.join('SOMA_RL','fits','temp',f))
 
+    return fit_data
+
+def compute_criterions(dataloader, fit_data, models, group_ids, recovery='parameter'):
+
     # =========================================== #
     # =============== REPORT FIT ================ #
     # =========================================== #
@@ -418,6 +425,8 @@ def run_fit_comparison(dataloader, models, group_ids, recovery='parameter'):
 
     group_AIC = {m: {} for m in models}
     group_BIC = {m: {} for m in models}
+    all_AIC = {m: {} for m in models}
+    all_BIC = {m: {} for m in models}
     for model_name in models:
 
         #Compute AIC and BIC
@@ -429,6 +438,8 @@ def run_fit_comparison(dataloader, models, group_ids, recovery='parameter'):
             participant_BIC = np.log(number_trials)*number_params + 2*participant_NLL
             group_AIC[model_name][group] = np.mean(participant_AIC)
             group_BIC[model_name][group] = np.mean(participant_BIC)
+            all_AIC[model_name][group] = participant_AIC.reset_index(drop=True)
+            all_BIC[model_name][group] = participant_BIC.reset_index(drop=True)
 
         number_params = len(fit_data[model_name].columns) - 4
         participant_NLL = fit_data[model_name]["fit"]
@@ -471,7 +482,39 @@ def run_fit_comparison(dataloader, models, group_ids, recovery='parameter'):
     print(group_BIC)
     print('==========')
 
-    return fit_data
+    #Create a dataframe for each key within all_AIC['QLearning+novel']
+    model_data_AIC = {m: {} for m in models}
+    model_data_BIC = {m: {} for m in models}
+    for model_name in all_AIC:
+        model_data_AIC[model_name] = pd.DataFrame(pd.concat(all_AIC[model_name].values(), ignore_index=True))
+        model_data_BIC[model_name] = pd.DataFrame(pd.concat(all_BIC[model_name].values(), ignore_index=True))
+        
+        group_names = []
+        for group in all_AIC[model_name]:
+            group_names.extend([group] * len(all_AIC[model_name][group]))
+
+    best_fits_AIC = pd.concat(model_data_AIC.values(), ignore_index=True, axis=1)
+    best_fits_AIC.columns = list(all_AIC.keys())
+    best_fits_AIC['best_model'] = best_fits_AIC.idxmin(axis=1)
+    best_fits_AIC.insert(0, 'group', group_names)
+
+    best_fits_BIC = pd.concat(model_data_BIC.values(), ignore_index=True, axis=1)
+    best_fits_BIC.columns = list(all_BIC.keys())
+    best_fits_BIC['best_model'] = best_fits_BIC.idxmin(axis=1)
+    best_fits_BIC.insert(0, 'group', group_names)
+
+    #Create best fit percentages
+    best_fits_AIC_summary = best_fits_AIC.groupby(['group', 'best_model']).size().unstack(fill_value=0)
+    best_fits_AIC_summary.loc['full'] = best_fits_AIC_summary.sum(numeric_only=True)
+    best_fits_AIC_summary = best_fits_AIC_summary.div(best_fits_AIC_summary.sum(axis=1), axis=0) * 100
+
+    best_fits_BIC_summary = best_fits_BIC.groupby(['group', 'best_model']).size().unstack(fill_value=0)
+    best_fits_BIC_summary.loc['full'] = best_fits_BIC_summary.sum(numeric_only=True)
+    best_fits_BIC_summary = best_fits_BIC_summary.div(best_fits_BIC_summary.sum(axis=1), axis=0) * 100
+
+    #Save as csv files
+    best_fits_AIC_summary.to_csv('SOMA_RL/fits/group_AIC_percentages.csv')
+    best_fits_BIC_summary.to_csv('SOMA_RL/fits/group_BIC_percentages.csv')
 
 def run_fit_simulations(learning_filename, transfer_filename, fit_data, models, participant_ids, group_ids, number_of_participants=0, multiprocessing=False):
 

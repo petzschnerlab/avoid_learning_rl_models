@@ -165,6 +165,8 @@ def export_fits(path):
     files_to_move = [
         'SOMA_RL/fits/fit_data.pkl',
         'SOMA_RL/fits/full_fit_data.pkl',
+        'SOMA_RL/fits/group_AIC_percentages.csv',
+        'SOMA_RL/fits/group_BIC_percentages.csv',
         'SOMA_RL/fits/modelsimulation_accuracy_data.csv',
         'SOMA_RL/fits/modelsimulation_choice_data.csv',
         'SOMA_RL/fits/parameter_outlier_results.pkl'
