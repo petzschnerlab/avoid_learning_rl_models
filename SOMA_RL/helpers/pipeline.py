@@ -157,7 +157,8 @@ class RLPipeline:
             accuracy.to_csv(f'SOMA_RL/fits/temp/{model.model_name}_{group}_{participant_id}_accuracy_sim_results.csv', index=False)
             prediction_errors.to_csv(f'SOMA_RL/fits/temp/{model.model_name}_{group}_{participant_id}_pe_sim_results.csv', index=False)
             values.to_csv(f'SOMA_RL/fits/temp/{model.model_name}_{group}_{participant_id}_values_sim_results.csv', index=False)
-            choice_rates.to_csv(f'SOMA_RL/fits/temp/{model.model_name}_{group}_{participant_id}_choice_sim_results.csv', index=False)        
+            choice_rates.to_csv(f'SOMA_RL/fits/temp/{model.model_name}_{group}_{participant_id}_choice_sim_results.csv', index=False)
+
 # Functions
 def export_fits(path):
 
@@ -211,14 +212,11 @@ def export_fits(path):
 def export_recovery(path):
 
     files_to_move = [
-        'SOMA_RL/fits/fit_data.pkl',
-        'SOMA_RL/fits/full_fit_data.pkl',
-        'SOMA_RL/plots/model_recovery.png'
-    ]
-
-    files_to_rename = [
-        ['SOMA_RL/fits/fit_data.pkl',       'SOMA_RL/fits/fit_data_RECOVERY.pkl'],
-        ['SOMA_RL/fits/full_fit_data.pkl',  'SOMA_RL/fits/full_fit_data_RECOVERY.pkl']
+        'SOMA_RL/plots/model_recovery.png',
+        'SOMA_RL/fits/fit_data_PARAMETER.pkl',
+        'SOMA_RL/fits/full_fit_data_PARAMETER.pkl',
+        'SOMA_RL/fits/fit_data_MODEL.pkl',
+        'SOMA_RL/fits/full_fit_data_MODEL.pkl',
     ]
 
     folders_to_move = [
@@ -229,12 +227,6 @@ def export_recovery(path):
     for file_to_move in files_to_move:
         if os.path.exists(file_to_move):
             shutil.copy(file_to_move, path)
-
-    for old_name, new_name in files_to_rename:
-        if os.path.exists(old_name):
-            if os.path.exists(new_name):
-                os.remove(new_name)
-            os.rename(old_name, new_name)
 
     for folder_to_move in folders_to_move:
         if os.path.exists(folder_to_move[0]):

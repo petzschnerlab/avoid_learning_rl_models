@@ -121,6 +121,7 @@ def plot_simulations(accuracy, prediction_errors, values, choice_rates, models, 
     fig.tight_layout()
     fig.suptitle(f"{group.title()}", x=0.001, y=.999, ha='left', fontsize=16)
     fig.savefig(os.path.join('SOMA_RL','plots',f"{group.replace(' ','')}_model_simulations.png"))
+    fig.savefig(os.path.join('SOMA_RL','plots',f"{group.replace(' ','')}_model_simulations.svg"), format='svg')
 
 def plot_simulations_behaviours(accuracy, choice_rates, models, groups, dataloader=None):
     colors = ['#33A02C', '#B2DF8A', '#FB9A99', '#E31A1C', '#D3D3D3']
@@ -207,6 +208,7 @@ def plot_simulations_behaviours(accuracy, choice_rates, models, groups, dataload
         #Metaplot settings
         fig.tight_layout()
         fig.savefig(os.path.join('SOMA_RL','plots', 'model_behaviours', f"{m}_model_behaviours.png"))
+        fig.savefig(os.path.join('SOMA_RL','plots', 'model_behaviours', f"{m}_model_behaviours.svg"), format='svg')
 
 def plot_fits_by_run_number(fit_data):
 
@@ -243,6 +245,7 @@ def plot_fits_by_run_number(fit_data):
 
     plt.tight_layout()
     plt.savefig('SOMA_RL/plots/fit-by-runs.png')
+    plt.savefig('SOMA_RL/plots/fit-by-runs.svg', format='svg')
 
 def rename_models(model_name):
     return model_name.split('+')[0].replace('Hybrid2', 'Hybrid 2').replace('ActorCritic', 'Actor Critic').replace('QLearning', 'Q Learning')
@@ -283,6 +286,7 @@ def plot_model_fits(confusion_matrix):
     plt.setp(ax.get_xticklabels(), rotation=45, ha='left')
     plt.tight_layout()
     plt.savefig(f'SOMA_RL/plots/model_recovery.png')
+    plt.savefig(f'SOMA_RL/plots/model_recovery.svg', format='svg')
 
 def plot_parameter_fits(models, fit_data, fixed=None, bounds=None):
     #Create a dictionary with model being keys and pd.dataframe empty as value
@@ -327,6 +331,8 @@ def plot_parameter_fits(models, fit_data, fixed=None, bounds=None):
         if not os.path.exists('SOMA_RL/plots/correlations'):
             os.makedirs('SOMA_RL/plots/correlations')
         plt.savefig(f'SOMA_RL/plots/correlations/{model}_correlation_plot.png')
+        plt.savefig(f'SOMA_RL/plots/correlations/{model}_correlation_plot.svg', format='svg')
+
 def plot_parameter_rainclouds(save_name: str, model_data: pd.DataFrame = None) -> None:
 
     """
@@ -404,6 +410,7 @@ def plot_parameter_rainclouds(save_name: str, model_data: pd.DataFrame = None) -
 
     #Save the plot
     plt.savefig(f'SOMA_RL/plots/fits/{save_name}.png')
+    plt.savefig(f'SOMA_RL/plots/fits/{save_name}.svg', format='svg')
 
     #Close figure
     plt.close()
@@ -532,4 +539,5 @@ def plot_fit_distributions(fit_data):
             ax.set_ylabel('Proportion')
     plt.tight_layout()
     plt.savefig('SOMA_RL/plots/model_fits_distributions.png')
+    plt.savefig('SOMA_RL/plots/model_fits_distributions.svg', format='svg')
     plt.close()

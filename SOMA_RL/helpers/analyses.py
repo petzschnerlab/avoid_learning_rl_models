@@ -78,7 +78,8 @@ def run_fit_empirical(learning_filename,
     
     fit_data = run_fit_comparison(dataloader, 
                                   models, 
-                                  dataloader.get_group_ids())
+                                  dataloader.get_group_ids(),
+                                  None)
     
     plot_fits_by_run_number(fit_data)
     
@@ -388,11 +389,18 @@ def run_fit_comparison(dataloader, models, group_ids, recovery='parameter'):
     determine_parameter_outliers(fit_data, dataloader)
 
     #Save fit data as a pickle file
-    with open('SOMA_RL/fits/full_fit_data.pkl', 'wb') as f:
-        pickle.dump(full_fit_data, f)
+    if recovery is None: 
+        with open(f'SOMA_RL/fits/full_fit_data.pkl', 'wb') as f:
+            pickle.dump(full_fit_data, f)
 
-    with open('SOMA_RL/fits/fit_data.pkl', 'wb') as f:
-        pickle.dump(fit_data, f)
+        with open(f'SOMA_RL/fits/fit_data.pkl', 'wb') as f:
+            pickle.dump(fit_data, f)  
+    else: 
+        with open(f'SOMA_RL/fits/full_fit_data_{recovery.UPPER()}.pkl', 'wb') as f:
+            pickle.dump(full_fit_data, f)
+
+        with open(f'SOMA_RL/fits/fit_data_{recovery.UPPER()}.pkl', 'wb') as f:
+            pickle.dump(fit_data, f)
 
     #Delete all files
     for f in files:
