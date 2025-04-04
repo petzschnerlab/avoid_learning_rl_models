@@ -194,12 +194,19 @@ def plot_simulations_behaviours(accuracy, choice_rates, models, groups, dataload
             ax[0, gi].spines['right'].set_visible(False)
 
             # Plot choice rates
-            ax[1, gi].bar(['High\nReward', 'Low\nReward', 'Low\nPunish', 'High\nPunish', 'Novel'], choice_rates[m][group].mean(axis=0), color=colors, alpha=0.5)
-            ax[1, gi].errorbar(['High\nReward', 'Low\nReward', 'Low\nPunish', 'High\nPunish', 'Novel'], choice_rates[m][group].mean(axis=0), yerr=choice_rates[m][group].sem()*stats.t.ppf(0.975, number_of_participants-1), fmt='.', color='grey')
+            _, t_scores = compute_n_and_t(choice_rates[m][group], None)
+            choice_data_long = choice_rates[m][group].stack().reset_index()[['level_1', 0]]
+            choice_data_long.columns = ['stimulus', 'choice_rate']
+            choice_data_long['stimulus'] = choice_data_long['stimulus'].replace({'A': 'High\nReward', 'B': 'Low\nReward', 'E': 'Low\nPunish', 'F': 'High\nPunish', 'N': 'Novel'})
+            choice_data_long.set_index('stimulus', inplace=True)
+            raincloud_plot(data=choice_data_long, ax=ax[1, gi], t_scores=t_scores)
+            ax[1, gi].errorbar(np.arange(1,choice_data_long.index.nunique()+1), choice_rates[m][group].mean(axis=0), yerr=choice_rates[m][group].sem()*stats.t.ppf(0.975, number_of_participants-1), fmt='.', color='grey')
             
             if dataloader is not None:
-                ax[1, gi].scatter(['High\nReward', 'Low\nReward', 'Low\nPunish', 'High\nPunish', 'Novel'], list(emp_choice_groups[group].values()), color='grey', marker='D', alpha=0.5)
+                ax[1, gi].scatter(np.arange(1,choice_data_long.index.nunique()+1), list(emp_choice_groups[group].values()), color='grey', marker='D', alpha=0.5)
 
+            #Set x-ticks and labels for the choice rate plot
+            ax[1, gi].set_xticks(np.arange(1,choice_data_long.index.nunique()+1), ['High\nReward', 'Low\nReward', 'Low\nPunish', 'High\nPunish', 'Novel'])
             ax[1, gi].set_ylim([0, 100])
             ax[1, gi].set_ylabel('Choice Rate (%)')
             ax[1, gi].spines['top'].set_visible(False)
@@ -442,11 +449,13 @@ def raincloud_plot(data: pd.DataFrame, ax: plt.axes, t_scores: list[float], alph
 
         #Set index name
         data.index.name = 'code'
-        data = data.to_frame()
+        if isinstance(data, pd.Series):
+            data = data.to_frame()
         data.columns = ['score']
 
         #Create a violin plot of the data for each level
         wide_data = data.reset_index().pivot(columns='code', values='score')
+        wide_data = wide_data[data.index.unique()]
         wide_list = [wide_data[code].dropna() for code in wide_data.columns]
         vp = ax.violinplot(wide_list, showmeans=False, showmedians=False, showextrema=False)
         

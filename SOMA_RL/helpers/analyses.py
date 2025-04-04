@@ -399,10 +399,10 @@ def run_fit_comparison(dataloader, models, group_ids, recovery='parameter'):
         with open(f'SOMA_RL/fits/fit_data.pkl', 'wb') as f:
             pickle.dump(fit_data, f)  
     else: 
-        with open(f'SOMA_RL/fits/full_fit_data_{recovery.UPPER()}.pkl', 'wb') as f:
+        with open(f'SOMA_RL/fits/full_fit_data_{recovery.upper()}.pkl', 'wb') as f:
             pickle.dump(full_fit_data, f)
 
-        with open(f'SOMA_RL/fits/fit_data_{recovery.UPPER()}.pkl', 'wb') as f:
+        with open(f'SOMA_RL/fits/fit_data_{recovery.upper()}.pkl', 'wb') as f:
             pickle.dump(fit_data, f)
 
     #Delete all files
@@ -497,6 +497,7 @@ def compute_criterions(dataloader, fit_data, models, group_ids, recovery='parame
     best_fits_AIC.columns = list(all_AIC.keys())
     best_fits_AIC['best_model'] = best_fits_AIC.idxmin(axis=1)
     best_fits_AIC.insert(0, 'group', group_names)
+    
 
     best_fits_BIC = pd.concat(model_data_BIC.values(), ignore_index=True, axis=1)
     best_fits_BIC.columns = list(all_BIC.keys())
@@ -506,10 +507,12 @@ def compute_criterions(dataloader, fit_data, models, group_ids, recovery='parame
     #Create best fit percentages
     best_fits_AIC_summary = best_fits_AIC.groupby(['group', 'best_model']).size().unstack(fill_value=0)
     best_fits_AIC_summary.loc['full'] = best_fits_AIC_summary.sum(numeric_only=True)
+    best_fits_AIC_summary = best_fits_AIC_summary.reindex(columns=list(all_AIC.keys()), fill_value=0)
     best_fits_AIC_summary = best_fits_AIC_summary.div(best_fits_AIC_summary.sum(axis=1), axis=0) * 100
 
     best_fits_BIC_summary = best_fits_BIC.groupby(['group', 'best_model']).size().unstack(fill_value=0)
     best_fits_BIC_summary.loc['full'] = best_fits_BIC_summary.sum(numeric_only=True)
+    best_fits_BIC_summary = best_fits_BIC_summary.reindex(columns=list(all_BIC.keys()), fill_value=0)
     best_fits_BIC_summary = best_fits_BIC_summary.div(best_fits_BIC_summary.sum(axis=1), axis=0) * 100
 
     #Save as csv files
