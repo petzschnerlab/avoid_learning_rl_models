@@ -43,7 +43,7 @@ def fixed_priors():
             'novel_value': .50, # Custom
         },
 
-        'Hybrid2021': {  # From Geana et al., 2021
+        'Hybrid2021': { # From Geana et al., 2021
             'factual_lr': 0.49,
             'counterfactual_lr': 0.49,
             'factual_actor_lr': .33,
@@ -51,6 +51,7 @@ def fixed_priors():
             'critic_lr': .48,
             'temperature': 0.06,
             'mixing_factor': 0.69,
+            'noise_factor': 0.04,
             'valence_factor': 0.33, # From Geana et al., 2021:
             'decay_factor': 0.08, # From Geana et al., 2021:
             'novel_value': .50, # Custom
