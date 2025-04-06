@@ -195,13 +195,13 @@ class RLModel:
                              'counterfactual_actor_lr': (0.01, .99),
                              'critic_lr': (0.01, .99),
                              'contextual_lr': (0.01, .99),
-                             'temperature': (0.1, 5),
+                             'temperature': (0.01, 5),
                              'mixing_factor': (0, 1),
-                             'noise_factor': (0, 1),
+                             'noise_factor': (0, .2),
                              'valence_factor': (0, 1),
                              'valence_reward': (0, 1),
                              'novel_value': (-1, 1),
-                             'decay_factor': (0, 1)}
+                             'decay_factor': (0, .2)}
 
         model_parameters = self.get_model_parameters()
         default_bounds = {}

@@ -8,7 +8,7 @@ def fixed_priors():
             'counterfactual_lr': 0.18,
             'temperature': 0.06,
             'decay_factor': 0.08, # From Geana et al., 2021:
-            'novel_value': .50, # Custom
+            'novel_value': 0, # Custom
         },
 
         'ActorCritic': {  # From Geana et al., 2021's Hybrid2021 model
@@ -18,7 +18,7 @@ def fixed_priors():
             'temperature': .06,
             'valence_factor': .33, # From Geana et al., 2021:
             'decay_factor': .08,
-            'novel_value': .50, # Custom
+            'novel_value': 0, # Custom
         },
 
         'Relative': {  # From Palminteri et al., 2015
@@ -27,7 +27,7 @@ def fixed_priors():
             'contextual_lr': 0.33,
             'temperature': 0.05,
             'decay_factor': 0.08, # From Geana et al., 2021:
-            'novel_value': .50, # Custom
+            'novel_value': 0, # Custom
         },
 
         'Hybrid2012': {  # From Geana et al., 2021:
@@ -40,7 +40,7 @@ def fixed_priors():
             'mixing_factor': 0.7, # From Gold et al., 2012
             'valence_factor': 0.33,
             'decay_factor': 0.08,
-            'novel_value': .50, # Custom
+            'novel_value': 0, # Custom
         },
 
         'Hybrid2021': { # From Geana et al., 2021
@@ -54,7 +54,7 @@ def fixed_priors():
             'noise_factor': 0.04,
             'valence_factor': 0.33, # From Geana et al., 2021:
             'decay_factor': 0.08, # From Geana et al., 2021:
-            'novel_value': .50, # Custom
+            'novel_value': 0, # Custom
         },
     }
 
