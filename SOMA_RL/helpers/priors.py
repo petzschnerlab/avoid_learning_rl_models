@@ -58,6 +58,14 @@ def fixed_priors():
         },
     }
 
+    fixed['StandardHybrid2012'] = fixed['Hybrid2012'].copy()
+    fixed['StandardHybrid2012'].pop('counterfactual_lr')
+    fixed['StandardHybrid2012'].pop('counterfactual_actor_lr')
+
+    fixed['StandardHybrid2021'] = fixed['Hybrid2021'].copy()
+    fixed['StandardHybrid2021'].pop('counterfactual_lr')
+    fixed['StandardHybrid2021'].pop('counterfactual_actor_lr')
+
     return fixed
 
 def bounds_priors():

@@ -37,14 +37,12 @@ if __name__ == "__main__":
               'ActorCritic+novel', #Standard + novel
               'Relative+novel', #Standard + novel
               'Hybrid2012+bias+novel', #Standard + novel
-              'Hybrid2021+bias+decay+novel'] #Standard + novel
-    
-    training_params = {'training':              'scipy',
-                       'training_epochs':       100,
-                       'optimizer_lr':          0.001,
-                    }
-    
-    fixed, bounds = get_priors()
+              'Hybrid2021+bias+decay+novel', #Standard + novel
+              'StandardHybrid2012+bias+novel', #Standard + novel
+              'StandardHybrid2021+bias+decay+novel' #Standard + novel
+    ]
+        
+    fixed, bounds = get_priors()    
     fit_params = {'learning_filename':          'SOMA_RL/data/pain_learning_processed.csv',
                   'transfer_filename':          'SOMA_RL/data/pain_transfer_processed.csv',
                   'models':                     models,
@@ -54,8 +52,8 @@ if __name__ == "__main__":
                   'bounds':                     bounds,
                   'number_of_runs':             10,
                   'multiprocessing':            True,
+                  'training':                   'scipy'
                  }
-    fit_params.update(training_params)
 
     run_fit_empirical(**fit_params)
     export_fits(path="SOMA_RL/reports")           

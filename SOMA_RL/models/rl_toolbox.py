@@ -191,7 +191,11 @@ class RLToolbox:
 
     def update_q_values(self, state):
         if self.training == 'torch':
-            learning_rates = torch.stack([self.factual_lr, self.counterfactual_lr]) if state['action'] == 0 else torch.stack([self.counterfactual_lr, self.factual_lr])
+            if 'Standard' in self.model_name:
+                learning_rates = torch.stack([self.factual_lr, self.factual_lr]) 
+            else:
+                learning_rates = torch.stack([self.factual_lr, self.counterfactual_lr]) if state['action'] == 0 else torch.stack([self.counterfactual_lr, self.factual_lr])
+            
             if 'Hybrid' in self.__class__.__name__:
                 prediction_errors = state['q_prediction_errors']
             elif 'Relative' in self.__class__.__name__:
@@ -200,17 +204,26 @@ class RLToolbox:
                 prediction_errors = state['prediction_errors'].detach()
             self.q_values[state['state_id']] = state['q_values'].detach() + (learning_rates * prediction_errors)
         else:
-            learning_rates = [self.factual_lr, self.counterfactual_lr] if state['action'] == 0 else [self.counterfactual_lr, self.factual_lr]
+            if 'Standard' in self.model_name:
+                learning_rates = [self.factual_lr, self.factual_lr]
+            else:
+                learning_rates = [self.factual_lr, self.counterfactual_lr] if state['action'] == 0 else [self.counterfactual_lr, self.factual_lr]
             prediction_errors = state['q_prediction_errors'] if 'Hybrid' in self.__class__.__name__ else state['prediction_errors']
             self.q_values[state['state_id']] = [state['q_values'][i] + (learning_rates[i] * prediction_errors[i]) for i in range(len(state['q_values']))]
 
     def update_w_values(self, state):
         if self.training == 'torch':
-            learning_rates = torch.stack([self.factual_actor_lr, self.counterfactual_actor_lr]) if state['action'] == 0 else torch.stack([self.counterfactual_actor_lr, self.factual_actor_lr])
+            if 'Standard' in self.model_name:
+                learning_rates = torch.stack([self.factual_actor_lr, self.factual_actor_lr])
+            else:
+                learning_rates = torch.stack([self.factual_actor_lr, self.counterfactual_actor_lr]) if state['action'] == 0 else torch.stack([self.counterfactual_actor_lr, self.factual_actor_lr])
             prediction_errors = state['v_prediction_errors'] if 'Hybrid' in self.__class__.__name__ else state['prediction_errors']
             new_w_values = state['w_values'].detach() + (learning_rates * prediction_errors)
         else:
-            learning_rates = [self.factual_actor_lr, self.counterfactual_actor_lr] if state['action'] == 0 else [self.counterfactual_actor_lr, self.factual_actor_lr]
+            if 'Standard' in self.model_name:
+                learning_rates = [self.factual_actor_lr, self.factual_actor_lr]
+            else:
+                learning_rates = [self.factual_actor_lr, self.counterfactual_actor_lr] if state['action'] == 0 else [self.counterfactual_actor_lr, self.factual_actor_lr]
             prediction_errors = state['v_prediction_errors'] if 'Hybrid' in self.__class__.__name__ else state['prediction_errors']
             new_w_values = [state['w_values'][i] + (learning_rates[i] * prediction_errors[i]) for i in range(len(state['w_values']))]
 
@@ -369,7 +382,7 @@ class RLToolbox:
             probability_values = (transformed_values/np.sum(transformed_values))
             uniform_dist = np.ones((len(probability_values)))/len(probability_values)
 
-        if self.__class__.__name__ == 'Hybrid2021':
+        if 'Hybrid2021' in self.__class__.__name__:
             probability_values = (((1-self.noise_factor)*probability_values).T + (self.noise_factor*uniform_dist)).T
 
         return -torch.log(probability_values) if self.training == 'torch' else -np.log(probability_values)

@@ -1,9 +1,10 @@
 import random as rnd
 import numpy as np
 
+from helpers.priors import get_priors
 from models.standard import QLearning, ActorCritic, ContextualQ
 from models.relative import Relative
-from models.hybrid import Hybrid2012, Hybrid2021
+from models.hybrid import Hybrid2012, Hybrid2021, StandardHybrid2012, StandardHybrid2021
 
 class RLModel:
 
@@ -22,8 +23,13 @@ class RLModel:
             model = model.replace('+novel', '')
             model = model.replace('+decay', '')
 
+            #Determine Hybrid counterfactual toggle
+            self.counterfactual = False if 'Standard' in model else True
+
             #Set fixed and bounds parameters
-            self.fixed, self.bounds = self.get_default_parameters()
+            #self.fixed, self.bounds = self.get_default_parameters() #TODO: Default parameters are probably not as good as priors, delete them?
+            self.fixed, _ = get_priors()
+            self.bounds = self.get_default_bounds()
             if fixed is not None:
                 if model in fixed:
                     self.fixed[model].update(fixed[model])
@@ -149,6 +155,14 @@ class RLModel:
                                             'valence_factor',
                                             'novel_value',
                                             'decay_factor']
+        
+        model_parameters['StandardHybrid2012'] = model_parameters['Hybrid2012'].copy()
+        model_parameters['StandardHybrid2012'].remove('counterfactual_lr')
+        model_parameters['StandardHybrid2012'].remove('counterfactual_actor_lr')
+
+        model_parameters['StandardHybrid2021'] = model_parameters['Hybrid2021'].copy()
+        model_parameters['StandardHybrid2021'].remove('counterfactual_lr')
+        model_parameters['StandardHybrid2021'].remove('counterfactual_actor_lr')
     
         return model_parameters
     
@@ -203,7 +217,7 @@ class RLModel:
                              'counterfactual_actor_lr': (0.01, .99),
                              'critic_lr': (0.01, .99),
                              'contextual_lr': (0.01, .99),
-                             'temperature': (0.01, 5),
+                             'temperature': (0.01, 1),
                              'mixing_factor': (0, 1),
                              'weighing_factor': (0, 1),
                              'noise_factor': (0, .2),
@@ -226,7 +240,9 @@ class RLModel:
                          'Relative': Relative,
                          'ContextualQ': ContextualQ,
                          'Hybrid2012': Hybrid2012,
-                         'Hybrid2021': Hybrid2021}
+                         'Hybrid2021': Hybrid2021,
+                         'StandardHybrid2012': StandardHybrid2012,
+                         'StandardHybrid2021': StandardHybrid2021}
         
         if model not in model_classes:
             raise ValueError(f'Model {model} not recognized.')
