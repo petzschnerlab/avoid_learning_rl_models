@@ -1,7 +1,7 @@
 import random as rnd
 import numpy as np
 
-from models.standard import QLearning, ActorCritic
+from models.standard import QLearning, ActorCritic, ContextualQ
 from models.relative import Relative
 from models.hybrid import Hybrid2012, Hybrid2021
 
@@ -119,6 +119,13 @@ class RLModel:
                                         'temperature',
                                         'novel_value',
                                         'decay_factor']
+        
+        model_parameters['ContextualQ'] = ['factual_lr',
+                                           'counterfactual_lr',
+                                           'temperature',
+                                           'weighing_factor',
+                                           'novel_value',
+                                           'decay_factor']
 
         model_parameters['Hybrid2012'] = ['factual_lr',
                                             'counterfactual_lr',
@@ -174,6 +181,7 @@ class RLModel:
                             'contextual_lr': 0.1,
                             'temperature': 0.1,
                             'mixing_factor': 0.5,
+                            'weighing_factor': 0.5,
                             'noise_factor': 0.1,
                             'valence_factor': 0.5,
                             'valence_reward': 0.5,
@@ -197,6 +205,7 @@ class RLModel:
                              'contextual_lr': (0.01, .99),
                              'temperature': (0.01, 5),
                              'mixing_factor': (0, 1),
+                             'weighing_factor': (0, 1),
                              'noise_factor': (0, .2),
                              'valence_factor': (0, 1),
                              'valence_reward': (0, 1),
@@ -215,6 +224,7 @@ class RLModel:
         model_classes = {'QLearning': QLearning,
                          'ActorCritic': ActorCritic,
                          'Relative': Relative,
+                         'ContextualQ': ContextualQ,
                          'Hybrid2012': Hybrid2012,
                          'Hybrid2021': Hybrid2021}
         

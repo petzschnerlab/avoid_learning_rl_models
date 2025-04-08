@@ -188,7 +188,7 @@ def run_recovery(models,
                             fixed=fixed, 
                             bounds=bounds)
 
-def run_fit_analyses(fit_data):
+def run_fit_analyses(fit_data, transform=True):
     
     linear_results = None
     ttest_results = None
@@ -203,10 +203,11 @@ def run_fit_analyses(fit_data):
             model_data['pain_group'] = pd.Categorical(model_data['pain_group'], categories=['no pain', 'acute pain', 'chronic pain'])
 
             #Log-Transform when needed
-            if parameter not in ['novel_factor', 'mixing_factor', 'valence_factor']: # Exclude parameters that are not to be log-transformed
-                if model_data[parameter].min() <= 0: 
-                    model_data[parameter] = model_data[parameter] - model_data[parameter].min() + 1  # Shift the parameter to be positive if it has non-positive values
-                model_data[parameter] = np.log(model_data[parameter])  # Log-transform the parameter to reduce skewness
+            if transform:
+                if parameter not in ['novel_factor', 'mixing_factor', 'valence_factor']: # Exclude parameters that are not to be log-transformed
+                    if model_data[parameter].min() <= 0: 
+                        model_data[parameter] = model_data[parameter] - model_data[parameter].min() + 1  # Shift the parameter to be positive if it has non-positive values
+                    model_data[parameter] = np.log(model_data[parameter])  # Log-transform the parameter to reduce skewness
 
             #Run linear model
             linear_model = statistics.linear_model_categorical(f'{parameter} ~ pain_group', model_data)

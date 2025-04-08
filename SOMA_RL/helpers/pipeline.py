@@ -119,7 +119,8 @@ class RLPipeline:
 
         value_labels = {'QLearning': 'q_values', 
                         'ActorCritic': 'w_values', 
-                        'Relative': 'q_values', 
+                        'Relative': 'q_values',
+                        'ContextualQ': 'q_values', 
                         'Hybrid2012': 'h_values',
                         'Hybrid2021': 'h_values'}
         
