@@ -56,6 +56,15 @@ def fixed_priors():
             'decay_factor': 0.08, # From Geana et al., 2021:
             'novel_value': 0, # Custom
         },
+
+        'ContextualQ': {  # From Palminteri et al., 2015
+            'factual_lr': 0.28,
+            'counterfactual_lr': 0.18,
+            'temperature': 0.06,
+            'weighing_factor': 0.5, # Custom
+            'decay_factor': 0.08, # From Geana et al., 2021:
+            'novel_value': 0, # Custom
+        },
     }
 
     fixed['StandardHybrid2012'] = fixed['Hybrid2012'].copy()
