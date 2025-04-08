@@ -123,13 +123,10 @@ class RLToolbox:
         return state
     
     def get_final_w_values(self, state):
-        if self.optional_parameters['decay']:
-            state['w_values'] = self.get_decayed_w_values(state)
+        if self.training == 'torch':
+            state['w_values'] = torch.stack([self.final_w_values[stim] for stim in state['stim_id']])
         else:
-            if self.training == 'torch':
-                state['w_values'] = torch.stack([self.final_w_values[stim] for stim in state['stim_id']])
-            else:
-                state['w_values'] = [self.final_w_values[stim].values[0] for stim in state['stim_id']]
+            state['w_values'] = [self.final_w_values[stim].values[0] for stim in state['stim_id']]
         return state
     
     def get_decayed_q_values(self, state):
@@ -144,19 +141,6 @@ class RLToolbox:
             q_initial_decayed = [q*(self.decay_factor) for q in q_initial]
             q_values = [q_final_decayed[i].values[0] + q_initial_decayed[i].values[0] for i in range(len(q_final))]
         return q_values
-    
-    def get_decayed_w_values(self, state):
-        if self.training == 'torch':
-            w_final = torch.stack([self.final_w_values[stim] for stim in state['stim_id']])
-            w_initial = torch.stack([torch.tensor(self.initial_w_values[stim][0]) for stim in state['stim_id']])
-            w_values = w_final*(1-self.decay_factor) + w_initial*(self.decay_factor)
-        else:
-            w_final = [self.final_w_values[stim] for stim in state['stim_id']]
-            w_initial = [self.initial_w_values[stim] for stim in state['stim_id']]
-            w_final_decayed = [w*(1-self.decay_factor) for w in w_final]
-            w_initial_decayed = [w*(self.decay_factor) for w in w_initial]
-            w_values = [w_final_decayed[i].values[0] + w_initial_decayed[i].values[0] for i in range(len(w_final))]
-        return w_values
 
     def torch_select_action(self, probabilities):
         number_of_tries = 0
