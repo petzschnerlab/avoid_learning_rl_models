@@ -387,7 +387,7 @@ def plot_parameter_rainclouds(save_name: str, model_data: pd.DataFrame = None) -
 
         #Get descriptive statistics for the group
         group_data = group_data.set_index(condition_name)[parameter].astype(float)
-        if parameter not in ['novel_value', 'mixing_factor', 'valence_factor']: # Exclude parameters that are not to be log-transformed
+        if parameter not in ['novel_value', 'mixing_factor', 'valence_factor', 'weighing_factor']: # Exclude parameters that are not to be log-transformed
             if group_data.min() <= 0: 
                 group_data = group_data - group_data.min() + 1  # Shift the parameter to be positive if it has non-positive values
             group_data = np.log(group_data)  # Log-transform the parameter to reduce skewness
