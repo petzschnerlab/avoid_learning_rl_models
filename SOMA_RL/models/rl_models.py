@@ -23,9 +23,6 @@ class RLModel:
             model = model.replace('+novel', '')
             model = model.replace('+decay', '')
 
-            #Determine Hybrid counterfactual toggle
-            self.counterfactual = False if 'Standard' in model else True
-
             #Set fixed and bounds parameters
             #self.fixed, self.bounds = self.get_default_parameters() #TODO: Default parameters are probably not as good as priors, delete them?
             self.fixed, _ = get_priors()
