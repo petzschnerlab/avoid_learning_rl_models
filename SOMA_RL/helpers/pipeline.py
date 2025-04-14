@@ -172,7 +172,7 @@ def export_fits(path):
         'SOMA_RL/fits/group_BIC_percentages.csv',
         'SOMA_RL/fits/modelsimulation_accuracy_data.csv',
         'SOMA_RL/fits/modelsimulation_choice_data.csv',
-        'SOMA_RL/fits/parameter_outlier_results.pkl'
+        'SOMA_RL/fits/parameter_outlier_results.pkl',
         'SOMA_RL/fits/group_AIC.csv',
         'SOMA_RL/fits/group_BIC.csv',
 
