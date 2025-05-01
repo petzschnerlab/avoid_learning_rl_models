@@ -1,6 +1,5 @@
 import os
 import copy
-import pickle
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -34,9 +33,9 @@ def plot_simulations(accuracy, prediction_errors, values, choice_rates, models, 
             emp_choice_rates[pair[0]] = (emp_choice_rate[pair[0]] + emp_choice_rate[pair[1]])/2
         emp_choice_rates['N'] = emp_choice_rate['N']
 
-    colors = ['#33A02C', '#B2DF8A', '#FB9A99', '#E31A1C', '#D3D3D3']
-    bi_colors = ['#B2DF8A', '#FB9A99']
-    val_colors = ['#33A02C', '#B2DF8A', '#FB9A99', '#E31A1C']
+    colors = get_colors('condition')
+    bi_colors = get_colors('condition_2')
+    val_colors = get_colors('condition')[:-1]
     fig, ax = plt.subplots(4, np.max((2,len(models))), figsize=(4*len(models), 15))
     for i, m in enumerate(models):
 
@@ -124,8 +123,7 @@ def plot_simulations(accuracy, prediction_errors, values, choice_rates, models, 
     fig.savefig(os.path.join('SOMA_RL','plots',f"{group.replace(' ','')}_model_simulations.svg"), format='svg')
 
 def plot_simulations_behaviours(accuracy, choice_rates, models, groups, dataloader=None):
-    colors = ['#33A02C', '#B2DF8A', '#FB9A99', '#E31A1C', '#D3D3D3']
-    bi_colors = ['#B2DF8A', '#FB9A99']
+    bi_colors = get_colors('condition_2')
 
     if dataloader is not None:
 
@@ -404,7 +402,8 @@ def plot_parameter_rainclouds(save_name: str, model_data: pd.DataFrame = None) -
         ax.set_xticks(x_values, x_labels)
         ax.set_xlabel('')
         y_label = parameter.replace('_', ' ').replace('lr', 'learning rate').title()
-        y_label = f'Log-Transformed {y_label}' if parameter not in ['novel_value', 'mixing_factor', 'valence_factor'] else f'{y_label}'
+        y_label = f'Log-Transformed {y_label}' if parameter not in ['novel_value', 'mixing_factor', 'valence_factor', 'weighing_factor'] else f'{y_label}'
+        y_label = 'Weighting Factor' if parameter == 'weighing_factor' else y_label
         ax.set_ylabel(y_label)
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
@@ -441,11 +440,11 @@ def raincloud_plot(data: pd.DataFrame, ax: plt.axes, t_scores: list[float], alph
         
         #Set parameters
         if data.index.nunique() == 2:
-            colors = ['#B2DF8A', '#FB9A99']
+            colors = get_colors('condition_2')
         elif data.index.nunique() == 3:
-            colors = ['#B2DF8A', '#FFD92F', '#FB9A99']
+            colors = get_colors('group')
         else:
-            colors = ['#33A02C', '#B2DF8A', '#FB9A99', '#E31A1C', '#D3D3D3']
+            colors = get_colors('condition')
 
         #Set index name
         data.index.name = 'code'
@@ -550,3 +549,14 @@ def plot_fit_distributions(fit_data):
     plt.savefig('SOMA_RL/plots/model_fits_distributions.png')
     plt.savefig('SOMA_RL/plots/model_fits_distributions.svg', format='svg')
     plt.close()
+
+def get_colors(color_type = None):
+
+    colors = {'group': ['#B2DF8A', '#FFD92F', '#FB9A99'],
+              'condition': ['#095086', '#9BD2F2', '#ECA6A6', '#B00000', '#D3D3D3'],
+              'condition_2': ['#9BD2F2', '#ECA6A6']}
+    
+    if color_type is not None:
+        return colors[color_type]
+    else:
+        return colors
