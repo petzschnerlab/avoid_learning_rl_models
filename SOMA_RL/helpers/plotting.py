@@ -122,7 +122,7 @@ def plot_simulations(accuracy, prediction_errors, values, choice_rates, models, 
     fig.savefig(os.path.join('SOMA_RL','plots',f"{group.replace(' ','')}_model_simulations.png"))
     fig.savefig(os.path.join('SOMA_RL','plots',f"{group.replace(' ','')}_model_simulations.svg"), format='svg')
 
-def plot_simulations_behaviours(accuracy, choice_rates, models, groups, dataloader=None):
+def plot_simulations_behaviours(accuracy, choice_rates, models, groups, dataloader=None, rolling_mean=None, plot_type='raincloud'):
     bi_colors = get_colors('condition_2')
 
     if dataloader is not None:
@@ -172,15 +172,19 @@ def plot_simulations_behaviours(accuracy, choice_rates, models, groups, dataload
                 CIs = model_accuracy.groupby(['context', 'trial_total'], observed=False)['accuracy'].sem() * stats.t.ppf(0.975, number_of_participants-1)
                 averaged_accuracy = model_accuracy.groupby(['context', 'trial_total'], observed=False).mean().reset_index()
                 context_accuracy = averaged_accuracy[averaged_accuracy['context'] == context]['accuracy'].reset_index(drop=True).astype(float) * 100
+                if rolling_mean is not None:
+                    context_accuracy = context_accuracy.rolling(rolling_mean, min_periods=1, center=True).mean()
                 context_CIs = CIs[CIs.index.get_level_values('context') == context].reset_index(drop=True) * 100
                 
                 ax[0, gi].fill_between(context_accuracy.index, context_accuracy - context_CIs, context_accuracy + context_CIs, alpha=0.2, color=bi_colors[ci], edgecolor='none')
-                ax[0, gi].plot(context_accuracy, color=bi_colors[ci], alpha=0.8, label=context.replace('Loss Avoid', 'Punish'))
+                ax[0, gi].plot(context_accuracy, color=bi_colors[ci], alpha=0.8, label=context.replace('Loss Avoid', 'Punish'), linewidth=3)
 
                 if dataloader is not None:
                     trials = emp_accuracy_group[group][emp_accuracy_group[group]['context_val_name'] == context]['trial_number']
                     accuracies = emp_accuracy_group[group][emp_accuracy_group[group]['context_val_name'] == context]['accuracy']
-                    ax[0, gi].plot(trials, accuracies, color=bi_colors[ci], linestyle='dashed', alpha=0.5)
+                    if rolling_mean is not None:
+                        accuracies = accuracies.rolling(rolling_mean, min_periods=1, center=True).mean()
+                    ax[0, gi].plot(trials, accuracies, color=bi_colors[ci], linestyle='dashed', alpha=0.5, linewidth=2)
             
             ax[0, gi].set_title(f'{group.title()}')
             ax[0, gi].set_ylim([25, 100])
@@ -197,7 +201,14 @@ def plot_simulations_behaviours(accuracy, choice_rates, models, groups, dataload
             choice_data_long.columns = ['stimulus', 'choice_rate']
             choice_data_long['stimulus'] = choice_data_long['stimulus'].replace({'A': 'High\nReward', 'B': 'Low\nReward', 'E': 'Low\nPunish', 'F': 'High\nPunish', 'N': 'Novel'})
             choice_data_long.set_index('stimulus', inplace=True)
-            raincloud_plot(data=choice_data_long, ax=ax[1, gi], t_scores=t_scores)
+
+            if plot_type == 'raincloud':
+                raincloud_plot(data=choice_data_long, ax=ax[1, gi], t_scores=t_scores)
+            elif plot_type == 'bar':
+                bar_plot(data=choice_data_long, ax=ax[1, gi], t_scores=t_scores)
+            else:
+                raise ValueError(f"Invalid plot type {plot_type}. Choose either 'raincloud' or 'bar'.")
+            
             ax[1, gi].errorbar(np.arange(1,choice_data_long.index.nunique()+1), choice_rates[m][group].mean(axis=0), yerr=choice_rates[m][group].sem()*stats.t.ppf(0.975, number_of_participants-1), fmt='.', color='grey')
             
             if dataloader is not None:
@@ -205,15 +216,17 @@ def plot_simulations_behaviours(accuracy, choice_rates, models, groups, dataload
 
             #Set x-ticks and labels for the choice rate plot
             ax[1, gi].set_xticks(np.arange(1,choice_data_long.index.nunique()+1), ['High\nReward', 'Low\nReward', 'Low\nPunish', 'High\nPunish', 'Novel'])
-            ax[1, gi].set_ylim([0, 100])
+            ylims = [-4, 104] if plot_type == 'raincloud' else [0, 100]
+            ax[1, gi].set_ylim(ylims)
             ax[1, gi].set_ylabel('Choice Rate (%)')
             ax[1, gi].spines['top'].set_visible(False)
             ax[1, gi].spines['right'].set_visible(False)
 
         #Metaplot settings
         fig.tight_layout()
-        fig.savefig(os.path.join('SOMA_RL','plots', 'model_behaviours', f"{m}_model_behaviours.png"))
-        fig.savefig(os.path.join('SOMA_RL','plots', 'model_behaviours', f"{m}_model_behaviours.svg"), format='svg')
+        save_name = f"{m}_model_behaviours_supplemental.png" if plot_type == 'raincloud' else f"{m}_model_behaviours.png"
+        fig.savefig(os.path.join('SOMA_RL','plots', 'model_behaviours', save_name))
+        fig.savefig(os.path.join('SOMA_RL','plots', 'model_behaviours', save_name.replace('.png','.svg')), format='svg')
 
 def plot_fits_by_run_number(fit_data):
 
@@ -415,13 +428,14 @@ def plot_parameter_rainclouds(save_name: str, model_data: pd.DataFrame = None) -
         fig.delaxes(ax)
 
     #Save the plot
+    save_name = f'{save_name}_supplemental' if plot_type == 'raincloud' else save_name
     plt.savefig(f'SOMA_RL/plots/fits/{save_name}.png')
     plt.savefig(f'SOMA_RL/plots/fits/{save_name}.svg', format='svg')
 
     #Close figure
     plt.close()
 
-def raincloud_plot(data: pd.DataFrame, ax: plt.axes, t_scores: list[float], alpha: float=0.25) -> None:
+def raincloud_plot(data: pd.DataFrame, ax: plt.axes, t_scores: list[float], alpha: float=0.25, plot_type='raincloud') -> None:
         
         """
         Create a raincloud plot of the data
@@ -476,6 +490,50 @@ def raincloud_plot(data: pd.DataFrame, ax: plt.axes, t_scores: list[float], alph
         for factor_index, factor in enumerate(data.index.unique()):
             ax.add_patch(plt.Rectangle((factor_index+1-0.4, (mean_data.loc[factor] - CIs.loc[factor])['score']), 0.8, 2*CIs.loc[factor], fill=None, edgecolor='darkgrey'))
             ax.hlines(mean_data.loc[factor], factor_index+1-0.4, factor_index+1+0.4, color='darkgrey')            
+
+
+def bar_plot(data: pd.DataFrame, ax: plt.axes, t_scores: list[float], alpha: float=0.25) -> None:
+        
+        """
+        Create a raincloud plot of the data
+
+        Parameters
+        ----------
+        data : DataFrame
+            The data to be plotted
+        ax : Axes
+            The axes to plot the data on
+        t_scores : list
+            The t-scores for each group
+        alpha : float
+            The transparency of the scatter plot
+        """
+
+        #Set colors
+        if data.index.nunique() == 2:
+            colors = get_colors('condition_2')
+        elif data.index.nunique() == 3:
+            colors = get_colors('group')
+        else:
+            colors = get_colors('condition')
+
+        #Set index name
+        data.index.name = 'code'
+        if isinstance(data, pd.Series):
+            data = data.to_frame()
+        data.columns = ['score']
+         
+        #Compute the mean and 95% CIs for the choice rate for each symbol
+        mean_data = data.groupby('code').mean()
+        mean_data = mean_data.reindex(['High\nReward', 'Low\nReward', 'Low\nPunish', 'High\nPunish', 'Novel'])
+        mean_data = mean_data.dropna()
+        CIs = data.groupby('code').sem()['score'] 
+        CIs = CIs.reindex(['High\nReward', 'Low\nReward', 'Low\nPunish', 'High\nPunish', 'Novel'])
+        CIs = CIs.dropna()
+        CIs = CIs * t_scores
+
+        #Add barplot with CIs
+        ax.bar(np.arange(1,len(mean_data['score'])+1), mean_data['score'], yerr=CIs, color=colors, alpha=alpha, capsize=5, ecolor='dimgrey')                        
 
 def compute_n_and_t(data: pd.DataFrame, splitting_column: str) -> tuple:
 
