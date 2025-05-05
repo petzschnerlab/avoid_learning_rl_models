@@ -351,7 +351,7 @@ def plot_parameter_fits(models, fit_data, fixed=None, bounds=None):
         plt.savefig(f'SOMA_RL/plots/correlations/{model}_correlation_plot.png')
         plt.savefig(f'SOMA_RL/plots/correlations/{model}_correlation_plot.svg', format='svg')
 
-def plot_parameter_rainclouds(save_name: str, model_data: pd.DataFrame = None) -> None:
+def plot_parameter_data(save_name: str, model_data: pd.DataFrame = None, plot_type: str = 'raincloud') -> None:
 
     """
     Create raincloud plots of the data
@@ -409,7 +409,12 @@ def plot_parameter_rainclouds(save_name: str, model_data: pd.DataFrame = None) -
             ax = axs
         else:
             ax = axs[row, col] if num_subplots > 3 else axs[pi]
-        raincloud_plot(data=group_data, ax=ax, t_scores=t_scores)
+        if plot_type == 'raincloud':
+            raincloud_plot(data=group_data, ax=ax, t_scores=t_scores)
+        elif plot_type == 'bar':
+            group_bar_plot(data=group_data, ax=ax, t_scores=t_scores)
+        else:
+            raise ValueError(f"Invalid plot type {plot_type}. Choose either 'raincloud' or 'bar'.")
 
         #Create horizontal line for the mean the same width
         ax.set_xticks(x_values, x_labels)
@@ -435,7 +440,7 @@ def plot_parameter_rainclouds(save_name: str, model_data: pd.DataFrame = None) -
     #Close figure
     plt.close()
 
-def raincloud_plot(data: pd.DataFrame, ax: plt.axes, t_scores: list[float], alpha: float=0.25, plot_type='raincloud') -> None:
+def raincloud_plot(data: pd.DataFrame, ax: plt.axes, t_scores: list[float], alpha: float=0.25) -> None:
         
         """
         Create a raincloud plot of the data
@@ -491,6 +496,48 @@ def raincloud_plot(data: pd.DataFrame, ax: plt.axes, t_scores: list[float], alph
             ax.add_patch(plt.Rectangle((factor_index+1-0.4, (mean_data.loc[factor] - CIs.loc[factor])['score']), 0.8, 2*CIs.loc[factor], fill=None, edgecolor='darkgrey'))
             ax.hlines(mean_data.loc[factor], factor_index+1-0.4, factor_index+1+0.4, color='darkgrey')            
 
+def group_bar_plot(data: pd.DataFrame, ax: plt.axes, t_scores: list[float], alpha: float=0.25) -> None:
+
+        """
+        Create a raincloud plot of the data
+
+        Parameters
+        ----------
+        data : DataFrame
+            The data to be plotted
+        ax : Axes
+            The axes to plot the data on
+        t_scores : list
+            The t-scores for each group
+        alpha : float
+            The transparency of the scatter plot
+        """
+
+        #Set colors
+        if data.index.nunique() == 2:
+            colors = get_colors('condition_2')
+        elif data.index.nunique() == 3:
+            colors = get_colors('group')
+        else:
+            colors = get_colors('condition')
+
+        #Set index name
+        data.index.name = 'code'
+        if isinstance(data, pd.Series):
+            data = data.to_frame()
+        data.columns = ['score']
+         
+        #Compute the mean and 95% CIs for the choice rate for each symbol
+        mean_data = data.groupby('code').mean()
+        mean_data = mean_data.reindex(['no pain', 'acute pain', 'chronic pain'])
+        mean_data = mean_data.dropna()
+        CIs = data.groupby('code').sem()['score'] 
+        CIs = CIs.reindex(['no pain', 'acute pain', 'chronic pain'])
+        CIs = CIs.dropna()
+        CIs = CIs * t_scores
+
+        #Add barplot with CIs
+        ax.bar(np.arange(1,len(mean_data['score'])+1), mean_data['score'], yerr=CIs, color=colors, alpha=alpha, capsize=5, ecolor='dimgrey')                        
 
 def bar_plot(data: pd.DataFrame, ax: plt.axes, t_scores: list[float], alpha: float=0.25) -> None:
         

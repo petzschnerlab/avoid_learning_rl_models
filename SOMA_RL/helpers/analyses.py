@@ -15,7 +15,7 @@ from models.rl_models import RLModel
 from helpers.dataloader import DataLoader
 from helpers.tasks import AvoidanceLearningTask
 from helpers.pipeline import RLPipeline, mp_run_fit, mp_run_simulations, mp_progress
-from helpers.plotting import plot_simulations, plot_simulations_behaviours, plot_parameter_fits, plot_model_fits, plot_parameter_rainclouds, plot_fits_by_run_number, plot_fit_distributions
+from helpers.plotting import plot_simulations, plot_simulations_behaviours, plot_parameter_fits, plot_model_fits, plot_parameter_data, plot_fits_by_run_number, plot_fit_distributions
 from helpers.statistics import Statistics
 
 
@@ -246,7 +246,8 @@ def run_fit_analyses(fit_data, transform=True):
     posthoc_results.to_csv('SOMA_RL/stats/pain_fits_posthoc_results.csv', index=False)
 
     for model in fit_data:
-        plot_parameter_rainclouds(f'{model}-model-fits', fit_data[model])
+        plot_parameter_data(f'{model}-model-fits', copy.copy(fit_data[model]))
+        plot_parameter_data(f'{model}-model-fits', copy.copy(fit_data[model]), plot_type='bar')
 
 def create_confusion_matrix(dataloader, fit_data):
     confusion_matrix = pd.DataFrame(index=fit_data.keys(), columns=fit_data.keys(), dtype=float) #Rows = model fit, Columns = generated model
