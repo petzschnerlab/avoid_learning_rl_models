@@ -7,6 +7,9 @@ from scipy import stats
 
 from models.rl_models import RLModel
 
+plt.rcParams['font.family'] = 'Helvetica'
+plt.rcParams['font.size'] = 16
+
 def plot_simulations(accuracy, prediction_errors, values, choice_rates, models, group, dataloader=None):
     
     if dataloader is not None:
@@ -440,7 +443,7 @@ def plot_parameter_data(save_name: str, model_data: pd.DataFrame = None, plot_ty
     #Close figure
     plt.close()
 
-def raincloud_plot(data: pd.DataFrame, ax: plt.axes, t_scores: list[float], alpha: float=0.25) -> None:
+def raincloud_plot(data: pd.DataFrame, ax: plt.axes, t_scores: list[float], alpha: float=0.5) -> None:
         
         """
         Create a raincloud plot of the data
@@ -496,7 +499,7 @@ def raincloud_plot(data: pd.DataFrame, ax: plt.axes, t_scores: list[float], alph
             ax.add_patch(plt.Rectangle((factor_index+1-0.4, (mean_data.loc[factor] - CIs.loc[factor])['score']), 0.8, 2*CIs.loc[factor], fill=None, edgecolor='darkgrey'))
             ax.hlines(mean_data.loc[factor], factor_index+1-0.4, factor_index+1+0.4, color='darkgrey')            
 
-def group_bar_plot(data: pd.DataFrame, ax: plt.axes, t_scores: list[float], alpha: float=0.25) -> None:
+def group_bar_plot(data: pd.DataFrame, ax: plt.axes, t_scores: list[float], alpha: float=0.5) -> None:
 
         """
         Create a raincloud plot of the data
@@ -539,7 +542,7 @@ def group_bar_plot(data: pd.DataFrame, ax: plt.axes, t_scores: list[float], alph
         #Add barplot with CIs
         ax.bar(np.arange(1,len(mean_data['score'])+1), mean_data['score'], yerr=CIs, color=colors, alpha=alpha, capsize=5, ecolor='dimgrey')                        
 
-def bar_plot(data: pd.DataFrame, ax: plt.axes, t_scores: list[float], alpha: float=0.25) -> None:
+def bar_plot(data: pd.DataFrame, ax: plt.axes, t_scores: list[float], alpha: float=0.5) -> None:
         
         """
         Create a raincloud plot of the data
