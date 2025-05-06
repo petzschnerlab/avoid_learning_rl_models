@@ -8,7 +8,7 @@ from scipy import stats
 from models.rl_models import RLModel
 
 plt.rcParams['font.family'] = 'Helvetica'
-plt.rcParams['font.size'] = 16
+plt.rcParams['font.size'] = 14
 
 def plot_simulations(accuracy, prediction_errors, values, choice_rates, models, group, dataloader=None):
     
