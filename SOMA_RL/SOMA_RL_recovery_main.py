@@ -37,23 +37,16 @@ if __name__ == "__main__":
         +decay: Adds a decay parameter to the model (e.g. QLearning+decay), useable with all models
     '''
 
-    models = ['QLearning+novel', #Standard
-              'ActorCritic+novel', #Standard
-              'Relative+novel', #Standard
-              'Hybrid2012+bias+novel', #Standard
-              'Hybrid2021+bias+decay+novel'] #Standard
+    models = ['StandardHybrid2012+bias+novel', #Standard
+              'StandardHybrid2021+bias+decay+novel'] #Standard
 
     fixed, _ = get_priors()
-    bounds = {'QLearning':      {'temperature': (0.1, 1)},
-              'ActorCritic':    {'temperature': (0.1, 1)},
-              'Relative':       {'temperature': (0.1, 1)},
-              'Hybrid2012':     {'temperature': (0.1, 1)},
-              'Hybrid2021':     {'temperature': (0.1, 1)}}
-
-    training_params = {'training':              'scipy',
-                       'training_epochs':       100,
-                       'optimizer_lr':          0.001,
-                    }
+    bounds = {'StandardHybrid2012':     {'temperature': (0.1, .2),
+                                         'valence_factor': (0.5, 0.5)},
+              'StandardHybrid2021':     {'temperature': (0.1, .2),
+                                         'noise_factor': (0, 0),
+                                         'valence_factor': (0.5, 0.5)}}
+    
     generate_params = {'learning_filename':         'SOMA_RL/data/pain_learning_processed.csv',
                        'transfer_filename':         'SOMA_RL/data/pain_transfer_processed.csv',
                        'models':                    models,
@@ -63,9 +56,9 @@ if __name__ == "__main__":
                        'number_of_runs':            10,
                        'multiprocessing':           True,
                        'number_of_participants':    0,
+                       'training':                  'scipy',
                        }
-    generate_params.update(training_params)
 
     run_recovery(**generate_params, recovery='parameter')
-    run_recovery(**generate_params, recovery='model')
+    #run_recovery(**generate_params, recovery='model')
     export_recovery(path="SOMA_RL/reports")
