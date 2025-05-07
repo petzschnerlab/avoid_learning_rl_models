@@ -43,7 +43,7 @@ class AvoidanceLearningTask:
         self.rl_model.initial_q_values = pd.DataFrame([self.rl_model.q_values[self.rl_model.states[0]][0]]*9).T
         self.rl_model.initial_q_values.columns = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'N']
         
-        if 'Relative' in self.rl_model.__class__.__name__:
+        if self.rl_model.__class__.__name__ == 'Relative':
             self.rl_model.context_values = {state: [0] for state in states}
             self.rl_model.context_prediction_errors = {state: [0] for state in states}
 
@@ -194,7 +194,7 @@ class AvoidanceLearningTask:
         }
         self.rl_model.load_methods(methods)
 
-        if 'Relative' in self.rl_model.__class__.__name__:
+        if self.rl_model.__class__.__name__ == 'Relative':
             self.task_learning_data_columns += ['context_value']
             self.task_learning_data_columns += ['context_prediction_errors']
         

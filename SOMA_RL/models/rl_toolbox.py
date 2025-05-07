@@ -177,7 +177,7 @@ class RLToolbox:
         if self.training == 'torch':
             if 'Hybrid' in self.__class__.__name__:
                 prediction_errors = state['q_prediction_errors']
-            elif 'Relative' in self.__class__.__name__:
+            elif self.__class__.__name__ == 'Relative':
                 prediction_errors = state['prediction_errors']
             else:
                 prediction_errors = state['prediction_errors'].detach()
@@ -274,7 +274,7 @@ class RLToolbox:
         if self.__class__.__name__ != 'ActorCritic':
             self.update_q_values(state)
 
-        if 'Relative' in self.__class__.__name__:
+        if self.__class__.__name__ == 'Relative':
             self.update_context_values(state)
             self.update_context_prediction_errors(state)
             
@@ -298,7 +298,7 @@ class RLToolbox:
             if self.__class__.__name__ != 'ActorCritic':
                 self.q_values[s] = [0]*len(self.q_values[s])
 
-            if 'Relative' in self.__class__.__name__:
+            if self.__class__.__name__ == 'Relative':
                 self.context_values[s] = [0]*len(self.context_values[s])
                 self.context_prediction_errors[s] = [0]*len(self.context_prediction_errors[s])
 
@@ -320,7 +320,7 @@ class RLToolbox:
             if self.__class__.__name__ != 'ActorCritic':
                 self.q_values[s] = torch.zeros(len(self.q_values[s]))
 
-            if 'Relative' in self.__class__.__name__:
+            if self.__class__.__name__ == 'Relative':
                 self.context_values[s] = torch.zeros(len(self.context_values[s]))
                 self.context_prediction_errors[s] = torch.zeros(len(self.context_prediction_errors[s]))
 
