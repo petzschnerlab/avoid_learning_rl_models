@@ -185,9 +185,9 @@ class ActorCritic(RLToolbox, nn.Module):
     
     def compute_prediction_error(self, state):
         if self.training == 'torch':
-            state['prediction_errors'] = state['rewards'][state['action']] - state['v_values']
+            state['prediction_errors'] = state['rewards'] - state['v_values']
         else:
-            state['prediction_errors'] = [state['rewards'][state['action']] - state['v_values'][0] for i in range(len(state['rewards']))]
+            state['prediction_errors'] = [state['rewards'][i] - state['v_values'][0] for i in range(len(state['rewards']))]
 
         return state
 

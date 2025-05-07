@@ -61,10 +61,10 @@ class Hybrid2012(RLToolbox, nn.Module):
     def compute_prediction_error(self, state):
         if self.training == 'torch':
             state['q_prediction_errors'] = state['rewards'] - state['q_values'].detach()
-            state['v_prediction_errors'] = state['rewards'][state['action']] - state['v_values']
+            state['v_prediction_errors'] = state['rewards'] - state['v_values']
         else:
             state['q_prediction_errors'] = [state['rewards'][i] - state['q_values'][i] for i in range(len(state['rewards']))]
-            state['v_prediction_errors'] = [state['rewards'][state['action']] - state['v_values'][0] for i in range(len(state['rewards']))]
+            state['v_prediction_errors'] = [state['rewards'][i] - state['v_values'][0] for i in range(len(state['rewards']))]
 
         return state
 
@@ -228,7 +228,7 @@ class Hybrid2021(RLToolbox, nn.Module):
             state['v_prediction_errors'] = state['rewards'][state['action']] - state['v_values']
         else:
             state['q_prediction_errors'] = [state['rewards'][i] - state['q_values'][i] for i in range(len(state['rewards']))]
-            state['v_prediction_errors'] = [state['rewards'][state['action']] - state['v_values'][0] for i in range(len(state['rewards']))] #Uses selected reward
+            state['v_prediction_errors'] = [state['rewards'][i] - state['v_values'][0] for i in range(len(state['rewards']))] #Uses selected reward
 
         return state
 
@@ -390,7 +390,7 @@ class StandardHybrid2012(RLToolbox, nn.Module):
             state['v_prediction_errors'] = state['rewards'][state['action']] - state['v_values']
         else:
             state['q_prediction_errors'] = [state['rewards'][i] - state['q_values'][i] for i in range(len(state['rewards']))]
-            state['v_prediction_errors'] = [state['rewards'][state['action']] - state['v_values'][0] for i in range(len(state['rewards']))]
+            state['v_prediction_errors'] = [state['rewards'][i] - state['v_values'][0] for i in range(len(state['rewards']))]
 
         return state
 
@@ -550,7 +550,7 @@ class StandardHybrid2021(RLToolbox, nn.Module):
             state['v_prediction_errors'] = state['rewards'][state['action']] - state['v_values']
         else:
             state['q_prediction_errors'] = [state['rewards'][i] - state['q_values'][i] for i in range(len(state['rewards']))]
-            state['v_prediction_errors'] = [state['rewards'][state['action']] - state['v_values'][0] for i in range(len(state['rewards']))] #Uses selected reward
+            state['v_prediction_errors'] = [state['rewards'][i] - state['v_values'][0] for i in range(len(state['rewards']))] #Uses selected reward
 
         return state
 
