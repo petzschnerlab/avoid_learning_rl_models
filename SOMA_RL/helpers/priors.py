@@ -57,7 +57,7 @@ def fixed_priors():
             'novel_value': 0, # Custom
         },
 
-        'ContextualQ': {  # From Palminteri et al., 2015
+        'wRelative': {  # From Palminteri et al., 2015
             'factual_lr': 0.28,
             'counterfactual_lr': 0.18,
             'temperature': 0.06,

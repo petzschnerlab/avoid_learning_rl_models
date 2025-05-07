@@ -17,13 +17,14 @@ if __name__ == "__main__":
     '''
     Supported models: 
         QLearning, ActorCritic
-        Relative
+        Relative, wRelative
         Hybrid2012, Hybrid2021
 
     Standard models:
         QLearning: Standard Q-Learning Model
         ActorCritic: Standard Actor-Critic Model
         Relative: Standard Relative Model (Palminteri et al., 2015)
+        wRelative: Simplified Relative Model (Williams et al., ...)
         Hybrid2012+bias: Standard Hybrid 2012 Model (Gold et al., 2012)
         Hybrid2021+bias+decay: Standard Hybrid 2021 Model (Geana et al., 2021)
 
@@ -36,11 +37,12 @@ if __name__ == "__main__":
     models = ['QLearning+novel', #Standard + novel
               'ActorCritic+novel', #Standard + novel
               'Relative+novel', #Standard + novel
-              'Hybrid2012+bias+novel', #Standard + novel
-              'Hybrid2021+bias+decay+novel', #Standard + novel
+              'wRelative+novel', #Standard + novel
               'StandardHybrid2012+bias+novel', #Standard + novel
-              'StandardHybrid2021+bias+decay+novel' #Standard + novel
-    ]
+              'Hybrid2012+bias+novel', #Standard + novel
+              'StandardHybrid2021+bias+decay+novel', #Standard + novel
+              'Hybrid2021+bias+decay+novel', #Standard + novel
+    ] 
         
     fixed, bounds = get_priors()    
     fit_params = {'learning_filename':          'SOMA_RL/data/pain_learning_processed.csv',
@@ -51,7 +53,7 @@ if __name__ == "__main__":
                   'fixed':                      fixed,
                   'bounds':                     bounds,
                   'number_of_runs':             10,
-                  'multiprocessing':            True,
+                  'multiprocessing':            False,
                   'training':                   'scipy'
                  }
 

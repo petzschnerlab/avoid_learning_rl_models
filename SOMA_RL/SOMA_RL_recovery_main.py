@@ -21,13 +21,14 @@ if __name__ == "__main__":
     '''
     Supported models: 
         QLearning, ActorCritic
-        Relative
+        Relative, wRelative
         Hybrid2012, Hybrid2021
 
     Standard models:
         QLearning: Standard Q-Learning Model
         ActorCritic: Standard Actor-Critic Model
         Relative: Standard Relative Model (Palminteri et al., 2015)
+        wRelative: Simplified Relative Model (Williams et al., ...)
         Hybrid2012+bias: Standard Hybrid 2012 Model (Gold et al., 2012)
         Hybrid2021+bias+decay: Standard Hybrid 2021 Model (Geana et al., 2021)
 
@@ -37,23 +38,27 @@ if __name__ == "__main__":
         +decay: Adds a decay parameter to the model (e.g. QLearning+decay), useable with all models
     '''
 
-    models = ['QLearning+novel', #Standard
-              'ActorCritic+novel', #Standard
-              'Relative+novel', #Standard
-              'Hybrid2012+bias+novel', #Standard
-              'Hybrid2021+bias+decay+novel'] #Standard
+    models = ['QLearning+novel', #Standard + novel
+              'ActorCritic+novel', #Standard + novel
+              'Relative+novel', #Standard + novel
+              'wRelative+novel', #Standard + novel
+              'StandardHybrid2012+bias+novel', #Standard + novel
+              'Hybrid2012+bias+novel', #Standard + novel
+              'StandardHybrid2021+bias+decay+novel', #Standard + novel
+              'Hybrid2021+bias+decay+novel', #Standard + novel
+    ] 
 
     fixed, _ = get_priors()
-    bounds = {'QLearning':      {'temperature': (0.1, 1)},
-              'ActorCritic':    {'temperature': (0.1, 1)},
-              'Relative':       {'temperature': (0.1, 1)},
-              'Hybrid2012':     {'temperature': (0.1, 1)},
-              'Hybrid2021':     {'temperature': (0.1, 1)}}
+    bounds = {'QLearning':          {'temperature': (0.1, .2)},
+              'ActorCritic':        {'temperature': (0.1, .2)},
+              'Relative':           {'temperature': (0.1, .2)},
+              'wRelative':          {'temperature': (0.1, .2)},
+              'StandardHybrid2012': {'temperature': (0.1, .2), 'valence_factor': (0.5, 0.5)}, # Freeze valence_factor
+              'Hybrid2012':         {'temperature': (0.1, .2), 'valence_factor': (0.5, 0.5)}, # Freeze valence_factor
+              'StandardHybrid2021': {'temperature': (0.1, .2), 'noise_factor': (0, 0), 'valence_factor': (0.5, 0.5)}, # Freeze noise_factor, valence_factor
+              'Hybrid2021':         {'temperature': (0.1, .2), 'noise_factor': (0, 0), 'valence_factor': (0.5, 0.5)}, # Freeze noise_factor, valence_factor
+    }
 
-    training_params = {'training':              'scipy',
-                       'training_epochs':       100,
-                       'optimizer_lr':          0.001,
-                    }
     generate_params = {'learning_filename':         'SOMA_RL/data/pain_learning_processed.csv',
                        'transfer_filename':         'SOMA_RL/data/pain_transfer_processed.csv',
                        'models':                    models,
@@ -63,8 +68,8 @@ if __name__ == "__main__":
                        'number_of_runs':            10,
                        'multiprocessing':           True,
                        'number_of_participants':    0,
+                       'training':                  'scipy',
                        }
-    generate_params.update(training_params)
 
     run_recovery(**generate_params, recovery='parameter')
     run_recovery(**generate_params, recovery='model')
