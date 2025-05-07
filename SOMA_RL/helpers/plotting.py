@@ -191,8 +191,7 @@ def plot_simulations_behaviours(accuracy, choice_rates, models, groups, dataload
             
             ax[0, gi].set_title(f'{group.title()}')
             ax[0, gi].set_ylim([25, 100])
-            if gi == len(groups) - 1:
-                ax[0, gi].legend(loc='lower right', frameon=False)
+            ax[0, gi].legend(loc='lower right', frameon=False)
             ax[0, gi].set_ylabel('Accuracy (%)')
             ax[0, gi].set_xlabel('Trial')
             ax[0, gi].spines['top'].set_visible(False)
