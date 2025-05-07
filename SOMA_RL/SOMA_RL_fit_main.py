@@ -53,7 +53,7 @@ if __name__ == "__main__":
                   'fixed':                      fixed,
                   'bounds':                     bounds,
                   'number_of_runs':             10,
-                  'multiprocessing':            False,
+                  'multiprocessing':            True,
                   'training':                   'scipy'
                  }
 
