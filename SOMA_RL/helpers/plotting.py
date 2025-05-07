@@ -8,9 +8,9 @@ from scipy import stats
 from models.rl_models import RLModel
 
 plt.rcParams['font.family'] = 'Helvetica'
-plt.rcParams['font.size'] = 14
+plt.rcParams['font.size'] = 18
 
-def plot_simulations(accuracy, prediction_errors, values, choice_rates, models, group, dataloader=None):
+def plot_simulations(accuracy, prediction_errors, values, choice_rates, models, group, dataloader=None, alpha = .75):
     
     if dataloader is not None:
 
@@ -52,10 +52,10 @@ def plot_simulations(accuracy, prediction_errors, values, choice_rates, models, 
             averaged_accuracy = model_accuracy.groupby(['context','trial_total'], observed=False).mean().reset_index()
             context_accuracy = averaged_accuracy[averaged_accuracy['context'] == context]['accuracy'].reset_index(drop=True).astype(float)*100
             context_CIs = CIs[CIs.index.get_level_values('context') == context].reset_index(drop=True)*100
-            ax[0, i].fill_between(context_accuracy.index, context_accuracy - context_CIs, context_accuracy + context_CIs, alpha=0.2, color=bi_colors[ci], edgecolor='none')
-            ax[0, i].plot(context_accuracy, color=bi_colors[ci], alpha = .8, label=context.replace('Loss Avoid', 'Punish'))
+            ax[0, i].fill_between(context_accuracy.index, context_accuracy - context_CIs, context_accuracy + context_CIs, alpha=0.1, color=bi_colors[ci], edgecolor='none')
+            ax[0, i].plot(context_accuracy, color=bi_colors[ci], alpha = alpha, label=context.replace('Loss Avoid', 'Punish'))
             if dataloader is not None:
-                ax[0, i].plot(emp_accuracy[emp_accuracy['context_val_name'] == context]['trial_number'], emp_accuracy[emp_accuracy['context_val_name'] == context]['accuracy'], color=bi_colors[ci], linestyle='dashed', alpha=.5)
+                ax[0, i].plot(emp_accuracy[emp_accuracy['context_val_name'] == context]['trial_number'], emp_accuracy[emp_accuracy['context_val_name'] == context]['accuracy'], color=bi_colors[ci], linestyle='dashed', alpha= alpha)
 
         ax[0, i].set_title(m)
         ax[0, i].set_ylim([25, 100])
@@ -75,8 +75,8 @@ def plot_simulations(accuracy, prediction_errors, values, choice_rates, models, 
             averaged_pe = model_pe.groupby(['context','trial_total'], observed=False).mean().reset_index()
             context_pe = averaged_pe[averaged_pe['context'] == context]['averaged_pe'].reset_index(drop=True)
             context_CIs = CIs[CIs.index.get_level_values('context') == context].reset_index(drop=True)
-            ax[1, i].fill_between(context_pe.index, context_pe - context_CIs, context_pe + context_CIs, alpha=0.2, color=bi_colors[ci], edgecolor='none')
-            ax[1, i].plot(context_pe, color=bi_colors[ci], alpha = .8, label=context.replace('Loss Avoid', 'Punish'))
+            ax[1, i].fill_between(context_pe.index, context_pe - context_CIs, context_pe + context_CIs, alpha=0.1, color=bi_colors[ci], edgecolor='none')
+            ax[1, i].plot(context_pe, color=bi_colors[ci], alpha = alpha, label=context.replace('Loss Avoid', 'Punish'))
         ax[1, i].set_ylim([-.75, .75])
         if i == 0:
             ax[1, i].set_ylabel('Prediction Error')
@@ -96,8 +96,8 @@ def plot_simulations(accuracy, prediction_errors, values, choice_rates, models, 
                 averaged_values = model_values.groupby(['context','trial_total'], observed=False).mean().reset_index()
                 context_values = averaged_values[averaged_values['context'] == context][val].reset_index(drop=True)
                 context_CIs = CIs[CIs.index.get_level_values('context') == context].reset_index(drop=True)
-                ax[2, i].fill_between(context_values.index, context_values - context_CIs, context_values + context_CIs, alpha=0.2, color=val_colors[ci*2+vi], edgecolor='none')
-                ax[2, i].plot(context_values, color=val_colors[ci*2+vi], alpha = .8, label=['High Reward', 'Low Reward', 'Low Punish', 'High Punish'][ci*2+vi])
+                ax[2, i].fill_between(context_values.index, context_values - context_CIs, context_values + context_CIs, alpha=0.1, color=val_colors[ci*2+vi], edgecolor='none')
+                ax[2, i].plot(context_values, color=val_colors[ci*2+vi], alpha = alpha, label=['High Reward', 'Low Reward', 'Low Punish', 'High Punish'][ci*2+vi])
         ax[2, i].set_ylim([-1, 1])
         if i == 0:
             ax[2, i].set_ylabel('q/w/h Value')
@@ -109,10 +109,10 @@ def plot_simulations(accuracy, prediction_errors, values, choice_rates, models, 
         ax[2, i].axhline(0, linestyle='--', color='grey', alpha=.5)
 
         #Plot choice rates        
-        ax[3, i].bar(['High\nReward', 'Low\nReward', 'Low\nPunish', 'High\nPunish', 'Novel'], choice_rates[m].mean(axis=0), color=colors, alpha = .5)
-        ax[3, i].errorbar(['High\nReward', 'Low\nReward', 'Low\nPunish', 'High\nPunish', 'Novel'], choice_rates[m].mean(axis=0), yerr=choice_rates[m].sem()* stats.t.ppf(0.975, number_of_participants-1), fmt='.', color='grey')
+        ax[3, i].bar(['HR', 'LR', 'LP', 'HP', 'N'], choice_rates[m].mean(axis=0), color=colors, alpha = .5)
+        ax[3, i].errorbar(['HR', 'LR', 'LP', 'HP', 'N'], choice_rates[m].mean(axis=0), yerr=choice_rates[m].sem()* stats.t.ppf(0.975, number_of_participants-1), fmt='.', color='grey')
         if dataloader is not None:
-            ax[3, i].scatter(['High\nReward', 'Low\nReward', 'Low\nPunish', 'High\nPunish', 'Novel'], list(emp_choice_rates.values()), color='grey', marker='D', alpha=.5)
+            ax[3, i].scatter(['HR', 'LR', 'LP', 'HP', 'N'], list(emp_choice_rates.values()), color='grey', marker='D', alpha=alpha)
         ax[3, i].set_ylim([0, 100])
         if i == 0:
             ax[3, i].set_ylabel('Choice Rate (%)')
@@ -125,7 +125,7 @@ def plot_simulations(accuracy, prediction_errors, values, choice_rates, models, 
     fig.savefig(os.path.join('SOMA_RL','plots',f"{group.replace(' ','')}_model_simulations.png"))
     fig.savefig(os.path.join('SOMA_RL','plots',f"{group.replace(' ','')}_model_simulations.svg"), format='svg')
 
-def plot_simulations_behaviours(accuracy, choice_rates, models, groups, dataloader=None, rolling_mean=None, plot_type='raincloud'):
+def plot_simulations_behaviours(accuracy, choice_rates, models, groups, dataloader=None, rolling_mean=None, plot_type='raincloud', alpha = .75):
     bi_colors = get_colors('condition_2')
 
     if dataloader is not None:
@@ -179,15 +179,15 @@ def plot_simulations_behaviours(accuracy, choice_rates, models, groups, dataload
                     context_accuracy = context_accuracy.rolling(rolling_mean, min_periods=1, center=True).mean()
                 context_CIs = CIs[CIs.index.get_level_values('context') == context].reset_index(drop=True) * 100
                 
-                ax[0, gi].fill_between(context_accuracy.index, context_accuracy - context_CIs, context_accuracy + context_CIs, alpha=0.2, color=bi_colors[ci], edgecolor='none')
-                ax[0, gi].plot(context_accuracy, color=bi_colors[ci], alpha=0.8, label=context.replace('Loss Avoid', 'Punish'), linewidth=3)
+                ax[0, gi].fill_between(context_accuracy.index, context_accuracy - context_CIs, context_accuracy + context_CIs, alpha=0.1, color=bi_colors[ci], edgecolor='none')
+                ax[0, gi].plot(context_accuracy, color=bi_colors[ci], alpha=alpha, label=context.replace('Loss Avoid', 'Punish'), linewidth=3)
 
                 if dataloader is not None:
                     trials = emp_accuracy_group[group][emp_accuracy_group[group]['context_val_name'] == context]['trial_number']
                     accuracies = emp_accuracy_group[group][emp_accuracy_group[group]['context_val_name'] == context]['accuracy']
                     if rolling_mean is not None:
                         accuracies = accuracies.rolling(rolling_mean, min_periods=1, center=True).mean()
-                    ax[0, gi].plot(trials, accuracies, color=bi_colors[ci], linestyle='dashed', alpha=0.5, linewidth=2)
+                    ax[0, gi].plot(trials, accuracies, color=bi_colors[ci], linestyle='dashed', alpha=alpha, linewidth=2)
             
             ax[0, gi].set_title(f'{group.title()}')
             ax[0, gi].set_ylim([25, 100])
@@ -215,10 +215,10 @@ def plot_simulations_behaviours(accuracy, choice_rates, models, groups, dataload
             ax[1, gi].errorbar(np.arange(1,choice_data_long.index.nunique()+1), choice_rates[m][group].mean(axis=0), yerr=choice_rates[m][group].sem()*stats.t.ppf(0.975, number_of_participants-1), fmt='.', color='grey')
             
             if dataloader is not None:
-                ax[1, gi].scatter(np.arange(1,choice_data_long.index.nunique()+1), list(emp_choice_groups[group].values()), color='grey', marker='D', alpha=0.5)
+                ax[1, gi].scatter(np.arange(1,choice_data_long.index.nunique()+1), list(emp_choice_groups[group].values()), color='grey', marker='D', alpha=alpha)
 
             #Set x-ticks and labels for the choice rate plot
-            ax[1, gi].set_xticks(np.arange(1,choice_data_long.index.nunique()+1), ['High\nReward', 'Low\nReward', 'Low\nPunish', 'High\nPunish', 'Novel'])
+            ax[1, gi].set_xticks(np.arange(1,choice_data_long.index.nunique()+1), ['HR', 'LR', 'LP', 'HP', 'N'])
             ylims = [-4, 104] if plot_type == 'raincloud' else [0, 100]
             ax[1, gi].set_ylim(ylims)
             ax[1, gi].set_ylabel('Choice Rate (%)')
@@ -309,7 +309,7 @@ def plot_model_fits(confusion_matrix):
     plt.savefig(f'SOMA_RL/plots/model_recovery.png')
     plt.savefig(f'SOMA_RL/plots/model_recovery.svg', format='svg')
 
-def plot_parameter_fits(models, fit_data, fixed=None, bounds=None):
+def plot_parameter_fits(models, fit_data, fixed=None, bounds=None, alpha=.75):
     #Create a dictionary with model being keys and pd.dataframe empty as value
     fit_results = {model: [] for model in models}
     for model in models:
@@ -340,7 +340,7 @@ def plot_parameter_fits(models, fit_data, fixed=None, bounds=None):
             fit = fit_results[model][fit_results[model]['fit_type']=='Fit'][parameter]
             axs[i].scatter(true, fit)
             r = np.round(np.corrcoef(true.to_numpy().astype(float), fit.to_numpy().astype(float))[0,1], 2)
-            axs[i].plot(model_bounds[parameter], model_bounds[parameter], '--', color='grey', alpha=0.5)
+            axs[i].plot(model_bounds[parameter], model_bounds[parameter], '--', color='grey', alpha=alpha)
             axs[i].set_title(f"{parameter}, r={r}")
             axs[i].set_xlabel('True')
             axs[i].set_ylabel('Fit')
@@ -443,7 +443,7 @@ def plot_parameter_data(save_name: str, model_data: pd.DataFrame = None, plot_ty
     #Close figure
     plt.close()
 
-def raincloud_plot(data: pd.DataFrame, ax: plt.axes, t_scores: list[float], alpha: float=0.5) -> None:
+def raincloud_plot(data: pd.DataFrame, ax: plt.axes, t_scores: list[float], alpha: float=0.75) -> None:
         
         """
         Create a raincloud plot of the data
@@ -499,7 +499,7 @@ def raincloud_plot(data: pd.DataFrame, ax: plt.axes, t_scores: list[float], alph
             ax.add_patch(plt.Rectangle((factor_index+1-0.4, (mean_data.loc[factor] - CIs.loc[factor])['score']), 0.8, 2*CIs.loc[factor], fill=None, edgecolor='darkgrey'))
             ax.hlines(mean_data.loc[factor], factor_index+1-0.4, factor_index+1+0.4, color='darkgrey')            
 
-def group_bar_plot(data: pd.DataFrame, ax: plt.axes, t_scores: list[float], alpha: float=0.5) -> None:
+def group_bar_plot(data: pd.DataFrame, ax: plt.axes, t_scores: list[float], alpha: float=0.75) -> None:
 
         """
         Create a raincloud plot of the data
@@ -542,7 +542,7 @@ def group_bar_plot(data: pd.DataFrame, ax: plt.axes, t_scores: list[float], alph
         #Add barplot with CIs
         ax.bar(np.arange(1,len(mean_data['score'])+1), mean_data['score'], yerr=CIs, color=colors, alpha=alpha, capsize=5, ecolor='dimgrey')                        
 
-def bar_plot(data: pd.DataFrame, ax: plt.axes, t_scores: list[float], alpha: float=0.5) -> None:
+def bar_plot(data: pd.DataFrame, ax: plt.axes, t_scores: list[float], alpha: float=0.75) -> None:
         
         """
         Create a raincloud plot of the data
@@ -662,7 +662,7 @@ def get_colors(color_type = None):
 
     colors = {'group': ['#B2DF8A', '#FFD92F', '#FB9A99'],
               'condition': ['#095086', '#9BD2F2', '#ECA6A6', '#B00000', '#D3D3D3'],
-              'condition_2': ['#9BD2F2', '#ECA6A6']}
+              'condition_2': ['#095086', '#B00000']}
     
     if color_type is not None:
         return colors[color_type]
