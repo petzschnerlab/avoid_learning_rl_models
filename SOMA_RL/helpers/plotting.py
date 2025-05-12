@@ -3,11 +3,13 @@ import copy
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from matplotlib import font_manager
 from scipy import stats
 
 from models.rl_models import RLModel
 
-plt.rcParams['font.family'] = 'Helvetica'
+if 'Helvetica' in set(f.name for f in font_manager.fontManager.ttflist):
+    plt.rcParams['font.family'] = 'Helvetica'
 plt.rcParams['font.size'] = 18
 
 def plot_simulations(accuracy, prediction_errors, values, choice_rates, models, group, dataloader=None, alpha = .75):
