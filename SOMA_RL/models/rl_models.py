@@ -3,7 +3,7 @@ import numpy as np
 
 from helpers.priors import get_priors
 from models.standard import QLearning, ActorCritic
-from models.relative import Relative, wRelative
+from models.relative import Relative, wRelative, fRelative
 from models.hybrid import Hybrid2012, Hybrid2021, StandardHybrid2012, StandardHybrid2021
 
 class RLModel:
@@ -129,6 +129,13 @@ class RLModel:
                                            'weighing_factor',
                                            'novel_value',
                                            'decay_factor']
+        
+        model_parameters['fRelative'] = ['factual_lr',
+                                        'counterfactual_lr',
+                                        'contextual_lr',
+                                        'temperature',
+                                        'novel_value',
+                                        'decay_factor']
 
         model_parameters['Hybrid2012'] = ['factual_lr',
                                             'counterfactual_lr',
@@ -236,6 +243,7 @@ class RLModel:
                          'ActorCritic': ActorCritic,
                          'Relative': Relative,
                          'wRelative': wRelative,
+                         'fRelative': fRelative,
                          'Hybrid2012': Hybrid2012,
                          'Hybrid2021': Hybrid2021,
                          'StandardHybrid2012': StandardHybrid2012,

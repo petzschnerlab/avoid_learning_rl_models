@@ -21,7 +21,7 @@ class RLToolbox:
             setattr(self, key, methods[key])
 
     def get_value_type(self, model_name):
-        if model_name == 'QLearning' or model_name == 'Relative':
+        if model_name == 'QLearning' or model_name == 'Relative' or model_name == 'wRelative' or model_name == 'fRelative':
             return 'q_values'
         elif model_name == 'ActorCritic':
             return 'w_values'
@@ -29,7 +29,7 @@ class RLToolbox:
             return 'h_values'
         
     def get_context_reward(self, model_name):
-        if model_name == 'Relative':
+        if model_name == 'Relative' or model_name == 'fRelative':
             return True
         else:
             return False
@@ -177,7 +177,7 @@ class RLToolbox:
         if self.training == 'torch':
             if 'Hybrid' in self.__class__.__name__:
                 prediction_errors = state['q_prediction_errors']
-            elif self.__class__.__name__ == 'Relative':
+            elif self.__class__.__name__ == 'Relative' or self.__class__.__name__ == 'wRelative' or self.__class__.__name__ == 'fRelative':
                 prediction_errors = state['prediction_errors']
             else:
                 prediction_errors = state['prediction_errors'].detach()
@@ -252,6 +252,8 @@ class RLToolbox:
             self.context_values[state['state_id']] = state['context_value'].detach() + (self.contextual_lr * state['context_prediction_errors'])
         else:
             self.context_values[state['state_id']] = state['context_value'] + (self.contextual_lr * state['context_prediction_errors'])
+        state = self.get_context_value(state)
+        return state
     
     def update_context_prediction_errors(self, state):
         self.context_prediction_errors[state['state_id']] = state['context_prediction_errors'].detach() if self.training == 'torch' else state['context_prediction_errors']
@@ -277,7 +279,10 @@ class RLToolbox:
         if self.__class__.__name__ == 'Relative':
             self.update_context_values(state)
             self.update_context_prediction_errors(state)
-            
+
+        if self.__class__.__name__ == 'fRelative':
+            self.update_context_prediction_errors(state)
+
         if self.__class__.__name__ == 'ActorCritic' or 'Hybrid' in self.__class__.__name__:
             self.update_w_values(state)
             self.update_v_values(state)
@@ -298,7 +303,7 @@ class RLToolbox:
             if self.__class__.__name__ != 'ActorCritic':
                 self.q_values[s] = [0]*len(self.q_values[s])
 
-            if self.__class__.__name__ == 'Relative':
+            if self.__class__.__name__ == 'Relative' or self.__class__.__name__ == 'fRelative':
                 self.context_values[s] = [0]*len(self.context_values[s])
                 self.context_prediction_errors[s] = [0]*len(self.context_prediction_errors[s])
 
@@ -320,7 +325,7 @@ class RLToolbox:
             if self.__class__.__name__ != 'ActorCritic':
                 self.q_values[s] = torch.zeros(len(self.q_values[s]))
 
-            if self.__class__.__name__ == 'Relative':
+            if self.__class__.__name__ == 'Relative' or self.__class__.__name__ == 'fRelative':
                 self.context_values[s] = torch.zeros(len(self.context_values[s]))
                 self.context_prediction_errors[s] = torch.zeros(len(self.context_prediction_errors[s]))
 
