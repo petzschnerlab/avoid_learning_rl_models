@@ -97,7 +97,8 @@ def run_fit_empirical(learning_filename,
 def run_recovery(models, 
                  parameters, 
                  learning_filename=None, 
-                 transfer_filename=None, 
+                 transfer_filename=None,
+                 fit_filename=None,
                  task_design=None, 
                  fixed=None, 
                  bounds=None, 
@@ -118,6 +119,7 @@ def run_recovery(models,
     print(f'Parameters: {parameters}')
     print(f'Learning Filename: {learning_filename}')
     print(f'Transfer Filename: {transfer_filename}')
+    print(f'Fit Filename: {fit_filename}')
     print(f'Task Design: {task_design}')
     print(f'Datasets to Generate: {datasets_to_generate}')
     print(f'Number of Runs: {number_of_runs}')
@@ -128,6 +130,9 @@ def run_recovery(models,
     print(f'Training: {training}')
     print(f'Training Epochs: {training_epochs}')
     print(f'Optimizer Learning Rate: {optimizer_lr}')
+
+    if isinstance(parameters, dict) and fit_filename is not None:
+        raise ValueError('Parameters and fit_filename will both provide parameters to the model. Please provide only one of them.')
 
     if fixed is not None:
         print('\nParameter Overwrites:')
@@ -153,12 +158,13 @@ def run_recovery(models,
                             parameters=parameters, 
                             learning_filename=learning_filename, 
                             transfer_filename=transfer_filename, 
+                            fit_filename=fit_filename,
                             task_design=task_design, 
                             fixed=fixed, 
                             bounds=bounds, 
                             datasets_to_generate=datasets_to_generate, 
                             number_of_participants=number_of_participants, 
-                            multiprocessing=False, # TODO: True fails on ODD for some reason 
+                            multiprocessing=False, # TODO: True fails on OOD for some reason 
                             clear_data=clear_data)
     
     dataloader = run_generative_fits(models=models, 
@@ -639,14 +645,14 @@ def run_fit_simulations(learning_filename, transfer_filename, fit_data, models, 
     plot_simulations_behaviours(accuracy_model, choice_rates_model, models, accuracy.keys(), dataloader, rolling_mean=5)
     plot_simulations_behaviours(accuracy_model, choice_rates_model, models, accuracy.keys(), dataloader, rolling_mean=5, plot_type = 'bar')
 
-def generate_simulated_data(models, parameters, learning_filename=None, transfer_filename=None, task_design=None, fixed=None, bounds=None, datasets_to_generate=1, number_of_participants=0, multiprocessing=False, clear_data=True):
+def generate_simulated_data(models, parameters, learning_filename=None, transfer_filename=None, fit_filename=None, task_design=None, fixed=None, bounds=None, datasets_to_generate=1, number_of_participants=0, multiprocessing=False, clear_data=True):
     '''
     Parameters
     ----------
     models : list
         List of models to simulate.
     parameters : dict | str
-        Dictionary of model parameters or 'random'
+        Dictionary of model parameters or 'random' or 'normal' to generate random parameters.
     task_design : dict
         Dictionary of task design parameters
     number_of_runs : int
@@ -664,6 +670,15 @@ def generate_simulated_data(models, parameters, learning_filename=None, transfer
                 os.remove(os.path.join('SOMA_RL','data','generated',f))
             else:
                 shutil.rmtree(os.path.join('SOMA_RL','data','generated',f))
+
+    #Load fit data
+    if fit_filename is not None:
+        #Check to see if fit_filename is a file that exists
+        if not os.path.exists(fit_filename):
+            raise ValueError(f'Fit file {fit_filename} does not exist.')
+        
+        with open(fit_filename, 'rb') as f:
+            fit_data = pickle.load(f)
 
     #Set up parameters
     random_params = True if parameters == 'random' or parameters == 'normal' else False
@@ -689,6 +704,14 @@ def generate_simulated_data(models, parameters, learning_filename=None, transfer
                 p_dataloader.filter_participant_data(participant_ids[run])
             else:
                 p_dataloader = None
+
+            if fit_filename is not None:
+                if dataloader is not None:
+                    participant_id = fit_data[model_name]['participant'][fit_data[model_name]['participant']==participant_ids[run]].values[0]
+                else:
+                    participant_id = fit_data[model_name]['participant'][run]
+                parameters = {model_name: fit_data[model_name][fit_data[model_name]['participant']==participant_id]}
+                random_params = False
 
             model_parameters = parameters[model_name] if not random_params else None
             model = RLModel(model_name, model_parameters, random_params=parameters, fixed=fixed, bounds=bounds)

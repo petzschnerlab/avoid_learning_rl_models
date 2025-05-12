@@ -8,7 +8,7 @@ from models.hybrid import Hybrid2012, Hybrid2021, StandardHybrid2012, StandardHy
 
 class RLModel:
 
-    def __init__(self, model=None, parameters=None, random_params=False, fixed=None, bounds=None):
+    def __init__(self, model=None, parameters=None, random_params=False, fixed=None, bounds=None, fit_filename=None):
 
         if model is not None:
             self.random_params = random_params
