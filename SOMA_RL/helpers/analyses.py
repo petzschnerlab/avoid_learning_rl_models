@@ -842,13 +842,13 @@ def add_outlier_data(dataloader, outlier_results):
             participant_learning, participant_transfer = participant_dataloader.get_data()
 
             #Compute choice rate
-            participant_transfer['stim1'] = participant_transfer['state'].apply(lambda x: x[-2])
-            participant_transfer['stim2'] = participant_transfer['state'].apply(lambda x: x[-1])
+            participant_transfer.loc[:, 'stim1'] = participant_transfer['state'].apply(lambda x: x[-2])
+            participant_transfer.loc[:, 'stim2'] = participant_transfer['state'].apply(lambda x: x[-1])
             stims = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'N']
             stim_pairs = [['A', 'C'], ['B', 'D'], ['E', 'G'], ['F', 'H']]
             for stim in stims:
                 stim_transfer = participant_transfer[(participant_transfer['stim1'] == stim) | (participant_transfer['stim2'] == stim)]
-                stim_transfer['stim_chosen'] = stim_transfer.apply(lambda x: x['stim1'] if x['action'] == 0 else x['stim2'], axis=1)
+                stim_transfer.loc[:, 'stim_chosen'] = stim_transfer.apply(lambda x: x['stim1'] if x['action'] == 0 else x['stim2'], axis=1)
                 participant_choice_rate[stim] = stim_transfer['stim_chosen'].value_counts(normalize=True).get(stim, 0)
             reduced_choice_rate = {}
             for pair in stim_pairs:
