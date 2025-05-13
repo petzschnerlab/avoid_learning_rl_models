@@ -131,13 +131,23 @@ def run_recovery(models,
     print(f'Training Epochs: {training_epochs}')
     print(f'Optimizer Learning Rate: {optimizer_lr}')
 
-    if isinstance(parameters, dict) and fit_filename is not None:
-        raise ValueError('Parameters and fit_filename will both provide parameters to the model. Please provide only one of them.')
-    
-    if fit_filename is not None and bounds is not None:
-        warnings.warn('Bounds are being overridden by fit data.', stacklevel=2)
-        bounds = None
 
+    if fit_filename is not None:
+
+        if isinstance(parameters, dict):
+            raise ValueError('Parameters and fit_filename will both provide parameters to the model. Please provide only one of them.')
+        
+        if bounds is not None:
+            warnings.warn('\nBounds are being overridden by fit data.', stacklevel=2)
+            bounds = None
+
+        with open(fit_filename, 'rb') as f:
+            fit_data = pickle.load(f)
+        
+        if set(fit_data.keys()) != set(models):
+            warnings.warn(f'\nModels in fit data ({set(fit_data.keys())}) do not match models provided ({set(models)}). Overriding models parameter to match fit data.', stacklevel=2)
+            models = list(fit_data.keys())
+        
     if fixed is not None:
         print('\nParameter Overwrites:')
         for model in fixed:
