@@ -680,6 +680,11 @@ def generate_simulated_data(models, parameters, learning_filename=None, transfer
         with open(fit_filename, 'rb') as f:
             fit_data = pickle.load(f)
 
+        #Override bounds as the fit data will be used, raise error without stopping, and change bounds=None
+        if bounds is not None:
+            warnings.warn('Bounds are being overridden by fit data.')
+            bounds = None
+
     #Set up parameters
     random_params = True if parameters == 'random' or parameters == 'normal' else False
     datasets_to_generate = datasets_to_generate if random_params else 1
