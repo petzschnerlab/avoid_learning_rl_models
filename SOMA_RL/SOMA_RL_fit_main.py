@@ -35,15 +35,12 @@ if __name__ == "__main__":
         +decay: Adds a decay parameter to the model (e.g. QLearning+decay), useable with all models
     '''
 
-    models = ['QLearning+novel', #Standard + novel
-              'ActorCritic+novel', #Standard + novel
-              'Relative+novel', #Standard + novel
-              'wRelative+novel', #Standard + novel
-              'fRelative+novel', #Standard + novel
-              'StandardHybrid2012+bias+novel', #Standard + novel
-              'Hybrid2012+bias+novel', #Standard + novel
-              'StandardHybrid2021+bias+decay+novel', #Standard + novel
-              'Hybrid2021+bias+decay+novel', #Standard + novel
+    models = ['QLearning+novel',    #Standard + novel
+              'ActorCritic+novel',  #Standard + novel
+              'Relative+novel',     #Standard + novel
+              'wRelative+novel',    #Standard + novel
+              'fRelative+novel',    #Standard + novel
+              'Hybrid2012+novel',   #Standard - bias + novel
     ] 
         
     fixed, bounds = get_priors()    

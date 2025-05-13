@@ -39,15 +39,12 @@ if __name__ == "__main__":
         +decay: Adds a decay parameter to the model (e.g. QLearning+decay), useable with all models
     '''
 
-    models = ['QLearning+novel', #Standard + novel
-              'ActorCritic+novel', #Standard + novel
-              'Relative+novel', #Standard + novel
-              'wRelative+novel', #Standard + novel
-              'fRelative+novel', #Standard + novel
-              'StandardHybrid2012+bias+novel', #Standard + novel
-              'Hybrid2012+bias+novel', #Standard + novel
-              'StandardHybrid2021+bias+decay+novel', #Standard + novel
-              'Hybrid2021+bias+decay+novel', #Standard + novel
+    models = ['QLearning+novel',    #Standard + novel
+              'ActorCritic+novel',  #Standard + novel
+              'Relative+novel',     #Standard + novel
+              'wRelative+novel',    #Standard + novel
+              'fRelative+novel',    #Standard + novel
+              'Hybrid2012+novel',   #Standard - bias + novel
     ] 
 
     fixed, _ = get_priors()
@@ -56,10 +53,7 @@ if __name__ == "__main__":
               'Relative':           {'temperature': (0.1, .2)},
               'wRelative':          {'temperature': (0.1, .2)},
               'fRelative':          {'temperature': (0.1, .2)},
-              'StandardHybrid2012': {'temperature': (0.1, .2), 'valence_factor': (0.5, 0.5)}, # Freeze valence_factor
-              'Hybrid2012':         {'temperature': (0.1, .2), 'valence_factor': (0.5, 0.5)}, # Freeze valence_factor
-              'StandardHybrid2021': {'temperature': (0.1, .2), 'noise_factor': (0, 0), 'valence_factor': (0.5, 0.5)}, # Freeze noise_factor, valence_factor
-              'Hybrid2021':         {'temperature': (0.1, .2), 'noise_factor': (0, 0), 'valence_factor': (0.5, 0.5)}, # Freeze noise_factor, valence_factor
+              'Hybrid2012':         {'temperature': (0.1, .2)},
     }
 
     generate_params = {'learning_filename':         'SOMA_RL/data/pain_learning_processed.csv',
