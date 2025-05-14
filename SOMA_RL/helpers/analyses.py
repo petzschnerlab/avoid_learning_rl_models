@@ -541,8 +541,8 @@ def compute_criterions(dataloader, fit_data, models, group_ids, recovery='parame
     best_fits_BIC_summary.to_csv('SOMA_RL/fits/group_BIC_percentages.csv')
 
     #Plots
-    plot_model_comparisons(group_AIC, 'AIC-model-comparisons')
-    plot_model_comparisons(group_BIC, 'BIC-model-comparisons')
+    plot_model_comparisons(group_AIC, 'AIC_model_comparisons')
+    plot_model_comparisons(group_BIC, 'BIC_model_comparisons')
 
 def run_fit_simulations(learning_filename, transfer_filename, fit_data, models, participant_ids, group_ids, number_of_participants=0, multiprocessing=False):
 

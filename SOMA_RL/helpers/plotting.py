@@ -383,7 +383,7 @@ def plot_parameter_data(save_name: str, model_data: pd.DataFrame = None, plot_ty
     condition_name = 'pain_group'
     condition_values = ['no pain', 'acute pain', 'chronic pain']
     x_values = np.arange(1, len(condition_values)+1).tolist()
-    x_labels = ['No Pain', 'Acute Pain', 'Chronic Pain']
+    x_labels = ['No\nPain', 'Acute\nPain', 'Chronic\nPain']
     plot_labels = data.columns[3:]
     num_subplots = len(plot_labels)
     
@@ -425,7 +425,7 @@ def plot_parameter_data(save_name: str, model_data: pd.DataFrame = None, plot_ty
         ax.set_xticks(x_values, x_labels)
         ax.set_xlabel('')
         y_label = parameter.replace('_', ' ').replace('lr', 'learning rate').title()
-        y_label = f'Log-Transformed {y_label}' if parameter not in ['novel_value', 'mixing_factor', 'valence_factor', 'weighing_factor'] else f'{y_label}'
+        y_label = f'Log {y_label}' if parameter not in ['novel_value', 'mixing_factor', 'valence_factor', 'weighing_factor'] else f'{y_label}'
         y_label = 'Weighting Factor' if parameter == 'weighing_factor' else y_label
         ax.set_ylabel(y_label)
         ax.spines['top'].set_visible(False)
