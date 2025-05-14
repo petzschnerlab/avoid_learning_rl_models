@@ -181,8 +181,8 @@ def plot_simulations_behaviours(accuracy, choice_rates, models, groups, dataload
                     context_accuracy = context_accuracy.rolling(rolling_mean, min_periods=1, center=True).mean()
                 context_CIs = CIs[CIs.index.get_level_values('context') == context].reset_index(drop=True) * 100
                 
-                ax[0, gi].fill_between(context_accuracy.index, context_accuracy - context_CIs, context_accuracy + context_CIs, alpha=0.1, color=bi_colors[ci], edgecolor='none')
-                ax[0, gi].plot(context_accuracy, color=bi_colors[ci], alpha=alpha, label=context.replace('Loss Avoid', 'Punish'), linewidth=3)
+                ax[0, gi].fill_between(context_accuracy.index+1, context_accuracy - context_CIs, context_accuracy + context_CIs, alpha=0.1, color=bi_colors[ci], edgecolor='none')
+                ax[0, gi].plot(context_accuracy.index+1, context_accuracy, color=bi_colors[ci], alpha=alpha, label=context.replace('Loss Avoid', 'Punish'), linewidth=3)
 
                 if dataloader is not None:
                     trials = emp_accuracy_group[group][emp_accuracy_group[group]['context_val_name'] == context]['trial_number']
@@ -198,6 +198,7 @@ def plot_simulations_behaviours(accuracy, choice_rates, models, groups, dataload
             ax[0, gi].set_xlabel('Trial')
             ax[0, gi].spines['top'].set_visible(False)
             ax[0, gi].spines['right'].set_visible(False)
+            ax[0, gi].set_xticks(np.arange(0, 25, 4))
 
             # Plot choice rates
             _, t_scores = compute_n_and_t(choice_rates[m][group], None)
