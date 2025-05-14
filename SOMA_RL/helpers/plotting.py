@@ -660,6 +660,48 @@ def plot_fit_distributions(fit_data):
     plt.savefig('SOMA_RL/plots/model_fits_distributions.svg', format='svg')
     plt.close()
 
+def plot_model_comparisons(fits, save_name='model_comparisons'):
+    
+    fits = fits.loc['full'][:-1]
+    min_val, max_val = fits.min().min(), fits.max().max()
+    range_val = max_val - min_val
+
+    sorted_indices = np.argsort(-fits.values.flatten())
+    model_dict = {'QLearning': 'Q-Learning', 'ActorCritic': 'Actor Critic', 'Relative': 'Relative', 'wRelative': 'wRelative','Hybrid2012': 'Hybrid'}
+    models = [model_dict.get(model.split('+')[0], model) for model in fits.index]
+    
+    cmap = plt.get_cmap('RdBu')
+    green = [0.596078431372549, 0.8117647058823529, 0.5843137254901961, 1]
+    yellow = [0.9960784314, 0.9450980392, 0.6313725490, 1]  # pale yellow
+    red = [0.9411764705882353, 0.5490196078431373, 0.5529411764705883, 1]
+    custom_cmap = cmap.from_list('custom_cmap', [red, yellow, green], len(fits.index))
+    base_colors = custom_cmap(np.linspace(0, 1, len(fits.index)))
+
+    custom_colors = np.empty((len(fits.values), 4))
+    custom_colors[sorted_indices] = base_colors  # assign highest values the greenest colors
+
+    #Create a bar plot of the model fits
+    fig, ax = plt.subplots(1, 1, figsize=(5, 5))
+
+    ax.bar(np.arange(1, len(fits.index)+1), fits.values, color=custom_colors, alpha=0.9)
+    for i, v in enumerate(fits.values):
+        ax.text(i+1, v + (range_val*0.02), str(int(np.round(v, 0))), color='darkgrey', ha='center', fontweight='bold', fontsize=14)
+    lower_bar_index = np.where(fits.values == fits.values.min())[0][0]
+    lowest_bar_value = fits.values.min()
+    ax.add_patch(plt.Rectangle((lower_bar_index+0.6, min_val-(range_val*.5)), .8, lowest_bar_value-(min_val-(range_val*.5)), fill=False, edgecolor='black', lw=2, alpha=.6))
+
+    ax.set_xticks(np.arange(1, len(fits.index)+1), models)
+    plt.setp(ax.get_xticklabels(), rotation=45, ha='right', rotation_mode='anchor')    
+    ax.set_ylabel('BIC')
+    ax.set_xlabel('')
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.set_ylim([min_val-(range_val*.5), max_val+(range_val*0.1)])
+    plt.tight_layout()
+
+    #Save the plot
+    plt.savefig(f'SOMA_RL/plots/{save_name}.png')
+
 def get_colors(color_type = None):
 
     colors = {'group': ['#B2DF8A', '#FFD92F', '#FB9A99'],

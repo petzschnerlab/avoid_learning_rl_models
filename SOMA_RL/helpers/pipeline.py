@@ -182,6 +182,8 @@ def export_fits(path):
         'SOMA_RL/plots/chronicpain_model_simulations.png',
         'SOMA_RL/plots/nopain_model_simulations.png',
         'SOMA_RL/plots/model_fits_distributions.png',
+        'SOMA_RL/plots/AIC_model_comparisons.png',
+        'SOMA_RL/plots/BIC_model_comparisons.png',
         
         'SOMA_RL/stats/pain_fits_linear_results.csv',
         'SOMA_RL/stats/pain_fits_ttest_results.csv',
@@ -189,8 +191,8 @@ def export_fits(path):
     ]
 
     files_to_rename = [
-        ['SOMA_RL/fits/fit_data.pkl',       'SOMA_RL/fits/fit_data_FIT.pkl'],
-        ['SOMA_RL/fits/full_fit_data.pkl',  'SOMA_RL/fits/full_fit_data_FIT.pkl'],
+        [f'{path}/fit_data.pkl',       f'{path}/fit_data_FIT.pkl'],
+        [f'{path}/full_fit_data.pkl',  f'{path}/full_fit_data_FIT.pkl'],
     ]
 
     folders_to_move = [

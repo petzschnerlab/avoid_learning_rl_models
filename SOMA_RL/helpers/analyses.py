@@ -15,7 +15,7 @@ from models.rl_models import RLModel
 from helpers.dataloader import DataLoader
 from helpers.tasks import AvoidanceLearningTask
 from helpers.pipeline import RLPipeline, mp_run_fit, mp_run_simulations, mp_progress
-from helpers.plotting import plot_simulations, plot_simulations_behaviours, plot_parameter_fits, plot_model_fits, plot_parameter_data, plot_fits_by_run_number, plot_fit_distributions
+from helpers.plotting import *
 from helpers.statistics import Statistics
 
 
@@ -404,7 +404,7 @@ def run_fit_comparison(dataloader, models, group_ids, recovery='parameter'):
                 fit_data[model_name] = pd.concat((fit_data[model_name], best_participant_data), ignore_index=True)
                 full_fit_data[model_name] = pd.concat((full_fit_data[model_name], participant_data), ignore_index=True)
 
-    #Plot fit distributions
+    #Plots
     plot_fit_distributions(fit_data)
 
     #Determine participants with outlier fits
@@ -519,7 +519,6 @@ def compute_criterions(dataloader, fit_data, models, group_ids, recovery='parame
     best_fits_AIC.columns = list(all_AIC.keys())
     best_fits_AIC['best_model'] = best_fits_AIC.idxmin(axis=1)
     best_fits_AIC.insert(0, 'group', group_names)
-    
 
     best_fits_BIC = pd.concat(model_data_BIC.values(), ignore_index=True, axis=1)
     best_fits_BIC.columns = list(all_BIC.keys())
@@ -540,6 +539,10 @@ def compute_criterions(dataloader, fit_data, models, group_ids, recovery='parame
     #Save as csv files
     best_fits_AIC_summary.to_csv('SOMA_RL/fits/group_AIC_percentages.csv')
     best_fits_BIC_summary.to_csv('SOMA_RL/fits/group_BIC_percentages.csv')
+
+    #Plots
+    plot_model_comparisons(group_AIC, 'AIC-model-comparisons')
+    plot_model_comparisons(group_BIC, 'BIC-model-comparisons')
 
 def run_fit_simulations(learning_filename, transfer_filename, fit_data, models, participant_ids, group_ids, number_of_participants=0, multiprocessing=False):
 
