@@ -184,6 +184,7 @@ def export_fits(path):
         'SOMA_RL/plots/model_fits_distributions.png',
         'SOMA_RL/plots/AIC_model_comparisons.png',
         'SOMA_RL/plots/BIC_model_comparisons.png',
+        'SOMA_RL/plots/parameter_of_interest_comparisons.png',
         
         'SOMA_RL/stats/pain_fits_linear_results.csv',
         'SOMA_RL/stats/pain_fits_ttest_results.csv',

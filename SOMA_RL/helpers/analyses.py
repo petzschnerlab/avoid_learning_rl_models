@@ -82,6 +82,12 @@ def run_fit_empirical(learning_filename,
                                   None)
     
     plot_fits_by_run_number(fit_data)
+    models_of_interest = {
+        'wRelative+novel': 'weighing_factor',
+        'Relative+novel': 'contextual_lr',
+        'Hybrid2012+novel': 'mixing_factor'
+    } 
+    plot_model_parameter_correlations(fit_data, models_of_interest)
     
     run_fit_analyses(copy.deepcopy(fit_data))
     
