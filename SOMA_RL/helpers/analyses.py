@@ -613,6 +613,7 @@ def run_fit_simulations(learning_filename, transfer_filename, fit_data, models, 
         participant_data = pd.read_csv(os.path.join('SOMA_RL','fits','temp',f))
 
         if value_name == 'accuracy':
+            participant_data['accuracy'] = participant_data['accuracy']*100
             if len(accuracy[group][model_name]) == 0:
                 accuracy[group][model_name] = participant_data
             else:
@@ -661,6 +662,11 @@ def run_fit_simulations(learning_filename, transfer_filename, fit_data, models, 
     #Delete all files
     for f in files:
         os.remove(os.path.join('SOMA_RL','fits','temp',f))
+
+    #Average across states for plotting
+    for model in accuracy_model:
+        for group in accuracy_model[model]:
+            accuracy_model[model][group] = accuracy_model[model][group].groupby(['context', 'trial_total', 'run']).mean().reset_index()
         
     #Plot simulations 
     for group in accuracy:

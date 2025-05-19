@@ -114,8 +114,8 @@ class RLPipeline:
         if 'v_prediction_errors' in task_learning_data.columns:
             task_learning_data['prediction_errors'] = task_learning_data['v_prediction_errors'] + task_learning_data['q_prediction_errors']
         task_learning_data['averaged_pe'] = task_learning_data['prediction_errors'].apply(lambda x: sum(x)/len(x))
-        learning_accuracy = task_learning_data.groupby(['context', 'trial_total'])['accuracy'].mean().reset_index()
-        learning_prediction_errors = task_learning_data.groupby(['context', 'trial_total'])['averaged_pe'].mean().reset_index()
+        learning_accuracy = task_learning_data.groupby(['context', 'trial_total', 'state_id'])['accuracy'].mean().reset_index()
+        learning_prediction_errors = task_learning_data.groupby(['context', 'trial_total', 'state_id'])['averaged_pe'].mean().reset_index()
 
         value_labels = {'QLearning': 'q_values', 
                         'ActorCritic': 'w_values', 
