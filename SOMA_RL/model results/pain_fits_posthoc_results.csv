@@ -1,7 +1,7 @@
 model,parameter,factor,meandiff,p-adj,reject
-QLearning+novel,factual_lr,acute pain vs chronic pain,0.2689,0.6414,False
-QLearning+novel,factual_lr,acute pain vs no pain,0.101,0.9317,False
-QLearning+novel,factual_lr,chronic pain vs no pain,-0.1679,0.7796,False
+QLearning+novel,factual_lr,acute pain vs chronic pain,0.0909,0.7178,False
+QLearning+novel,factual_lr,acute pain vs no pain,0.0527,0.8819,False
+QLearning+novel,factual_lr,chronic pain vs no pain,-0.0382,0.9191,False
 QLearning+novel,counterfactual_lr,acute pain vs chronic pain,0.1298,0.8954,False
 QLearning+novel,counterfactual_lr,acute pain vs no pain,0.0435,0.9861,False
 QLearning+novel,counterfactual_lr,chronic pain vs no pain,-0.0863,0.9323,False

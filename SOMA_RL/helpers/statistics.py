@@ -47,7 +47,23 @@ class Statistics:
         -------
         dict
             The coefficients of the model
-        """        
+        """   
+
+        #Check anova assumptions
+        #Check normality of each group
+        metric_name = formula.split(' ~ ')[0]
+        group_name = formula.split(' ~ ')[-1]
+        normality = {group: [] for group in data[group_name].unique()}
+        for group in data[group_name].unique():
+            group_data = data[data[group_name] == group][metric_name]
+            normality[group] = 'met' if sp.stats.shapiro(group_data).pvalue > 0.05 else 'violated'
+        normality_assumption = 'met' if all([assumption == 'met' for assumption in normality.values()]) else 'violated'
+
+        #Check homogeneity of variance
+        metric_data = data[[group_name, metric_name]]
+        metric_list = [metric_data[metric_data[group_name] == group][metric_name] for group in metric_data[group_name].unique()]
+        homogeneity = sp.stats.levene(*metric_list)
+        homogeneity_assumption = 'met' if homogeneity.pvalue > 0.05 else 'violated'
 
         #Use ols to get omnibus p-value for category pain_group
         regression_model = smf.ols(formula=formula, data=data).fit()
@@ -57,8 +73,11 @@ class Statistics:
                           'df_res': regression_model.df_resid,
                           'df_model': regression_model.df_model,
                           'p_value': regression_model.f_pvalue,
-                          'r_squared': regression_model.rsquared}
+                          'r_squared': regression_model.rsquared,
+                          'normality': normality_assumption,
+                          'homogeneity': homogeneity_assumption}
         
+        #Extract coefficients
         model_summary = pd.DataFrame(regression_dict, index=[0])
         
         metadata = {'formula': formula,
