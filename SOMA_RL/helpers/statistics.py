@@ -279,4 +279,20 @@ class Statistics:
         tukey_table.set_index('factor', inplace=True)
         tukey_table = tukey_table.drop(columns=['lower', 'upper'])
 
+        tukey_table['cohens_d'] = np.nan
+        for comparison in tukey_table.index:
+            condition1_data = data[data[factor] == comparison.split(' vs ')[0]]
+            condition2_data = data[data[factor] == comparison.split(' vs ')[1]]
+
+            if len(set(condition1_data['participant_id']).intersection(set(condition2_data['participant_id']))) == condition1_data['participant_id'].shape[0]:
+                condition1_data = condition1_data.sort_values('participant_id')[metric].astype(float).reset_index(drop=True)
+                condition2_data = condition2_data.sort_values('participant_id')[metric].astype(float).reset_index(drop=True)
+                cohens_d = self.cohens_d(condition1_data, condition2_data, test_type='paired')
+            else:
+                condition1_data = condition1_data[metric].astype(float)
+                condition2_data = condition2_data[metric].astype(float)
+                cohens_d = self.cohens_d(condition1_data, condition2_data, test_type='independent')
+            
+            tukey_table.at[comparison, 'cohens_d'] = cohens_d
+
         return tukey_table
