@@ -82,6 +82,7 @@ def run_fit_empirical(learning_filename,
                                   None)
     
     plot_fits_by_run_number(fit_data)
+    describe_fits(fit_data)
     params_of_interest = {
         'wRelative+novel': 'weighing_factor',
         'Relative+novel': 'contextual_lr',
@@ -902,3 +903,23 @@ def add_outlier_data(dataloader, outlier_results):
     outlier_results['outlier_data'] = outlier_data
 
     return outlier_results      
+
+def describe_fits(fit_data):
+    groups = ['no pain', 'acute pain', 'chronic pain']
+    describe_fit = []
+    for model in fit_data:
+        for param in fit_data[model].columns[4:]:
+            group_params = []
+            for group in groups:
+                group_indices = fit_data[model]['pain_group'] == group
+                group_data = fit_data[model].loc[group_indices]
+                mean_data = np.round(group_data[param].mean(),2)
+                sd_data = np.round(group_data[param].std(),2)
+                group_params.append(f"{mean_data} ({sd_data})")
+            param_data = [model.split('+')[0], param] + group_params
+            if not isinstance(describe_fit, pd.DataFrame):
+                describe_fit = pd.DataFrame([param_data], columns=['model', 'parameter'] + groups)
+            else:
+                describe_fit = pd.concat((describe_fit, pd.DataFrame([param_data], columns=['model', 'parameter'] + groups)), ignore_index=True, axis=0)
+
+    describe_fit.to_csv('SOMA_RL/stats/param_fit_descriptives.csv', index=False)
