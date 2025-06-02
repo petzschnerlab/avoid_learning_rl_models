@@ -108,11 +108,12 @@ def run_recovery(models,
                  task_design=None, 
                  fixed=None, 
                  bounds=None, 
-                 datasets_to_generate=1, 
-                 number_of_runs=1, 
-                 number_of_participants=0, 
-                 multiprocessing=False, 
-                 clear_data=True, 
+                 datasets_to_generate=1,
+                 number_of_runs=1,
+                 number_of_participants=0,
+                 multiprocessing=False,
+                 generate_data=True,
+                 clear_data=True,
                  recovery='parameter',
                  training='torch',
                  training_epochs=1000,
@@ -131,6 +132,7 @@ def run_recovery(models,
     print(f'Number of Runs: {number_of_runs}')
     print(f'Number of Participants: {number_of_participants}')
     print(f'Multiprocessing: {multiprocessing}')
+    print(f'Generate Data: {generate_data}')
     print(f'Clear Data: {clear_data}')
     print(f'Recovery: {recovery}')
     print(f'Training: {training}')
@@ -174,18 +176,19 @@ def run_recovery(models,
     if [learning_filename, transfer_filename].count(None) == 0:
         datasets_to_generate = len(DataLoader(learning_filename, transfer_filename, number_of_participants=number_of_participants, reduced=False).get_participant_ids())
 
-    generate_simulated_data(models=models, 
-                            parameters=parameters, 
-                            learning_filename=learning_filename, 
-                            transfer_filename=transfer_filename, 
-                            fit_filename=fit_filename,
-                            task_design=task_design, 
-                            fixed=fixed, 
-                            bounds=bounds, 
-                            datasets_to_generate=datasets_to_generate, 
-                            number_of_participants=number_of_participants, 
-                            multiprocessing=False, # TODO: True fails on OOD for some reason 
-                            clear_data=clear_data)
+    if generate_data:
+        generate_simulated_data(models=models, 
+                                parameters=parameters, 
+                                learning_filename=learning_filename, 
+                                transfer_filename=transfer_filename, 
+                                fit_filename=fit_filename,
+                                task_design=task_design, 
+                                fixed=fixed, 
+                                bounds=bounds, 
+                                datasets_to_generate=datasets_to_generate, 
+                                number_of_participants=number_of_participants, 
+                                multiprocessing=False, # TODO: True fails on OOD for some reason 
+                                clear_data=clear_data)
     
     dataloader = run_generative_fits(models=models, 
                                      number_of_runs=number_of_runs, 

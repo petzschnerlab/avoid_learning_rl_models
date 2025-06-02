@@ -68,5 +68,5 @@ if __name__ == "__main__":
                        }
 
     run_recovery(**generate_params, recovery='parameter')
-    run_recovery(**generate_params, recovery='model')
+    run_recovery(**generate_params, recovery='model', generate_data=False)
     export_recovery(path="SOMA_RL/reports")
