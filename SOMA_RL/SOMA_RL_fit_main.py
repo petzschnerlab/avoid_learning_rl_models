@@ -47,13 +47,12 @@ if __name__ == "__main__":
     fit_params = {'learning_filename':          'SOMA_RL/data/pain_learning_processed.csv',
                   'transfer_filename':          'SOMA_RL/data/pain_transfer_processed.csv',
                   'models':                     models,
-                  'number_of_participants':     0,
                   'random_params':              'normal',
                   'fixed':                      fixed,
                   'bounds':                     bounds,
                   'number_of_runs':             10,
+                  'training':                   'scipy',
                   'multiprocessing':            True,
-                  'training':                   'scipy'
                  }
 
     run_fit_empirical(**fit_params)

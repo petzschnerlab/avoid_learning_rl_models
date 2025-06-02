@@ -58,15 +58,13 @@ if __name__ == "__main__":
 
     generate_params = {'learning_filename':         'SOMA_RL/data/pain_learning_processed.csv',
                        'transfer_filename':         'SOMA_RL/data/pain_transfer_processed.csv',
-                       'fit_filename':              'SOMA_RL/fits/fit_data_FIT.pkl',
                        'models':                    models,
                        'parameters':                'random',
                        'fixed':                     fixed,
                        'bounds':                    bounds,
                        'number_of_runs':            10,
-                       'multiprocessing':           True,
-                       'number_of_participants':    0,
                        'training':                  'scipy',
+                       'multiprocessing':           True,
                        }
 
     run_recovery(**generate_params, recovery='parameter')
