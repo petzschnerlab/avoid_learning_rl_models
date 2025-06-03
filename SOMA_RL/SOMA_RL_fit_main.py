@@ -17,7 +17,7 @@ if __name__ == "__main__":
     '''
     Supported models: 
         QLearning, ActorCritic
-        Relative, wRelative, fRelative
+        Relative, wRelative
         Hybrid2012, Hybrid2021
 
     Standard models:
@@ -25,7 +25,6 @@ if __name__ == "__main__":
         ActorCritic: Standard Actor-Critic Model
         Relative: Standard Relative Model (Palminteri et al., 2015)
         wRelative: Simplified Relative Model (Williams et al., ...)
-        fRelative: Forward-Thinking Relative Model (Williams et al., ...)
         Hybrid2012+bias: Standard Hybrid 2012 Model (Gold et al., 2012)
         Hybrid2021+bias+decay: Standard Hybrid 2021 Model (Geana et al., 2021)
 
@@ -39,7 +38,6 @@ if __name__ == "__main__":
               'ActorCritic+novel',  #Standard + novel
               'Relative+novel',     #Standard + novel
               'wRelative+novel',    #Standard + novel
-              'fRelative+novel',    #Standard + novel
               'Hybrid2012+novel',   #Standard - bias + novel
     ] 
         

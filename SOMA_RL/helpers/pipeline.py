@@ -121,7 +121,6 @@ class RLPipeline:
                         'ActorCritic': 'w_values', 
                         'Relative': 'q_values',
                         'wRelative': 'q_values',
-                        'fRelative': 'q_values',
                         'Hybrid2012': 'h_values',
                         'Hybrid2021': 'h_values',
                         'StandardHybrid2012': 'h_values',

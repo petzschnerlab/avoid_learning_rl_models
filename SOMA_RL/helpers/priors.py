@@ -30,15 +30,6 @@ def fixed_priors():
             'novel_value': 0, # Custom
         },
 
-        'fRelative': {  # From Palminteri et al., 2015
-            'factual_lr': 0.19,
-            'counterfactual_lr': 0.15,
-            'contextual_lr': 0.33,
-            'temperature': 0.05,
-            'decay_factor': 0.08, # From Geana et al., 2021:
-            'novel_value': 0, # Custom
-        },
-
         'Hybrid2012': {  # From Geana et al., 2021:
             'factual_lr': 0.49,
             'counterfactual_lr': 0.49,
