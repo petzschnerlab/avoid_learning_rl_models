@@ -314,6 +314,7 @@ def plot_model_fits(confusion_matrix):
 def plot_parameter_fits(models, fit_data, fixed=None, bounds=None, alpha=.75):
     #Create a dictionary with model being keys and pd.dataframe empty as value
     fit_results = {model: [] for model in models}
+    color = get_colors('condition')[0]
     for model in models:
         model_data = fit_data[model]
         for run_params in model_data['participant']:
@@ -334,27 +335,40 @@ def plot_parameter_fits(models, fit_data, fixed=None, bounds=None, alpha=.75):
             else:
                 fit_results[model] = combined_parameters            
 
-    for model in models:
+    number_columns = np.max([len(fit_results[model].columns)-2 for model in models])
+    fig, axs = plt.subplots(len(models), number_columns, figsize=(5*number_columns, 5*len(models)))
+    for mi, model in enumerate(models):
         model_bounds = RLModel(model, fixed=fixed, bounds=bounds).get_bounds()
-        fig, axs = plt.subplots(1, len(fit_results[model].columns)-2, figsize=(5*len(fit_results[model].columns)-2, 5))
         for i, parameter in enumerate(fit_results[model].columns[2:]):
+            parameter_name = parameter.replace('_', ' ').replace('lr', 'learning rate').title().replace('Weighing Factor', 'Weighting Factor')
             true = fit_results[model][fit_results[model]['fit_type']=='True'][parameter]
             fit = fit_results[model][fit_results[model]['fit_type']=='Fit'][parameter]
-            axs[i].scatter(true, fit)
-            r = np.round(np.corrcoef(true.to_numpy().astype(float), fit.to_numpy().astype(float))[0,1], 2)
-            axs[i].plot(model_bounds[parameter], model_bounds[parameter], '--', color='grey', alpha=alpha)
-            axs[i].set_title(f"{parameter}, r={r}")
-            axs[i].set_xlabel('True')
-            axs[i].set_ylabel('Fit')
-            axs[i].set_xlim(model_bounds[parameter])
-            axs[i].set_ylim(model_bounds[parameter])
-
-        fig.suptitle(f'{model} Correlation Plot')
-        plt.tight_layout()
-        if not os.path.exists('SOMA_RL/plots/correlations'):
-            os.makedirs('SOMA_RL/plots/correlations')
-        plt.savefig(f'SOMA_RL/plots/correlations/{model}_correlation_plot.png')
-        plt.savefig(f'SOMA_RL/plots/correlations/{model}_correlation_plot.svg', format='svg')
+            axs[mi, i].scatter(true, fit, s=5)
+            axs[mi, i].plot(model_bounds[parameter], model_bounds[parameter], '--', color='grey', alpha=alpha)
+            axs[mi, i].set_title(f"{parameter_name.title()}", loc='left', fontsize=12)
+            if mi == len(models)-1:
+                axs[mi, i].set_xlabel('True')
+            else: 
+                axs[mi, i].set_xlabel('')
+            if i == 0:
+                axs[mi, i].set_ylabel(f'{model.split("+")[0].replace('2012','')}\nFit')
+            else:
+                axs[mi, i].set_ylabel('')
+            axs[mi, i].set_xlim(model_bounds[parameter])
+            axs[mi, i].set_ylim(model_bounds[parameter])
+            axs[mi, i].set_xticks([model_bounds[parameter][0], model_bounds[parameter][1]])
+            axs[mi, i].set_yticks([model_bounds[parameter][0], model_bounds[parameter][1]])
+            axs[mi, i].spines['top'].set_visible(False)
+            axs[mi, i].spines['right'].set_visible(False)                
+            if i == len(fit_results[model].columns[2:])-1 and i != (number_columns-1):
+                for j in range(i+1, number_columns):
+                    axs[mi, j].axis('off')    
+                
+    plt.tight_layout()
+    if not os.path.exists('SOMA_RL/plots/correlations'):
+        os.makedirs('SOMA_RL/plots/correlations')
+    plt.savefig(f'SOMA_RL/plots/correlations/recovery_correlation_plot.png')
+    plt.savefig(f'SOMA_RL/plots/correlations/recovery_correlation_plot.svg', format='svg')
 
 def plot_parameter_data(save_name: str, model_data: pd.DataFrame = None, plot_type: str = 'raincloud') -> None:
 
