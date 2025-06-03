@@ -732,8 +732,12 @@ def plot_model_parameter_correlations(fit_data, params_of_interest):
 
     Parameters:
     - fit_data: dict of DataFrames, keyed by model name, each with a 'participant' column and parameter columns.
-    - models_of_interest: dict mapping model names to the parameter of interest in each model.
+    - params_of_interest: dict mapping model names to the parameter of interest in each model.
     """
+
+    # Remove any keys from params_of_interest that are not in fit_data
+    params_of_interest = {model: param for model, param in params_of_interest.items() if model in fit_data and param in fit_data[model].columns}
+
     # Extract relevant columns for each model
     model_values = {
         model: fit_data[model][['participant', param]]
@@ -757,34 +761,36 @@ def plot_model_parameter_correlations(fit_data, params_of_interest):
 
     # Create subplots
     n_pairs = len(param_pairs)
-    fig, axs = plt.subplots(1, n_pairs, figsize=(5 * n_pairs, 5))
 
-    if n_pairs == 1:
-        axs = [axs]  # Make it iterable
+    if n_pairs != 0:
+        fig, axs = plt.subplots(1, n_pairs, figsize=(5 * n_pairs, 5))
 
-    for i, (x_param, y_param) in enumerate(param_pairs):
-        x = merged_df[x_param]
-        y = merged_df[y_param]
-        corr = x.corr(y)
+        if n_pairs == 1:
+            axs = [axs]  # Make it iterable
 
-        model_1 = [k for k, v in params_of_interest.items() if v == x_param][0].split('+')[0]
-        model_2 = [k for k, v in params_of_interest.items() if v == y_param][0].split('+')[0]
+        for i, (x_param, y_param) in enumerate(param_pairs):
+            x = merged_df[x_param]
+            y = merged_df[y_param]
+            corr = x.corr(y)
 
-        axs[i].scatter(x, y)
-        axs[i].set_xlabel(x_param)
-        axs[i].set_ylabel(y_param)
-        axs[i].set_title(f'{model_1}: {x_param}\nvs\n{model_2}: {y_param}\nr={corr:.2f}')
-        axs[i].plot([x.min(), x.max()], [y.min(), y.max()], 'k--', lw=2)
-        axs[i].set_xlim(x.min(), x.max())
-        axs[i].set_ylim(y.min(), y.max())
-        axs[i].set_aspect('equal', adjustable='box')
-        axs[i].set_xticks([x.min(), x.max()])
-        axs[i].set_yticks([y.min(), y.max()])
-        axs[i].set_xticklabels([f'{x.min():.2f}', f'{x.max():.2f}'])
-        axs[i].set_yticklabels([f'{y.min():.2f}', f'{y.max():.2f}'])
-        axs[i].grid(True)
+            model_1 = [k for k, v in params_of_interest.items() if v == x_param][0].split('+')[0]
+            model_2 = [k for k, v in params_of_interest.items() if v == y_param][0].split('+')[0]
 
-    plt.tight_layout()
-    plt.savefig('SOMA_RL/plots/parameter_of_interest_comparisons.png', dpi=300)
-    plt.show()
-    plt.close()
+            axs[i].scatter(x, y)
+            axs[i].set_xlabel(x_param)
+            axs[i].set_ylabel(y_param)
+            axs[i].set_title(f'{model_1}: {x_param}\nvs\n{model_2}: {y_param}\nr={corr:.2f}')
+            axs[i].plot([x.min(), x.max()], [y.min(), y.max()], 'k--', lw=2)
+            axs[i].set_xlim(x.min(), x.max())
+            axs[i].set_ylim(y.min(), y.max())
+            axs[i].set_aspect('equal', adjustable='box')
+            axs[i].set_xticks([x.min(), x.max()])
+            axs[i].set_yticks([y.min(), y.max()])
+            axs[i].set_xticklabels([f'{x.min():.2f}', f'{x.max():.2f}'])
+            axs[i].set_yticklabels([f'{y.min():.2f}', f'{y.max():.2f}'])
+            axs[i].grid(True)
+
+        plt.tight_layout()
+        plt.savefig('SOMA_RL/plots/parameter_of_interest_comparisons.png', dpi=300)
+        plt.show()
+        plt.close()

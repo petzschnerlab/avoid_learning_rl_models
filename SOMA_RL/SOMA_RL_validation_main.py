@@ -1,22 +1,12 @@
-import os
-import random as rnd
-import pandas as pd
-import tqdm
-import matplotlib.pyplot as plt
-
-from helpers.analyses import run_recovery
+from helpers.pipeline import Pipeline
 from helpers.priors import get_priors
-from helpers.pipeline import export_recovery
 
 if __name__ == "__main__":
 
     # =========================================== #
     # ================= INPUTS ================== #
     # =========================================== #
-
-    #Seed random number generator
-    rnd.seed(1251)
-
+    
     #Models
     '''
     Supported models: 
@@ -43,7 +33,7 @@ if __name__ == "__main__":
               'Relative+novel',     #Standard + novel
               'wRelative+novel',    #Standard + novel
               'Hybrid2012+novel',   #Standard - bias + novel
-    ] 
+    ]
 
     fixed, _ = get_priors()
     bounds = {'QLearning':          {'temperature': (0.1, .2)},
@@ -59,11 +49,12 @@ if __name__ == "__main__":
                        'parameters':                'random',
                        'fixed':                     fixed,
                        'bounds':                    bounds,
-                       'number_of_runs':            10,
+                       'number_of_runs':            1,
                        'training':                  'scipy',
                        'multiprocessing':           True,
+                       'number_of_participants':    10,
                        }
 
-    run_recovery(**generate_params, recovery='parameter')
-    run_recovery(**generate_params, recovery='model', generate_data=False)
-    export_recovery(path="SOMA_RL/reports")
+    pipeline = Pipeline(seed=1251)
+    pipeline.run_validation(**generate_params, recovery='parameter')
+    pipeline.run_validation(**generate_params, recovery='model', generate_data=False)

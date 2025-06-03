@@ -1,17 +1,11 @@
-import random as rnd
-
-from helpers.analyses import run_fit_empirical
+from helpers.pipeline import Pipeline
 from helpers.priors import get_priors
-from helpers.pipeline import export_fits
 
 if __name__ == "__main__":
 
     # =========================================== #
     # ================= INPUTS ================== #
     # =========================================== #
-
-    #Seed random number generator
-    rnd.seed(1251)
 
     #Models and Parameters
     '''
@@ -39,7 +33,7 @@ if __name__ == "__main__":
               'Relative+novel',     #Standard + novel
               'wRelative+novel',    #Standard + novel
               'Hybrid2012+novel',   #Standard - bias + novel
-    ] 
+    ]
         
     fixed, bounds = get_priors()    
     fit_params = {'learning_filename':          'SOMA_RL/data/pain_learning_processed.csv',
@@ -53,5 +47,5 @@ if __name__ == "__main__":
                   'multiprocessing':            True,
                  }
 
-    run_fit_empirical(**fit_params)
-    export_fits(path="SOMA_RL/reports")           
+    pipeline = Pipeline(seed=1251)
+    pipeline.run_fit(**fit_params)
