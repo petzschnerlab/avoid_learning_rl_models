@@ -61,7 +61,7 @@ def fixed_priors():
             'factual_lr': 0.28,
             'counterfactual_lr': 0.18,
             'temperature': 0.06,
-            'weighing_factor': 0.5, # Custom
+            'weighting_factor': 0.5, # Custom
             'decay_factor': 0.08, # From Geana et al., 2021:
             'novel_value': 0, # Custom
         },

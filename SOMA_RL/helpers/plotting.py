@@ -340,7 +340,7 @@ def plot_parameter_fits(models, fit_data, fixed=None, bounds=None, alpha=.75):
     for mi, model in enumerate(models):
         model_bounds = RLModel(model, fixed=fixed, bounds=bounds).get_bounds()
         for i, parameter in enumerate(fit_results[model].columns[2:]):
-            parameter_name = parameter.replace('_', ' ').replace('lr', 'learning rate').title().replace('Weighing Factor', 'Weighting Factor')
+            parameter_name = parameter.replace('_', ' ').replace('lr', 'learning rate').title()
             true = fit_results[model][fit_results[model]['fit_type']=='True'][parameter]
             fit = fit_results[model][fit_results[model]['fit_type']=='Fit'][parameter]
             axs[mi, i].scatter(true, fit, s=5)
@@ -417,7 +417,7 @@ def plot_parameter_data(save_name: str, model_data: pd.DataFrame = None, plot_ty
 
         #Get descriptive statistics for the group
         group_data = group_data.set_index(condition_name)[parameter].astype(float)
-        if parameter not in ['novel_value', 'mixing_factor', 'valence_factor', 'weighing_factor']: # Exclude parameters that are not to be log-transformed
+        if parameter not in ['novel_value', 'mixing_factor', 'valence_factor', 'weighting_factor']: # Exclude parameters that are not to be log-transformed
             if group_data.min() <= 0: 
                 group_data = group_data - group_data.min() + 1  # Shift the parameter to be positive if it has non-positive values
             group_data = np.log(group_data)  # Log-transform the parameter to reduce skewness
@@ -439,8 +439,7 @@ def plot_parameter_data(save_name: str, model_data: pd.DataFrame = None, plot_ty
         ax.set_xticks(x_values, x_labels)
         ax.set_xlabel('')
         y_label = parameter.replace('_', ' ').replace('lr', 'learning rate').title()
-        y_label = f'Log {y_label}' if parameter not in ['novel_value', 'mixing_factor', 'valence_factor', 'weighing_factor'] else f'{y_label}'
-        y_label = 'Weighting Factor' if parameter == 'weighing_factor' else y_label
+        y_label = f'Log {y_label}' if parameter not in ['novel_value', 'mixing_factor', 'valence_factor', 'weighting_factor'] else f'{y_label}'
         ax.set_ylabel(y_label)
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)

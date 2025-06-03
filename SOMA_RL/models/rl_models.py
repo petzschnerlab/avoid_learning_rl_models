@@ -126,7 +126,7 @@ class RLModel:
         model_parameters['wRelative'] = ['factual_lr',
                                            'counterfactual_lr',
                                            'temperature',
-                                           'weighing_factor',
+                                           'weighting_factor',
                                            'novel_value',
                                            'decay_factor']
 
@@ -192,7 +192,7 @@ class RLModel:
                             'contextual_lr': 0.1,
                             'temperature': 0.1,
                             'mixing_factor': 0.5,
-                            'weighing_factor': 0.5,
+                            'weighting_factor': 0.5,
                             'noise_factor': 0.1,
                             'valence_factor': 0.5,
                             'valence_reward': 0.5,
@@ -216,7 +216,7 @@ class RLModel:
                              'contextual_lr': (0.01, .99),
                              'temperature': (0.01, 1),
                              'mixing_factor': (0, 1),
-                             'weighing_factor': (0, 1),
+                             'weighting_factor': (0, 1),
                              'noise_factor': (0, .2),
                              'valence_factor': (0, 1),
                              'valence_reward': (0, 1),

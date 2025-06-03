@@ -84,7 +84,7 @@ def run_fit_empirical(learning_filename,
     plot_fits_by_run_number(fit_data)
     describe_fits(fit_data)
     params_of_interest = {
-        'wRelative+novel': 'weighing_factor',
+        'wRelative+novel': 'weighting_factor',
         'Relative+novel': 'contextual_lr',
         'Hybrid2012+novel': 'mixing_factor'
     } 
@@ -234,7 +234,7 @@ def run_fit_analyses(fit_data, transform=True):
 
             #Log-Transform when needed
             if transform:
-                if parameter not in ['novel_factor', 'mixing_factor', 'valence_factor', 'weighing_factor']: # Exclude parameters that are not to be log-transformed
+                if parameter not in ['novel_factor', 'mixing_factor', 'valence_factor', 'weighting_factor']: # Exclude parameters that are not to be log-transformed
                     if model_data[parameter].min() <= 0: 
                         model_data[parameter] = model_data[parameter] - model_data[parameter].min() + 1  # Shift the parameter to be positive if it has non-positive values
                     model_data[parameter] = np.log(model_data[parameter])  # Log-transform the parameter to reduce skewness

@@ -157,24 +157,24 @@ class wRelative(RLToolbox, nn.Module):
         Learning rate for counterfactual Q-value update
     temperature: float
         Temperature parameter for softmax action selection
-    weighing_factor: float
+    weighting_factor: float
             Weighting factor for contextual information
     """
 
-    def __init__(self, factual_lr, counterfactual_lr, temperature, weighing_factor, novel_value, decay_factor):
+    def __init__(self, factual_lr, counterfactual_lr, temperature, weighting_factor, novel_value, decay_factor):
         super().__init__()
 
         #Set parameters
         self.factual_lr = factual_lr
         self.counterfactual_lr = counterfactual_lr
         self.temperature = temperature
-        self.weighing_factor = weighing_factor
+        self.weighting_factor = weighting_factor
         self.novel_value = novel_value
         self.decay_factor = decay_factor
         self.parameters = {'factual_lr': self.factual_lr, 
                            'counterfactual_lr': self.counterfactual_lr, 
                            'temperature': self.temperature,
-                           'weighing_factor': self.weighing_factor,
+                           'weighting_factor': self.weighting_factor,
                            'novel_value': self.novel_value,
                            'decay_factor': self.decay_factor}
     
@@ -205,9 +205,9 @@ class wRelative(RLToolbox, nn.Module):
     
     def compute_prediction_error(self, state):
         if self.training == 'torch':
-            state['prediction_errors'] = state['rewards'] - (torch.mean(state['rewards'])*self.weighing_factor) - state['q_values']
+            state['prediction_errors'] = state['rewards'] - (torch.mean(state['rewards'])*self.weighting_factor) - state['q_values']
         else:
-            state['prediction_errors'] = [state['rewards'][i] - (np.mean(state['rewards'])*self.weighing_factor) - state['q_values'][i] for i in range(len(state['rewards']))]
+            state['prediction_errors'] = [state['rewards'][i] - (np.mean(state['rewards'])*self.weighting_factor) - state['q_values'][i] for i in range(len(state['rewards']))]
         return state
     
     #Run trial functions
@@ -262,7 +262,7 @@ class wRelative(RLToolbox, nn.Module):
         self.reset_datalists()
         
         #Unpack free parameters
-        self.factual_lr, self.counterfactual_lr, self.temperature, self.weighing_factor, *optionals = x
+        self.factual_lr, self.counterfactual_lr, self.temperature, self.weighting_factor, *optionals = x
         self.unpack_optionals(optionals)
 
         #Return the negative log likelihood of all observed actions
