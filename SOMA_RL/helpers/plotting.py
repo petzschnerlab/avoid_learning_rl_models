@@ -351,7 +351,7 @@ def plot_parameter_fits(models, fit_data, fixed=None, bounds=None, alpha=.75):
             else: 
                 axs[mi, i].set_xlabel('')
             if i == 0:
-                axs[mi, i].set_ylabel(f'{model.split("+")[0].replace('2012','')}\nFit')
+                axs[mi, i].set_ylabel(f"{model.split('+')[0].replace('2012','')}\nFit")
             else:
                 axs[mi, i].set_ylabel('')
             axs[mi, i].set_xlim(model_bounds[parameter])
