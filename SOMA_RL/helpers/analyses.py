@@ -16,10 +16,10 @@ from helpers.dataloader import DataLoader
 from helpers.tasks import AvoidanceLearningTask
 from helpers.rlpipeline import RLPipeline
 from helpers.statistics import Statistics
-from helpers.plotting import *
+from helpers.plotting import Plotting
 from helpers.multiprocessing import mp_run_fit, mp_run_simulations, mp_progress
 
-class Analyses:
+class Analyses(Plotting):
     """
     Class to hold all functions for the SOMA project analyses
     """
@@ -90,14 +90,14 @@ class Analyses:
                                     dataloader.get_group_ids(),
                                     None)
         
-        plot_fits_by_run_number(fit_data)
+        self.plot_fits_by_run_number(fit_data)
         self.describe_fits(fit_data)
         params_of_interest = {
             'wRelative+novel': 'weighting_factor',
             'Relative+novel': 'contextual_lr',
             'Hybrid2012+novel': 'mixing_factor'
         } 
-        plot_model_parameter_correlations(fit_data, params_of_interest)
+        self.plot_model_parameter_correlations(fit_data, params_of_interest)
         
         self.run_fit_analyses(copy.deepcopy(fit_data))
         
@@ -221,9 +221,9 @@ class Analyses:
             confusion_matrix = self.create_confusion_matrix(dataloader=dataloader, 
                                                     fit_data=fit_data)
             
-            plot_model_fits(confusion_matrix=confusion_matrix)
+            self.plot_model_fits(confusion_matrix=confusion_matrix)
         else:
-            plot_parameter_fits(models=models, 
+            self.plot_parameter_fits(models=models, 
                                 fit_data=fit_data, 
                                 fixed=fixed, 
                                 bounds=bounds)
@@ -286,8 +286,8 @@ class Analyses:
         posthoc_results.to_csv('SOMA_RL/stats/pain_fits_posthoc_results.csv', index=False)
 
         for model in fit_data:
-            plot_parameter_data(f'{model}-model-fits', copy.copy(fit_data[model]))
-            plot_parameter_data(f'{model}-model-fits', copy.copy(fit_data[model]), plot_type='bar')
+            self.plot_parameter_data(f'{model}-model-fits', copy.copy(fit_data[model]))
+            self.plot_parameter_data(f'{model}-model-fits', copy.copy(fit_data[model]), plot_type='bar')
 
     def create_confusion_matrix(self, dataloader, fit_data):
         confusion_matrix = pd.DataFrame(index=fit_data.keys(), columns=fit_data.keys(), dtype=float) #Rows = model fit, Columns = generated model
@@ -426,7 +426,7 @@ class Analyses:
                     full_fit_data[model_name] = pd.concat((full_fit_data[model_name], participant_data), ignore_index=True)
 
         #Plots
-        plot_fit_distributions(fit_data)
+        self.plot_fit_distributions(fit_data)
 
         #Determine participants with outlier fits
         self.determine_parameter_outliers(fit_data, dataloader)
@@ -562,8 +562,8 @@ class Analyses:
         best_fits_BIC_summary.to_csv('SOMA_RL/fits/group_BIC_percentages.csv')
 
         #Plots
-        plot_model_comparisons(group_AIC, 'AIC_model_comparisons')
-        plot_model_comparisons(group_BIC, 'BIC_model_comparisons')
+        self.plot_model_comparisons(group_AIC, 'AIC_model_comparisons')
+        self.plot_model_comparisons(group_BIC, 'BIC_model_comparisons')
 
     def run_fit_simulations(self, 
                             learning_filename,
@@ -693,9 +693,9 @@ class Analyses:
             
         #Plot simulations 
         for group in accuracy:
-            plot_simulations(accuracy[group], prediction_errors[group], values[group], choice_rates[group], models, group, dataloader)
-        plot_simulations_behaviours(accuracy_model, choice_rates_model, models, accuracy.keys(), dataloader, rolling_mean=5)
-        plot_simulations_behaviours(accuracy_model, choice_rates_model, models, accuracy.keys(), dataloader, rolling_mean=5, plot_type = 'bar')
+            self.plot_simulations(accuracy[group], prediction_errors[group], values[group], choice_rates[group], models, group, dataloader)
+        self.plot_simulations_behaviours(accuracy_model, choice_rates_model, models, accuracy.keys(), dataloader, rolling_mean=5)
+        self.plot_simulations_behaviours(accuracy_model, choice_rates_model, models, accuracy.keys(), dataloader, rolling_mean=5, plot_type = 'bar')
 
     def generate_simulated_data(self,
                                 models,
