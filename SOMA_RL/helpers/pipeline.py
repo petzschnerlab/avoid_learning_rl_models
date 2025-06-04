@@ -51,10 +51,10 @@ class Pipeline(Master):
         self.set_parameters(mode=mode, **kwargs)
 
         if mode == 'FIT':
-            self.run_fit_empirical()
+            self.run_fit()
             self.export_fits(path="SOMA_RL/reports")           
         elif mode == 'VALIDATION':
-            self.run_recovery()
+            self.run_validation()
             self.export_recovery(path="SOMA_RL/reports")
         else:
             raise ValueError(f"Invalid mode '{mode}'. Mode must be 'fit' or 'validation'.")

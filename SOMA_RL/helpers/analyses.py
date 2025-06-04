@@ -27,7 +27,7 @@ class Analyses(Plotting):
     def __init__(self):
         super().__init__()
 
-    def run_fit_empirical(self):
+    def run_fit(self):
 
         #Report each of the inputs
         print('Running Empirical Fit with the following parameters:')
@@ -97,7 +97,7 @@ class Analyses(Plotting):
                             number_of_participants=self.number_of_participants, 
                             multiprocessing=self.multiprocessing)
 
-    def run_recovery(self):
+    def run_validation(self):
 
         #Report each of the inputs
         print('Running Generation and Fit with the following parameters:')
@@ -132,9 +132,9 @@ class Analyses(Plotting):
             with open(self.fit_filename, 'rb') as f:
                 fit_data = pickle.load(f)
             
-            if set(fit_data.keys()) != set(models):
-                warnings.warn(f'\nModels in fit data ({set(fit_data.keys())}) do not match models provided ({set(models)}). Overriding models parameter to match fit data.', stacklevel=2)
-                models = list(fit_data.keys())
+            if set(fit_data.keys()) != set(self.models):
+                warnings.warn(f'\nModels in fit data ({set(fit_data.keys())}) do not match models provided ({set(self.models)}). Overriding models parameter to match fit data.', stacklevel=2)
+                self.models = list(fit_data.keys())
             
         if self.fixed is not None:
             print('\nParameter Overwrites:')
@@ -157,20 +157,20 @@ class Analyses(Plotting):
             datasets_to_generate = len(DataLoader(self.learning_filename, self.transfer_filename, number_of_participants=self.number_of_participants, reduced=False).get_participant_ids())
 
         if self.generate_data:
-            self.generate_simulated_data(models=models, 
+            self.generate_simulated_data(models=self.models, 
                                     parameters=self.parameters, 
                                     learning_filename=self.learning_filename, 
                                     transfer_filename=self.transfer_filename, 
                                     fit_filename=self.fit_filename,
                                     task_design=self.task_design, 
                                     fixed=self.fixed, 
-                                    bounds=bounds, 
+                                    bounds=self.bounds, 
                                     datasets_to_generate=datasets_to_generate, 
                                     number_of_participants=self.number_of_participants, 
                                     multiprocessing=self.multiprocessing,
                                     clear_data=self.clear_data)
         
-        dataloader = self.run_generative_fits(models=models, 
+        dataloader = self.run_generative_fits(models=self.models, 
                                         number_of_runs=self.number_of_runs, 
                                         datasets_to_generate=datasets_to_generate, 
                                         fixed=self.fixed, 
@@ -182,7 +182,7 @@ class Analyses(Plotting):
                                         optimizer_lr=self.optimizer_lr)
         
         fit_data = self.run_fit_comparison(dataloader=dataloader, 
-                                    models=models, 
+                                    models=self.models, 
                                     group_ids=['simulated'], 
                                     recovery=self.recovery)
         
@@ -192,7 +192,7 @@ class Analyses(Plotting):
             
             self.plot_model_fits(confusion_matrix=confusion_matrix)
         else:
-            self.plot_parameter_fits(models=models, 
+            self.plot_parameter_fits(models=self.models, 
                                 fit_data=fit_data, 
                                 fixed=self.fixed, 
                                 bounds=self.bounds)
