@@ -36,7 +36,8 @@ if __name__ == "__main__":
     ]
         
     fixed, bounds = get_priors()    
-    fit_params = {'learning_filename':          'SOMA_RL/data/pain_learning_processed.csv',
+    fit_params = {'mode':                      'fit',
+                  'learning_filename':          'SOMA_RL/data/pain_learning_processed.csv',
                   'transfer_filename':          'SOMA_RL/data/pain_transfer_processed.csv',
                   'models':                     models,
                   'random_params':              'normal',
@@ -48,4 +49,4 @@ if __name__ == "__main__":
                  }
 
     pipeline = Pipeline(seed=1251)
-    pipeline.run_fit(**fit_params)
+    pipeline.run(**fit_params)

@@ -2,6 +2,7 @@ from typing import Optional
 import random as rnd
 
 from . import Master
+from .help import Help
 
 
 class Pipeline(Master):
@@ -29,7 +30,7 @@ class Pipeline(Master):
             
         super().__init__()
 
-    def run(self, mode: str, **kwargs):
+    def run(self, mode: str = None, **kwargs):
 
         """
         Runs the pipeline in the specified mode.
@@ -47,9 +48,16 @@ class Pipeline(Master):
             If the mode is invalid or if required parameters are missing.
         """
 
-        mode = mode.upper()
+        # Setup the parameters
         self.set_parameters(mode=mode, **kwargs)
 
+        #Run the help
+        if self.help:
+            help = Help()
+            help.print_help()
+            return None
+
+        mode = mode.upper()
         if mode == 'FIT':
             self.run_fit()
             self.export_fits(path="SOMA_RL/reports")           

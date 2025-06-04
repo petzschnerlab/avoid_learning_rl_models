@@ -6,7 +6,7 @@ class Parameters:
     Class to set parameters for model fitting and validation
     """
 
-    def set_parameters(self, mode: str, **kwargs: dict) -> None:
+    def set_parameters(self, mode: str = None, **kwargs: dict) -> None:
         
         """
         Assign parameters for FIT or validation mode.
@@ -24,12 +24,19 @@ class Parameters:
             If required parameters are missing or if mode is invalid.
         """
 
+        # Skip setting parameters if 'help' is requested
+        if 'help' in kwargs and kwargs['help']:
+            self.help = help
+            return None
+
         mode = mode.upper()
         if mode not in ['FIT', 'VALIDATION']:
             raise ValueError(f"Invalid mode '{mode}'. Mode must be 'fit' or 'validation'.")
 
         # Define accepted and required parameters
         fit_params = [
+            'help',
+            'mode',
             'learning_filename',
             'transfer_filename',
             'models',
@@ -46,6 +53,8 @@ class Parameters:
         ]
         
         validation_params = [
+            'help',
+            'mode',
             'models',
             'parameters',
             'learning_filename',
@@ -66,8 +75,8 @@ class Parameters:
             'optimizer_lr'
         ]
 
-        required_fit = ['learning_filename', 'transfer_filename', 'models']
-        required_validation = ['models', 'parameters']
+        required_fit = ['mode', 'learning_filename', 'transfer_filename', 'models']
+        required_validation = ['mode', 'models', 'parameters']
 
         accepted_params = fit_params if mode == 'FIT' else validation_params
         required_params = required_fit if mode == 'FIT' else required_validation
@@ -89,6 +98,7 @@ class Parameters:
         # Assign defaults and user values
         for param in accepted_params:
             default_value = {
+                'help': False,
                 'number_of_participants': 0,
                 'fixed': None,
                 'bounds': None,

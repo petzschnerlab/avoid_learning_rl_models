@@ -43,7 +43,8 @@ if __name__ == "__main__":
               'Hybrid2012':         {'temperature': (0.1, .2)},
     }
 
-    generate_params = {'learning_filename':         'SOMA_RL/data/pain_learning_processed.csv',
+    validate_params = {'mode':                      'validation',
+                       'learning_filename':         'SOMA_RL/data/pain_learning_processed.csv',
                        'transfer_filename':         'SOMA_RL/data/pain_transfer_processed.csv',
                        'models':                    models,
                        'parameters':                'random',
@@ -56,5 +57,5 @@ if __name__ == "__main__":
                        }
 
     pipeline = Pipeline(seed=1251)
-    pipeline.run_validation(**generate_params, recovery='parameter')
-    pipeline.run_validation(**generate_params, recovery='model', generate_data=False)
+    pipeline.run(recovery='parameter', **validate_params)
+    pipeline.run(recovery='model', **validate_params, generate_data=False)
