@@ -27,66 +27,53 @@ class Analyses(Plotting):
     def __init__(self):
         super().__init__()
 
-    def run_fit_empirical(self,
-                        learning_filename, 
-                        transfer_filename, 
-                        models, 
-                        number_of_participants=0,
-                        fixed=None, 
-                        bounds=None,  
-                        random_params=False, 
-                        number_of_runs=1, 
-                        generated=False, 
-                        multiprocessing=False,
-                        training='scipy',
-                        training_epochs=1000,
-                        optimizer_lr=0.01):
+    def run_fit_empirical(self):
 
         #Report each of the inputs
         print('Running Empirical Fit with the following parameters:')
         print('--------------------------------------------------------')
-        print(f'Models: {models}')
-        print(f'Learning Filename: {learning_filename}')
-        print(f'Transfer Filename: {transfer_filename}')
-        print(f'Number of Participants: {number_of_participants}')
-        print(f'Random Parameters: {random_params}')
-        print(f'Number of Runs: {number_of_runs}')
-        print(f'Generated: {generated}')
-        print(f'Multiprocessing: {multiprocessing}')
-        print(f'Training: {training}')
-        print(f'Training Epochs: {training_epochs}')
-        print(f'Optimizer Learning Rate: {optimizer_lr}')
+        print(f'Models: {self.models}')
+        print(f'Learning Filename: {self.learning_filename}')
+        print(f'Transfer Filename: {self.transfer_filename}')
+        print(f'Number of Participants: {self.number_of_participants}')
+        print(f'Random Parameters: {self.random_params}')
+        print(f'Number of Runs: {self.number_of_runs}')
+        print(f'Generated: {self.generated}')
+        print(f'Multiprocessing: {self.multiprocessing}')
+        print(f'Training: {self.training}')
+        print(f'Training Epochs: {self.training_epochs}')
+        print(f'Optimizer Learning Rate: {self.optimizer_lr}')
 
-        if fixed is not None:
+        if self.fixed is not None:
             print('\nParameter Overwrites:')
-            for model in fixed:
+            for model in self.fixed:
                 print(f'       {model}:')
-                for key in fixed[model]:
-                    print(f'              {key} = {fixed[model][key]}')
-        if bounds is not None:
+                for key in self.fixed[model]:
+                    print(f'              {key} = {self.fixed[model][key]}')
+        if self.bounds is not None:
             print('\nParameter Bound Overwrites:')
-            for model in bounds:
+            for model in self.bounds:
                 print(f'       {model}:')
-                for key in bounds[model]:
-                    print(f'              {key} = {bounds[model][key]}')
+                for key in self.bounds[model]:
+                    print(f'              {key} = {self.bounds[model][key]}')
         print('--------------------------------------------------------')
         
-        dataloader = self.run_model_fit(learning_filename, 
-                            transfer_filename, 
-                            models, 
-                            number_of_participants=number_of_participants, 
-                            fixed=fixed,
-                            bounds=bounds,
-                            random_params=random_params, 
-                            number_of_runs=number_of_runs, 
-                            generated=generated, 
-                            multiprocessing=multiprocessing,
-                            training=training,
-                            training_epochs=training_epochs,
-                            optimizer_lr=optimizer_lr)
+        dataloader = self.run_model_fit(self.learning_filename, 
+                            self.transfer_filename, 
+                            self.models, 
+                            number_of_participants=self.number_of_participants, 
+                            fixed=self.fixed,
+                            bounds=self.bounds,
+                            random_params=self.random_params, 
+                            number_of_runs=self.number_of_runs, 
+                            generated=self.generated, 
+                            multiprocessing=self.multiprocessing,
+                            training=self.training,
+                            training_epochs=self.training_epochs,
+                            optimizer_lr=self.optimizer_lr)
         
         fit_data = self.run_fit_comparison(dataloader, 
-                                    models, 
+                                    self.models, 
                                     dataloader.get_group_ids(),
                                     None)
         
@@ -101,123 +88,105 @@ class Analyses(Plotting):
         
         self.run_fit_analyses(copy.deepcopy(fit_data))
         
-        self.run_fit_simulations(learning_filename, 
-                            transfer_filename, 
+        self.run_fit_simulations(self.learning_filename, 
+                            self.transfer_filename, 
                             fit_data, 
-                            models, 
+                            self.models, 
                             dataloader.get_participant_ids(), 
                             dataloader.get_group_ids(), 
-                            number_of_participants=number_of_participants, 
-                            multiprocessing=multiprocessing)
+                            number_of_participants=self.number_of_participants, 
+                            multiprocessing=self.multiprocessing)
 
-    def run_recovery(self,
-                    models, 
-                    parameters, 
-                    learning_filename=None, 
-                    transfer_filename=None,
-                    fit_filename=None,
-                    task_design=None, 
-                    fixed=None, 
-                    bounds=None, 
-                    datasets_to_generate=1,
-                    number_of_runs=1,
-                    number_of_participants=0,
-                    multiprocessing=False,
-                    generate_data=True,
-                    clear_data=True,
-                    recovery='parameter',
-                    training='torch',
-                    training_epochs=1000,
-                    optimizer_lr=0.01):
+    def run_recovery(self):
 
         #Report each of the inputs
         print('Running Generation and Fit with the following parameters:')
         print('--------------------------------------------------------')
-        print(f'Models: {models}')
-        print(f'Parameters: {parameters}')
-        print(f'Learning Filename: {learning_filename}')
-        print(f'Transfer Filename: {transfer_filename}')
-        print(f'Fit Filename: {fit_filename}')
-        print(f'Task Design: {task_design}')
-        print(f'Datasets to Generate: {datasets_to_generate}')
-        print(f'Number of Runs: {number_of_runs}')
-        print(f'Number of Participants: {number_of_participants}')
-        print(f'Multiprocessing: {multiprocessing}')
-        print(f'Generate Data: {generate_data}')
-        print(f'Clear Data: {clear_data}')
-        print(f'Recovery: {recovery}')
-        print(f'Training: {training}')
-        print(f'Training Epochs: {training_epochs}')
-        print(f'Optimizer Learning Rate: {optimizer_lr}')
+        print(f'Models: {self.models}')
+        print(f'Parameters: {self.parameters}')
+        print(f'Learning Filename: {self.learning_filename}')
+        print(f'Transfer Filename: {self.transfer_filename}')
+        print(f'Fit Filename: {self.fit_filename}')
+        print(f'Task Design: {self.task_design}')
+        print(f'Datasets to Generate: {self.datasets_to_generate}')
+        print(f'Number of Runs: {self.number_of_runs}')
+        print(f'Number of Participants: {self.number_of_participants}')
+        print(f'Multiprocessing: {self.multiprocessing}')
+        print(f'Generate Data: {self.generate_data}')
+        print(f'Clear Data: {self.clear_data}')
+        print(f'Recovery: {self.recovery}')
+        print(f'Training: {self.training}')
+        print(f'Training Epochs: {self.training_epochs}')
+        print(f'Optimizer Learning Rate: {self.optimizer_lr}')
 
 
-        if fit_filename is not None:
+        if self.fit_filename is not None:
 
-            if isinstance(parameters, dict):
+            if isinstance(self.parameters, dict):
                 raise ValueError('Parameters and fit_filename will both provide parameters to the model. Please provide only one of them.')
             
-            if bounds is not None:
+            if self.bounds is not None:
                 warnings.warn('\nBounds are being overridden by fit data.', stacklevel=2)
-                bounds = None
+                self.bounds = None
 
-            with open(fit_filename, 'rb') as f:
+            with open(self.fit_filename, 'rb') as f:
                 fit_data = pickle.load(f)
             
             if set(fit_data.keys()) != set(models):
                 warnings.warn(f'\nModels in fit data ({set(fit_data.keys())}) do not match models provided ({set(models)}). Overriding models parameter to match fit data.', stacklevel=2)
                 models = list(fit_data.keys())
             
-        if fixed is not None:
+        if self.fixed is not None:
             print('\nParameter Overwrites:')
-            for model in fixed:
+            for model in self.fixed:
                 print(f'       {model}:')
-                for key in fixed[model]:
-                    print(f'              {key} = {fixed[model][key]}')
-        if bounds is not None:
+                for key in self.fixed[model]:
+                    print(f'              {key} = {self.fixed[model][key]}')
+        if self.bounds is not None:
             print('\nParameter Bound Overwrites:')
-            for model in bounds:
+            for model in self.bounds:
                 print(f'       {model}:')
-                for key in bounds[model]:
-                    print(f'              {key} = {bounds[model][key]}')
+                for key in self.bounds[model]:
+                    print(f'              {key} = {self.bounds[model][key]}')
         print('--------------------------------------------------------')
 
         if not os.path.exists('SOMA_RL/data/generated'):
             os.makedirs('SOMA_RL/data/generated')
 
-        if [learning_filename, transfer_filename].count(None) == 0:
-            datasets_to_generate = len(DataLoader(learning_filename, transfer_filename, number_of_participants=number_of_participants, reduced=False).get_participant_ids())
+        if [self.learning_filename, self.transfer_filename].count(None) == 0:
+            datasets_to_generate = len(DataLoader(self.learning_filename, self.transfer_filename, number_of_participants=self.number_of_participants, reduced=False).get_participant_ids())
 
-        if generate_data:
+        if self.generate_data:
             self.generate_simulated_data(models=models, 
-                                    parameters=parameters, 
-                                    learning_filename=learning_filename, 
-                                    transfer_filename=transfer_filename, 
-                                    fit_filename=fit_filename,
-                                    task_design=task_design, 
-                                    fixed=fixed, 
+                                    parameters=self.parameters, 
+                                    learning_filename=self.learning_filename, 
+                                    transfer_filename=self.transfer_filename, 
+                                    fit_filename=self.fit_filename,
+                                    task_design=self.task_design, 
+                                    fixed=self.fixed, 
                                     bounds=bounds, 
                                     datasets_to_generate=datasets_to_generate, 
-                                    number_of_participants=number_of_participants, 
-                                    multiprocessing=multiprocessing,
-                                    clear_data=clear_data)
+                                    number_of_participants=self.number_of_participants, 
+                                    multiprocessing=self.multiprocessing,
+                                    clear_data=self.clear_data)
         
         dataloader = self.run_generative_fits(models=models, 
-                                        number_of_runs=number_of_runs, 
+                                        number_of_runs=self.number_of_runs, 
                                         datasets_to_generate=datasets_to_generate, 
-                                        fixed=fixed, 
-                                        bounds=bounds, 
-                                        multiprocessing=multiprocessing, 
-                                        recovery=recovery,
-                                        training=training,
-                                        training_epochs=training_epochs,
-                                        optimizer_lr=optimizer_lr)
+                                        fixed=self.fixed, 
+                                        bounds=self.bounds, 
+                                        multiprocessing=self.multiprocessing, 
+                                        recovery=self.recovery,
+                                        training=self.training,
+                                        training_epochs=self.training_epochs,
+                                        optimizer_lr=self.optimizer_lr)
         
         fit_data = self.run_fit_comparison(dataloader=dataloader, 
                                     models=models, 
                                     group_ids=['simulated'], 
-                                    recovery=recovery)
+                                    recovery=self.recovery)
         
-        if recovery == 'model':
+        if self.recovery == 'model':
             confusion_matrix = self.create_confusion_matrix(dataloader=dataloader, 
                                                     fit_data=fit_data)
             
@@ -225,8 +194,8 @@ class Analyses(Plotting):
         else:
             self.plot_parameter_fits(models=models, 
                                 fit_data=fit_data, 
-                                fixed=fixed, 
-                                bounds=bounds)
+                                fixed=self.fixed, 
+                                bounds=self.bounds)
 
     def run_fit_analyses(self, fit_data, transform=True):
         

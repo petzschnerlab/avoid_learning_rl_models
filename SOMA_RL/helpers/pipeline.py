@@ -29,10 +29,32 @@ class Pipeline(Master):
             
         super().__init__()
 
-    def run_fit(self, **kwargs):
-        self.run_fit_empirical(**kwargs)
-        self.export_fits(path="SOMA_RL/reports")           
+    def run(self, mode: str, **kwargs):
 
-    def run_validation(self, **kwargs):
-        self.run_recovery(**kwargs)
-        self.export_recovery(path="SOMA_RL/reports")
+        """
+        Runs the pipeline in the specified mode.
+
+        Parameters
+        ----------
+        mode : str
+            'FIT' or 'validation' to specify the processing mode.
+        kwargs : dict
+            Additional parameters for the fitting or validation process.
+        
+        Raises
+        ------
+        ValueError
+            If the mode is invalid or if required parameters are missing.
+        """
+
+        mode = mode.upper()
+        self.set_parameters(mode=mode, **kwargs)
+
+        if mode == 'FIT':
+            self.run_fit_empirical()
+            self.export_fits(path="SOMA_RL/reports")           
+        elif mode == 'VALIDATION':
+            self.run_recovery()
+            self.export_recovery(path="SOMA_RL/reports")
+        else:
+            raise ValueError(f"Invalid mode '{mode}'. Mode must be 'fit' or 'validation'.")

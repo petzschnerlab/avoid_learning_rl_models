@@ -1,7 +1,10 @@
+from .parameters import Parameters
 from .analyses import Analyses
 from .export import Export
 
-class Master(Analyses,
+
+class Master(Parameters,
+             Analyses,
              Export):
     
     """
