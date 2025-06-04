@@ -38,7 +38,7 @@ class Analyses(Plotting):
                         number_of_runs=1, 
                         generated=False, 
                         multiprocessing=False,
-                        training='torch',
+                        training='scipy',
                         training_epochs=1000,
                         optimizer_lr=0.01):
 
