@@ -163,6 +163,9 @@ class Plotting:
         fig.suptitle(f"{group.title()}", x=0.001, y=.999, ha='left', fontsize=16)
         fig.savefig(os.path.join('SOMA_RL','plots',f"{group.replace(' ','')}_model_simulations.png"))
         fig.savefig(os.path.join('SOMA_RL','plots',f"{group.replace(' ','')}_model_simulations.svg"), format='svg')
+        
+        #Close figure
+        plt.close()
 
     def plot_simulations_behaviours(self,
                                     accuracy: dict,
@@ -306,6 +309,9 @@ class Plotting:
             fig.savefig(os.path.join('SOMA_RL','plots', 'model_behaviours', save_name))
             fig.savefig(os.path.join('SOMA_RL','plots', 'model_behaviours', save_name.replace('.png','.svg')), format='svg')
 
+            #Close figure
+            plt.close()
+
     def plot_fits_by_run_number(self, fit_data: dict) -> None:
         
         """
@@ -355,6 +361,9 @@ class Plotting:
         plt.tight_layout()
         plt.savefig('SOMA_RL/plots/fit-by-runs.png')
         plt.savefig('SOMA_RL/plots/fit-by-runs.svg', format='svg')
+
+        #Close figure
+        plt.close()
 
     def rename_models(self, model_name: str) -> str:
 
@@ -424,6 +433,9 @@ class Plotting:
         plt.tight_layout()
         plt.savefig(f'SOMA_RL/plots/model_recovery.png')
         plt.savefig(f'SOMA_RL/plots/model_recovery.svg', format='svg')
+
+        #Close figure
+        plt.close()
 
     def plot_parameter_fits(self,
                             models: list,
@@ -509,6 +521,9 @@ class Plotting:
             os.makedirs('SOMA_RL/plots/correlations')
         plt.savefig(f'SOMA_RL/plots/correlations/recovery_correlation_plot.png')
         plt.savefig(f'SOMA_RL/plots/correlations/recovery_correlation_plot.svg', format='svg')
+
+        #Close figure
+        plt.close()
 
     def plot_parameter_data(self, save_name: str, model_data: pd.DataFrame = None, plot_type: str = 'raincloud') -> None:
 
@@ -828,6 +843,8 @@ class Plotting:
         plt.tight_layout()
         plt.savefig('SOMA_RL/plots/model_fits_distributions.png')
         plt.savefig('SOMA_RL/plots/model_fits_distributions.svg', format='svg')
+
+        #Close figure
         plt.close()
 
     def plot_model_comparisons(self, fits: pd.DataFrame, save_name: str = 'model_comparisons') -> None:
@@ -886,6 +903,9 @@ class Plotting:
 
         #Save the plot
         plt.savefig(f'SOMA_RL/plots/{save_name}.png')
+        
+        #Close figure
+        plt.close()
 
     def get_colors(self, color_type: str = None) -> dict:
 
@@ -979,5 +999,6 @@ class Plotting:
 
             plt.tight_layout()
             plt.savefig('SOMA_RL/plots/parameter_of_interest_comparisons.png', dpi=300)
-            plt.show()
+
+            #Close figure
             plt.close()
