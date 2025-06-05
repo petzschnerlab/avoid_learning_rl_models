@@ -6,15 +6,13 @@ class Parameters:
     Class to set parameters for model fitting and validation
     """
 
-    def set_parameters(self, mode: str = None, **kwargs: dict) -> None:
+    def set_parameters(self, **kwargs: dict) -> None:
         
         """
         Assign parameters for FIT or validation mode.
 
         Parameters
         ----------
-        mode : str
-            'FIT' or 'validation' to specify the processing mode.
         kwargs : dict
             Parameter values.
 
@@ -29,7 +27,8 @@ class Parameters:
             self.help = help
             return None
 
-        mode = mode.upper()
+        kwargs['mode'] = kwargs['mode'].upper()
+        mode = kwargs['mode']
         if mode not in ['FIT', 'VALIDATION']:
             raise ValueError(f"Invalid mode '{mode}'. Mode must be 'fit' or 'validation'.")
 
@@ -91,9 +90,6 @@ class Parameters:
             if param not in kwargs:
                 raise ValueError(f"Missing required parameter '{param}' for mode '{mode}'.")
 
-        # Store mode
-        self.mode = mode
-
         # Assign defaults and user values
         for param in accepted_params:
             default_value = {
@@ -121,5 +117,10 @@ class Parameters:
             setattr(self, param, kwargs.get(param, default_value))
 
         #Report all custom parameters (i.e. kwargs)
+        print("User-defined parameters:")
+        print('--------------------------\n')
         for key, value in kwargs.items():
             print(f"{key.title()}: {value}")
+        print('--------------------------\n')
+
+        

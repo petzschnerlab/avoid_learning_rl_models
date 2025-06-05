@@ -81,8 +81,8 @@ class DataLoader:
         None
         """
 
-        self.learning_data = self.learning_data[self.learning_data['participant'] == participant]
-        self.transfer_data = self.transfer_data[self.transfer_data['participant'] == participant]
+        self.learning_data = self.learning_data[self.learning_data['participant'] == participant].copy()
+        self.transfer_data = self.transfer_data[self.transfer_data['participant'] == participant].copy()
 
     def get_participant_ids(self) -> np.ndarray:
         """

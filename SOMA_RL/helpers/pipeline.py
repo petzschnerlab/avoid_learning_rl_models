@@ -30,15 +30,13 @@ class Pipeline(Master):
             
         super().__init__()
 
-    def run(self, mode: str = None, **kwargs) -> None:
+    def run(self, **kwargs) -> None:
 
         """
         Runs the pipeline in the specified mode.
 
         Parameters
         ----------
-        mode : str
-            'FIT' or 'validation' to specify the processing mode.
         kwargs : dict
             Additional parameters for the fitting or validation process.
         
@@ -49,7 +47,7 @@ class Pipeline(Master):
         """
 
         # Setup the parameters
-        self.set_parameters(mode=mode, **kwargs)
+        self.set_parameters(**kwargs)
 
         #Run the help
         if self.help:
@@ -57,12 +55,12 @@ class Pipeline(Master):
             help.print_help()
             return None
 
-        mode = mode.upper()
-        if mode == 'FIT':
+        # Run the fit or validation process based on the mode
+        if self.mode == 'FIT':
             self.run_fit()
             self.export_fits(path="SOMA_RL/reports")           
-        elif mode == 'VALIDATION':
+        elif self.mode == 'VALIDATION':
             self.run_validation()
             self.export_recovery(path="SOMA_RL/reports")
         else:
-            raise ValueError(f"Invalid mode '{mode}'. Mode must be 'fit' or 'validation'.")
+            raise ValueError(f"Invalid mode '{self.mode}'. Mode must be 'fit' or 'validation'.")
