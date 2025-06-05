@@ -75,3 +75,6 @@
 
 Actor Critic
   - Using parameters from Geana et al., 2021
+
+# TODO
+A lot of the docstrings in this package was built using AI, so mistakes will happen. Sorry about that, so don't take them too seriously. Best to go through them all and confirm that they are accurate, if time allows.

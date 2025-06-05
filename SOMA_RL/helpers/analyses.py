@@ -20,6 +20,7 @@ from helpers.plotting import Plotting
 from helpers.multiprocessing import mp_run_fit, mp_run_simulations, mp_progress
 
 class Analyses(Plotting):
+
     """
     Class to hold all functions for the SOMA project analyses
     """
@@ -27,22 +28,45 @@ class Analyses(Plotting):
     def __init__(self):
         super().__init__()
 
-    def run_fit(self):
+    def run_fit(self) -> None:
 
-        #Report each of the inputs
-        print('Running Empirical Fit with the following parameters:')
-        print('--------------------------------------------------------')
-        print(f'Models: {self.models}')
-        print(f'Learning Filename: {self.learning_filename}')
-        print(f'Transfer Filename: {self.transfer_filename}')
-        print(f'Number of Participants: {self.number_of_participants}')
-        print(f'Random Parameters: {self.random_params}')
-        print(f'Number of Runs: {self.number_of_runs}')
-        print(f'Generated: {self.generated}')
-        print(f'Multiprocessing: {self.multiprocessing}')
-        print(f'Training: {self.training}')
-        print(f'Training Epochs: {self.training_epochs}')
-        print(f'Optimizer Learning Rate: {self.optimizer_lr}')
+        """
+        Run the empirical fit analysis.
+
+        Parameters
+        ----------
+        self.learning_filename : str
+            Path to the learning dataset.
+        self.transfer_filename : str
+            Path to the transfer dataset.
+        self.models : list
+            List of model names to fit.
+        self.number_of_participants : int
+            Number of participants to include in the fit.
+        self.fixed : dict, optional
+            Dictionary of fixed parameters for the models.
+        self.bounds : dict, optional
+            Dictionary of bounds for the model parameters.
+        self.random_params : bool, optional
+            Whether to use random parameters for the models.
+        self.number_of_runs : int, optional
+            Number of runs for each model fit.
+        self.generated : bool, optional
+            Whether to use generated data for the fit.
+        self.multiprocessing : bool, optional
+            Whether to use multiprocessing for the fit.
+        self.training : str, optional
+            Training method to use ('torch' or 'scipy').
+        self.training_epochs : int, optional
+            Number of epochs for training the models.
+        self.optimizer_lr : float, optional
+            Learning rate for the optimizer.
+
+
+        Returns
+        -------
+
+        """
 
         if self.fixed is not None:
             print('\nParameter Overwrites:')
@@ -97,28 +121,53 @@ class Analyses(Plotting):
                             number_of_participants=self.number_of_participants, 
                             multiprocessing=self.multiprocessing)
 
-    def run_validation(self):
+    def run_validation(self) -> None:
 
-        #Report each of the inputs
-        print('Running Generation and Fit with the following parameters:')
-        print('--------------------------------------------------------')
-        print(f'Models: {self.models}')
-        print(f'Parameters: {self.parameters}')
-        print(f'Learning Filename: {self.learning_filename}')
-        print(f'Transfer Filename: {self.transfer_filename}')
-        print(f'Fit Filename: {self.fit_filename}')
-        print(f'Task Design: {self.task_design}')
-        print(f'Datasets to Generate: {self.datasets_to_generate}')
-        print(f'Number of Runs: {self.number_of_runs}')
-        print(f'Number of Participants: {self.number_of_participants}')
-        print(f'Multiprocessing: {self.multiprocessing}')
-        print(f'Generate Data: {self.generate_data}')
-        print(f'Clear Data: {self.clear_data}')
-        print(f'Recovery: {self.recovery}')
-        print(f'Training: {self.training}')
-        print(f'Training Epochs: {self.training_epochs}')
-        print(f'Optimizer Learning Rate: {self.optimizer_lr}')
+        """
+        Run the validation analysis.
 
+        Parameters
+        ----------
+        self.recovery : str
+            Recovery method to employ ('parameter' or 'model').
+        self.models : list
+            List of model names to validate.
+        self.parameters : dict or str
+            Dictionary of parameters for the models or 'random' to use random parameters.
+        self.learning_filename : str
+            Path to the learning dataset.
+        self.transfer_filename : str
+            Path to the transfer dataset.
+        self.fit_filename : str, optional
+            Path to the fit data file. If provided, it will override the parameters and bounds.
+        self.fixed : dict, optional
+            Dictionary of fixed parameters for the models.
+        self.bounds : dict, optional
+            Dictionary of bounds for the model parameters.
+        self.number_of_participants : int, optional
+            Number of participants to include in the validation.
+        self.number_of_runs : int, optional
+            Number of runs for each model validation.
+        self.generate_data : bool, optional
+            Whether to generate simulated data for the validation.
+        self.task_design : str, optional
+            Task design to use for the validation.
+        self.multiprocessing : bool, optional
+            Whether to use multiprocessing for the validation.
+        self.clear_data : bool, optional
+            Whether to clear existing data before running the validation.
+        self.training : str, optional
+            Training method to use ('torch' or 'scipy').
+        self.training_epochs : int, optional
+            Number of epochs for training the models.
+        self.optimizer_lr : float, optional
+            Learning rate for the optimizer.
+
+        Returns
+        -------
+        None
+        
+        """
 
         if self.fit_filename is not None:
 
@@ -197,7 +246,29 @@ class Analyses(Plotting):
                                 fixed=self.fixed, 
                                 bounds=self.bounds)
 
-    def run_fit_analyses(self, fit_data, transform=True):
+    def run_fit_analyses(self, fit_data: dict, transform: bool = True) -> None:
+
+        """
+        Run statistics on the fit data.
+        
+        Parameters
+        ----------
+        fit_data : dict
+            Dictionary containing the fit data for each model.
+        transform : bool, optional
+            Whether to log-transform the parameters before running the analyses. Default is True.
+
+        Returns (External)
+        ------------------
+        linear_results : csv
+            CSV file containing the results of the glmm models.
+        ttest_results : csv
+            CSV file containing the results of the planned t-tests.
+        posthoc_results : csv
+            CSV file containing the results of the post-hoc tests.
+        model-fits : png & svg
+            Plots of the model fits for each parameter per model.
+        """
         
         linear_results = None
         ttest_results = None
@@ -258,7 +329,24 @@ class Analyses(Plotting):
             self.plot_parameter_data(f'{model}-model-fits', copy.copy(fit_data[model]))
             self.plot_parameter_data(f'{model}-model-fits', copy.copy(fit_data[model]), plot_type='bar')
 
-    def create_confusion_matrix(self, dataloader, fit_data):
+    def create_confusion_matrix(self, dataloader: DataLoader, fit_data: dict) -> pd.DataFrame:
+        
+        """
+        Create a confusion matrix for the model fits.
+        
+        Parameters
+        ----------
+        dataloader : DataLoader
+            DataLoader object containing the data.
+        fit_data : dict
+            Dictionary containing the fit data for each model.
+
+        Returns
+        -------
+        confusion_matrix : pd.DataFrame
+            DataFrame containing the confusion matrix with BIC values.
+        """
+
         confusion_matrix = pd.DataFrame(index=fit_data.keys(), columns=fit_data.keys(), dtype=float) #Rows = model fit, Columns = generated model
 
         data = dataloader.get_data()
@@ -277,22 +365,66 @@ class Analyses(Plotting):
         return confusion_matrix
                 
     def run_model_fit(self,
-                learning_filename, 
-                transfer_filename,
-                models, 
-                fixed=None, 
-                bounds=None, 
-                number_of_participants=0, 
-                random_params=False, 
-                number_of_runs=1, 
-                number_of_files=None, 
-                generated=False, 
-                clear_data=True, 
-                progress_bar=True, 
-                multiprocessing=False,
-                training='torch',
-                training_epochs=1000,
-                optimizer_lr=0.01):
+                learning_filename: str,
+                transfer_filename: str,
+                models: list,
+                fixed: dict = None,
+                bounds: dict = None,
+                number_of_participants: int = 0,
+                random_params: bool = False,
+                number_of_runs: int = 1,
+                number_of_files: int = None,
+                generated: bool = False,
+                clear_data: bool = True,
+                progress_bar: bool = True,
+                multiprocessing: bool = False,
+                training: str = 'torch',
+                training_epochs: int = 1000,
+                optimizer_lr: float = 0.01) -> DataLoader:
+        
+        """
+        Run the model fit analysis.
+
+        Parameters
+        ----------
+        learning_filename : str
+            Path to the learning dataset.
+        transfer_filename : str
+            Path to the transfer dataset.
+        models : list
+            List of model names to fit.
+        fixed : dict, optional
+            Dictionary of fixed parameters for the models.
+        bounds : dict, optional
+            Dictionary of bounds for the model parameters.
+        number_of_participants : int, optional
+            Number of participants to include in the fit. Default is 0, which means all participants.
+        random_params : bool, optional
+            Whether to use random parameters for the models. Default is False.
+        number_of_runs : int, optional
+            Number of runs for each model fit. Default is 1.
+        number_of_files : int, optional
+            Number of files to process. If None, it will process all files. Default is None.
+        generated : bool, optional
+            Whether to use generated data for the fit. Default is False.
+        clear_data : bool, optional
+            Whether to clear existing data before running the fit. Default is True.
+        progress_bar : bool, optional
+            Whether to show a progress bar during the fit. Default is True.
+        multiprocessing : bool, optional
+            Whether to use multiprocessing for the fit. Default is False.
+        training : str, optional
+            Training method to use ('torch' or 'scipy'). Default is 'torch'.
+        training_epochs : int, optional
+            Number of epochs for training the models. Default is 1000.
+        optimizer_lr : float, optional
+            Learning rate for the optimizer. Default is 0.01.
+
+        Returns
+        -------
+        dataloader : DataLoader
+            DataLoader object containing the data for the fit.
+        """
         
         #Delete any existing files
         if clear_data:
@@ -356,7 +488,30 @@ class Analyses(Plotting):
 
         return dataloader
 
-    def run_fit_comparison(self, dataloader, models, group_ids, recovery='parameter'):
+    def run_fit_comparison(self, dataloader: DataLoader, 
+                           models: list, 
+                           group_ids: list, 
+                           recovery: str = 'parameter') -> dict:
+
+        """
+        Run the fit comparison analysis.
+
+        Parameters
+        ----------
+        dataloader : DataLoader
+            DataLoader object containing the data for the fit.
+        models : list
+            List of model names to compare.
+        group_ids : list
+            List of group IDs to include in the fit comparison.
+        recovery : str, optional
+            Recovery method to employ ('parameter' or 'model'). Default is 'parameter'.
+
+        Returns
+        -------
+        fit_data : dict
+            Dictionary containing the fit data for each model, with keys as model names and values as DataFrames.
+        """
         
         columns = RLModel().get_model_columns()
 
@@ -423,7 +578,44 @@ class Analyses(Plotting):
 
         return fit_data
 
-    def compute_criterions(self, dataloader, fit_data, models, group_ids, recovery='parameter'):
+    def compute_criterions(self, dataloader: DataLoader,
+                           fit_data: dict, 
+                           models: list, 
+                           group_ids: list, 
+                           recovery: str = 'parameter') -> None:
+
+        """
+        Compute AIC and BIC for the fit data and print a report.
+
+        Parameters
+        ----------
+        dataloader : DataLoader
+            DataLoader object containing the data for the fit.
+        fit_data : dict
+            Dictionary containing the fit data for each model, with keys as model names and values as DataFrames.
+        models : list
+            List of model names to compare.
+        group_ids : list
+            List of group IDs to include in the fit comparison.
+        recovery : str, optional
+            Recovery method to employ ('parameter' or 'model'). Default is 'parameter'.
+
+        Returns (External)
+        ------------------
+        group_AIC: csv
+            CSV file containing the AIC values for each group and model.
+        group_BIC: csv
+            CSV file containing the BIC values for each group and model.
+        group_AIC_percentages: csv
+            CSV file containing the percentages of best fits based on AIC for each group and model.
+        group_BIC_percentages: csv
+            CSV file containing the percentages of best fits based on BIC for each group and model.
+        AIC_model_comparison: png & svg
+            Plots of the AIC values for each model and group.
+        BIC_model_comparison: png & svg
+            Plots of the BIC values for each model and group.
+        
+        """
 
         # =========================================== #
         # =============== REPORT FIT ================ #
@@ -535,14 +727,46 @@ class Analyses(Plotting):
         self.plot_model_comparisons(group_BIC, 'BIC_model_comparisons')
 
     def run_fit_simulations(self, 
-                            learning_filename,
-                            transfer_filename,
-                            fit_data,
-                            models,
-                            participant_ids,
-                            group_ids,
-                            number_of_participants=0,
-                            multiprocessing=False):
+                            learning_filename: str,
+                            transfer_filename: str,
+                            fit_data: dict,
+                            models: list,
+                            participant_ids: list,
+                            group_ids: list,
+                            number_of_participants: int = 0,
+                            multiprocessing: bool = False) -> None:
+
+        """
+        Run simulations with the fitted models and save the results.
+
+        Parameters
+        ----------
+        learning_filename : str
+            Path to the learning dataset.
+        transfer_filename : str
+            Path to the transfer dataset.
+        fit_data : dict
+            Dictionary containing the fit data for each model, with keys as model names and values as DataFrames.
+        models : list
+            List of model names to simulate.
+        participant_ids : list
+            List of participant IDs to include in the simulations.
+        group_ids : list
+            List of group IDs to include in the simulations.
+        number_of_participants : int, optional
+            Number of participants to include in the simulations. Default is 0, which means all participants.
+        multiprocessing : bool, optional
+            Whether to use multiprocessing for the simulations. Default is False.
+
+        Returns (External)
+        ------------------
+        modelsimulations_accuracy_data : csv
+            CSV file containing the accuracy data from the simulations.
+        modelsimulations_choice_data : csv
+            CSV file containing the choice rate data from the simulations.
+        model_simulations: png & svg
+            Plots of the model simulations for accuracy and choice rates.
+        """
 
         # =========================================== #
         # =========== SIMULATE WITH FITS ============ #
@@ -667,31 +891,57 @@ class Analyses(Plotting):
         self.plot_simulations_behaviours(accuracy_model, choice_rates_model, models, accuracy.keys(), dataloader, rolling_mean=5, plot_type = 'bar')
 
     def generate_simulated_data(self,
-                                models,
-                                parameters,
-                                learning_filename=None,
-                                transfer_filename=None,
-                                fit_filename=None,
-                                task_design=None,
-                                fixed=None,
-                                bounds=None,
-                                datasets_to_generate=1,
-                                number_of_participants=0,
-                                multiprocessing=False,
-                                clear_data=True):
+                                models: list,
+                                parameters: dict or str = 'random',
+                                learning_filename: str = None,
+                                transfer_filename: str = None,
+                                fit_filename: str = None,
+                                task_design: dict = None,
+                                fixed: dict = None,
+                                bounds: dict = None,
+                                datasets_to_generate: int = 1,
+                                number_of_participants: int = 0,
+                                multiprocessing: bool = False,
+                                clear_data: bool = True) -> None:
         
-        '''
+        """
+        Generate simulated data using the specified models and parameters.
+
         Parameters
         ----------
         models : list
-            List of models to simulate.
-        parameters : dict | str
-            Dictionary of model parameters or 'random' or 'normal' to generate random parameters.
-        task_design : dict
-            Dictionary of task design parameters
-        number_of_runs : int
-            Number of times to run the simulation for each model (only applicable when parameters='random')
-        '''
+            List of model names to generate data for.
+        parameters : dict or str
+            Dictionary of parameters for the models or 'random'/'normal' to use random parameters.
+        learning_filename : str, optional
+            Path to the learning dataset. If None, no learning data will be generated.
+        transfer_filename : str, optional
+            Path to the transfer dataset. If None, no transfer data will be generated.
+        fit_filename : str, optional
+            Path to the fit data file. If None, no fit data will be used.
+        task_design : dict, optional
+            Dictionary defining the task design for the simulations. If None, default task design will be used.
+        fixed : dict, optional
+            Dictionary of fixed parameters for the models. Default is None.
+        bounds : dict, optional
+            Dictionary of bounds for the model parameters. Default is None.
+        datasets_to_generate : int, optional
+            Number of datasets to generate for each model. Default is 1.
+        number_of_participants : int, optional
+            Number of participants to include in the generated data. Default is 0, which means all participants.
+        multiprocessing : bool, optional
+            Whether to use multiprocessing for generating data. Default is False.
+        clear_data : bool, optional
+            Whether to clear existing generated data before running the generation. Default is True.
+
+        Returns (External)
+        ------------------
+
+        generated_learning : csv
+            CSV file containing the generated learning data.
+        generated_transfer : csv
+            CSV file containing the generated transfer data.
+        """
 
         #Checks
         if [learning_filename, transfer_filename].count(None) == 1:
@@ -795,16 +1045,49 @@ class Analyses(Plotting):
             model_transfer.to_csv(f'SOMA_RL/data/generated/{model}_generated_transfer.csv', index=False)
 
     def run_generative_fits(self,
-                            models,
-                            number_of_runs=1,
-                            datasets_to_generate=1,
-                            fixed=None,
-                            bounds=None,
-                            multiprocessing=False,
-                            recovery='parameter',
-                            training='torch',
-                            training_epochs=1000,
-                            optimizer_lr=0.01):
+                            models: list or str,
+                            number_of_runs: int = 1,
+                            datasets_to_generate: int = 1,
+                            fixed: dict = None,
+                            bounds: dict = None,
+                            multiprocessing: bool = False,
+                            recovery: str = 'parameter',
+                            training: str = 'torch',
+                            training_epochs: int = 1000,
+                            optimizer_lr: float = 0.01) -> DataLoader:
+        
+        """
+        Run generative fits for the specified models.
+
+        Parameters
+        ----------
+        models : list or str
+            List of model names to fit or a single model name.
+        number_of_runs : int, optional
+            Number of runs to perform for each model. Default is 1.
+        datasets_to_generate : int, optional
+            Number of datasets to generate for each model. Default is 1.
+        fixed : dict, optional
+            Dictionary of fixed parameters for the models. Default is None.
+        bounds : dict, optional
+            Dictionary of bounds for the model parameters. Default is None.
+        multiprocessing : bool, optional
+            Whether to use multiprocessing for the fits. Default is False.
+        recovery : str, optional
+            Recovery method to employ ('parameter' or 'model'). Default is 'parameter'.
+        training : str, optional
+            Training method to use ('torch' or 'scipy'). Default is 'torch'.
+        training_epochs : int, optional
+            Number of epochs for training if using 'torch'. Default is 1000.
+        optimizer_lr : float, optional
+            Learning rate for the optimizer if using 'torch'. Default is 0.01.
+
+        Returns
+        -------
+        dataloader : DataLoader
+            DataLoader object containing the generated data for the fits.       
+
+        """
 
         #Find all files in SOMA_RL/data/generated that are not folders
         for f in os.listdir('SOMA_RL/fits/temp'):
@@ -837,7 +1120,23 @@ class Analyses(Plotting):
         
         return dataloader
 
-    def determine_parameter_outliers(self, fit_data, dataloader):
+    def determine_parameter_outliers(self, fit_data: dict, dataloader: DataLoader) -> None:
+
+        """
+        Determine parameter outliers in the fit data.
+
+        Parameters
+        ----------
+        fit_data : dict
+            Dictionary containing the fit data for each model, with keys as model names and values as DataFrames.
+        dataloader : DataLoader
+            DataLoader object containing the data for the fit.
+
+        Returns (External)
+        ------------------
+        outlier_results : pickle
+            Dictionary containing the results of the outlier analysis, including participant outliers, model outliers, and a summary DataFrame.
+        """
 
         outliers = {model: {} for model in fit_data}
         participant_outliers = {model: {} for model in fit_data}
@@ -869,7 +1168,24 @@ class Analyses(Plotting):
         with open('SOMA_RL/fits/parameter_outlier_results.pkl', 'wb') as f:
             pickle.dump(outlier_results, f)
         
-    def add_outlier_data(self, dataloader, outlier_results):
+    def add_outlier_data(self, dataloader: DataLoader, outlier_results: dict) -> dict:
+
+        """
+        Organize outlier data into a DataFrame for each model.
+
+        Parameters
+        ----------
+        dataloader : DataLoader
+            DataLoader object containing the data for the fit.
+        outlier_results : dict
+            Dictionary containing the results of the outlier analysis, including participant outliers, model outliers, and a summary DataFrame.
+
+        Returns
+        -------
+        outlier_results : dict
+            Updated dictionary containing the outlier data for each model, with keys as model names and values as DataFrames.
+
+        """
         
         proportion_violations = 0.5
         model_params = outlier_results['model_params']
@@ -915,7 +1231,22 @@ class Analyses(Plotting):
 
         return outlier_results      
 
-    def describe_fits(self, fit_data):
+    def describe_fits(self, fit_data: dict) -> None:
+
+        """
+        Generate descriptive statistics for the fitted parameters across different pain groups.
+
+        Parameters
+        ----------
+        fit_data : dict
+            Dictionary containing the fit data for each model, with keys as model names and values as DataFrames.
+
+        Returns (External)
+        -------
+        param_fit_descriptives : csv
+            CSV file containing the descriptive statistics of the fitted parameters for each model across different pain groups.
+        """
+
         groups = ['no pain', 'acute pain', 'chronic pain']
         describe_fit = []
         for model in fit_data:

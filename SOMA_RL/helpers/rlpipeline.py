@@ -1,23 +1,48 @@
+from typing import Optional
 import os
 import pandas as pd
 import numpy as np
+from .dataloader import DataLoader
+from .tasks import AvoidanceLearningTask
 
 class RLPipeline:
         
     """
     Reinforcement Learning Pipeline
-
-    Parameters
-    ----------
-    task : object
-        Task object
-    model : object
-        Reinforcement learning model object
-    task_design : dict
-        Dictionary containing task design parameters
     """
 
-    def __init__(self, model, dataloader=None, task=None, training='torch', training_epochs=1000, optimizer_lr=0.01, multiprocessing=False):
+    def __init__(self, model: object,
+                 dataloader: DataLoader = None,
+                 task: Optional[AvoidanceLearningTask] = None,
+                 training: str = 'scipy',
+                 training_epochs: int = 1000,
+                 optimizer_lr: float = 0.01,
+                 multiprocessing: bool = False):
+
+        """
+        Initializes the Reinforcement Learning Pipeline with a model, dataloader, and task.
+
+        Parameters
+        ----------
+        model : Model object
+            The reinforcement learning model to be used in the pipeline.
+        dataloader : DataLoader object, optional
+            The dataloader to provide data for the model. If None, the task design will be used.
+        task : Task object, optional
+            The task object containing the task design and model. If None, it will be created from the dataloader.
+        training : str, optional
+            The training backend to use, either 'scipy' or 'torch'. Default is 'scipy'.
+        training_epochs : int, optional
+            The number of training epochs for the model. Default is 1000.
+        optimizer_lr : float, optional
+            The learning rate for the optimizer. Default is 0.01.
+        multiprocessing : bool, optional
+            Whether to use multiprocessing for fitting and simulations. Default is False.
+
+        Returns
+        -------
+        None
+        """
 
         #Set parameters
         self.training = training
@@ -38,7 +63,21 @@ class RLPipeline:
         self.task.rl_model.optimizer_lr = optimizer_lr
         self.task.rl_model.multiprocessing = multiprocessing
 
-    def simulate(self, data):
+    def simulate(self, data: pd.DataFrame = None) -> object:
+
+        """
+        Runs the simulation of the reinforcement learning model.
+        
+        Parameters
+        ----------
+        data : pd.DataFrame, optional
+            Data to be used for the simulation. If None, the task design will be used.
+        
+        Returns
+        -------
+        object
+            The reinforcement learning model after running the simulation.
+        """
 
         #Run simulation and computations
         if data is None:
@@ -49,7 +88,23 @@ class RLPipeline:
 
         return self.task.rl_model
 
-    def fit(self, data, bounds):
+    def fit(self, data: pd.DataFrame, bounds: dict = None) -> tuple:
+
+        """
+        Fits the reinforcement learning model to the provided data.
+
+        Parameters
+        ----------
+        data : pd.DataFrame
+            The data to fit the model to, structured as a list of tuples containing states, actions, and rewards.
+        bounds : dict, optional
+            The bounds for the model parameters. If None, the model's default bounds will be used.
+
+        Returns
+        -------
+        tuple
+            A tuple containing the fit results and the fitted parameters.
+        """
 
         if self.training == 'torch':
             fit_results, fitted_params = self.task.rl_model.fit_torch(data, bounds)
@@ -58,7 +113,20 @@ class RLPipeline:
 
         return fit_results, fitted_params
         
-    def run_rl_fit(self, args):
+    def run_rl_fit(self, args: list) -> None:
+
+        """
+        Run the reinforcement learning fit for a participant.
+
+        Parameters
+        ----------
+        args : list
+            A list where the first element is a list of column names, followed by participant ID and run number.
+
+        Returns
+        -------
+        None
+        """
 
         #Extract args
         columns, participant_id, run = args
@@ -89,7 +157,30 @@ class RLPipeline:
         with open(f'SOMA_RL/fits/temp/{self.task.rl_model.model_name}_{participant_id}_Run{run}_fit_results.csv', 'a') as f:
             f.write(','.join([str(x) for x in participant_fitted]) + '\n')
 
-    def run_simulations(self, args, generate_data=False):
+    def run_simulations(self, args: list, generate_data: bool = False) -> None:
+
+        """
+        Run the reinforcement learning simulations for a participant.
+
+        Parameters
+        ----------
+        args : list
+            A list where the first element is a list of column names, followed by participant ID, group, and run number.
+        generate_data : bool, optional
+            Whether to generate new data or use existing data. Default is False.
+
+        Returns (External)
+        ------------------
+        generated_parameters : csv
+            A CSV file containing the generated parameters of the model.
+        generated_learning : csv
+            A CSV file containing the learning data from the simulation.
+        generated_transfer : csv
+            A CSV file containing the transfer data from the simulation.
+        OR
+        sim_results : csv
+            CSV files containing the simulation results, including accuracy, prediction errors, values, and choice rates.
+        """
 
         #Extract args
         columns, participant_id, group, run_number = args

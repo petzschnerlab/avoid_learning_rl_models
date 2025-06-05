@@ -30,7 +30,7 @@ class Pipeline(Master):
             
         super().__init__()
 
-    def run(self, mode: str = None, **kwargs):
+    def run(self, mode: str = None, **kwargs) -> None:
 
         """
         Runs the pipeline in the specified mode.

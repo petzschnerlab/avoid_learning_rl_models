@@ -1,7 +1,31 @@
-def get_priors():
+def get_priors() -> tuple:
+
+    """
+    Returns fixed and bounds priors for the models used in SOMA-RL.
+    Fixed priors are based on previous literature, while bounds priors are currently set to None.
+
+    Returns
+    -------
+    tuple
+        A tuple containing two dictionaries:
+        - fixed: Fixed priors for the models.
+        - bounds: Bounds priors for the models (currently None).
+    """
+
     return fixed_priors(), bounds_priors()
 
-def fixed_priors():
+def fixed_priors() -> dict:
+
+    """
+    Returns fixed priors for the models used in SOMA_RL.
+    Fixed priors are based on previous literature and custom settings.
+
+    Returns
+    -------
+    dict
+        A dictionary containing fixed priors for various models.
+    """
+
     fixed = {
         'QLearning': {  # From Palminteri et al., 2015
             'factual_lr': 0.28,
@@ -77,5 +101,16 @@ def fixed_priors():
 
     return fixed
 
-def bounds_priors():
+def bounds_priors() -> dict:
+
+    """
+    Returns bounds priors for the models used in SOMA_RL.
+    Bounds priors are currently set to None, indicating no specific bounds are defined.
+    
+    Returns
+    -------
+    dict
+        A dictionary containing bounds priors for various models (currently None).
+    """
+
     return None

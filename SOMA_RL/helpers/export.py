@@ -4,7 +4,16 @@ import shutil
 class Export:
 
     # Functions
-    def export_fits(self, path):
+    def export_fits(self, path: str) -> None:
+
+        """
+        Exports the fit results to a specified path.
+
+        Parameters
+        ----------
+        path : str
+            The directory where the fit results will be exported.
+        """
 
         files_to_move = [
             'SOMA_RL/fits/fit_data.pkl',
@@ -59,7 +68,16 @@ class Export:
                     shutil.rmtree(folder_to_move[1])
                 shutil.copytree(folder_to_move[0], folder_to_move[1])
 
-    def export_recovery(self, path):
+    def export_recovery(self, path: str) -> None:
+        
+        """
+        Exports the model recovery results to a specified path.
+        
+        Parameters
+        ----------
+        path : str
+            The directory where the model recovery results will be exported.
+        """
 
         files_to_move = [
             'SOMA_RL/plots/model_recovery.png',

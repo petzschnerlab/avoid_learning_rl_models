@@ -14,7 +14,42 @@ plt.rcParams['font.size'] = 18
 
 class Plotting:
 
-    def plot_simulations(self, accuracy, prediction_errors, values, choice_rates, models, group, dataloader=None, alpha = .75):
+    def plot_simulations(self,
+                         accuracy: dict,
+                            prediction_errors: dict,
+                            values: dict,
+                            choice_rates: dict,
+                            models: list,
+                            group: str,
+                            dataloader: object = None,
+                            alpha: float = 0.75) -> None:
+        
+        """
+        Plots the model simulations for a given group.
+        
+        Parameters
+        ----------
+        accuracy : dict
+            Dictionary containing accuracy data for each model.
+        prediction_errors : dict
+            Dictionary containing prediction error data for each model.
+        values : dict
+            Dictionary containing value data for each model.
+        choice_rates : dict
+            Dictionary containing choice rate data for each model.
+        models : list
+            List of model names to plot.
+        group : str
+            The group for which to plot the simulations (e.g., 'no pain', 'acute pain', 'chronic pain').
+        dataloader : DataLoader, optional
+            An instance of DataLoader to fetch empirical data for comparison. Default is None.
+        alpha : float, optional
+            Transparency level for the plots. Default is 0.75.
+
+        Returns
+        -------
+        None
+        """
         
         if dataloader is not None:
 
@@ -129,7 +164,43 @@ class Plotting:
         fig.savefig(os.path.join('SOMA_RL','plots',f"{group.replace(' ','')}_model_simulations.png"))
         fig.savefig(os.path.join('SOMA_RL','plots',f"{group.replace(' ','')}_model_simulations.svg"), format='svg')
 
-    def plot_simulations_behaviours(self, accuracy, choice_rates, models, groups, dataloader=None, rolling_mean=None, plot_type='raincloud', alpha = .75):
+    def plot_simulations_behaviours(self,
+                                    accuracy: dict,
+                                    choice_rates: dict,
+                                    models: list,
+                                    groups: list,
+                                    dataloader: object = None,
+                                    rolling_mean: int = None,
+                                    plot_type: str = 'raincloud',
+                                    alpha: float = 0.75) -> None:
+
+        """
+        Plots the model simulations for a given group, including accuracy, choice rates, and empirical data if available.
+
+        Parameters
+        ----------
+        accuracy : dict
+            Dictionary containing accuracy data for each model and group.
+        choice_rates : dict
+            Dictionary containing choice rate data for each model and group.
+        models : list
+            List of model names to plot.
+        groups : list
+            List of groups to plot (e.g., ['no pain', 'acute pain', 'chronic pain']).
+        dataloader : DataLoader, optional   
+            An instance of DataLoader to fetch empirical data for comparison. Default is None.
+        rolling_mean : int, optional    
+            The window size for rolling mean smoothing of the accuracy data. Default is None (no smoothing).
+        plot_type : str, optional
+            Type of plot to generate for choice rates ('raincloud' or 'bar'). Default is 'raincloud'.
+        alpha : float, optional
+            Transparency level for the plots. Default is 0.75.
+       
+        Returns
+        -------
+        None
+        """
+
         bi_colors = self.get_colors('condition_2')
 
         if dataloader is not None:
@@ -235,7 +306,20 @@ class Plotting:
             fig.savefig(os.path.join('SOMA_RL','plots', 'model_behaviours', save_name))
             fig.savefig(os.path.join('SOMA_RL','plots', 'model_behaviours', save_name.replace('.png','.svg')), format='svg')
 
-    def plot_fits_by_run_number(self, fit_data):
+    def plot_fits_by_run_number(self, fit_data: dict) -> None:
+        
+        """
+        Plots the negative log likelihood of model fits by run number for each model.
+
+        Parameters
+        ----------
+        fit_data : dict
+            A dictionary where keys are model names and values are DataFrames containing fit data with columns 'run' and 'fit'.
+
+        Returns
+        -------
+        None
+        """
 
         min_run, max_run = fit_data[list(fit_data.keys())[0]]['run'].min()+1, fit_data[list(fit_data.keys())[0]]['run'].max()+1
         best_run = {model: [] for model in fit_data}
@@ -272,10 +356,38 @@ class Plotting:
         plt.savefig('SOMA_RL/plots/fit-by-runs.png')
         plt.savefig('SOMA_RL/plots/fit-by-runs.svg', format='svg')
 
-    def rename_models(self, model_name):
+    def rename_models(self, model_name: str) -> str:
+
+        """
+        Renames the model name for better readability in plots.
+
+        Parameters
+        ----------
+        model_name : str
+            The original model name to be renamed.
+        
+        Returns
+        -------
+        str
+            The renamed model name.
+        """
+
         return model_name.split('+')[0].replace('Hybrid2', 'Hybrid 2').replace('ActorCritic', 'Actor Critic').replace('QLearning', 'Q Learning')
 
-    def plot_model_fits(self, confusion_matrix):
+    def plot_model_fits(self, confusion_matrix: pd.DataFrame) -> None:
+
+        """
+        Plots the model fits as a confusion matrix.
+
+        Parameters
+        ----------
+        confusion_matrix : pd.DataFrame
+            A DataFrame representing the confusion matrix where rows are true models and columns are fitted models.
+
+        Returns
+        -------
+        None
+        """
 
         confusion_matrix = confusion_matrix - confusion_matrix.min().min()
         confusion_matrix = confusion_matrix / confusion_matrix.max().max() * 200 - 100
@@ -313,10 +425,36 @@ class Plotting:
         plt.savefig(f'SOMA_RL/plots/model_recovery.png')
         plt.savefig(f'SOMA_RL/plots/model_recovery.svg', format='svg')
 
-    def plot_parameter_fits(self, models, fit_data, fixed=None, bounds=None, alpha=.75):
+    def plot_parameter_fits(self,
+                            models: list,
+                            fit_data: dict,
+                            fixed: dict = None,
+                            bounds: dict = None,
+                            alpha: float = 0.75) -> None:
+
+        """
+        Plots the parameter fits for each model, comparing true parameters with fitted parameters.
+
+        Parameters
+        ----------
+        models : list
+            List of model names to plot.
+        fit_data : dict
+            A dictionary where keys are model names and values are DataFrames containing fit data with columns 'participant' and model parameters.
+        fixed : dict, optional
+            A dictionary specifying which parameters are fixed for each model. Default is None.
+        bounds : dict, optional
+            A dictionary specifying the bounds for each parameter in each model. Default is None.
+        alpha : float, optional
+            Transparency level for the scatter plots. Default is 0.75.
+
+        Returns
+        -------
+        None
+        """
+
         #Create a dictionary with model being keys and pd.dataframe empty as value
         fit_results = {model: [] for model in models}
-        color = self.get_colors('condition')[0]
         for model in models:
             model_data = fit_data[model]
             for run_params in model_data['participant']:
@@ -382,10 +520,9 @@ class Plotting:
         save_name : str
             The name to save the plot as
 
-        Returns (External)
-        ------------------
-        Image: PNG
-            A plot of the raincloud plots
+        Returns
+        -------
+        None
         """
 
         #Set data specific parameters
@@ -475,6 +612,10 @@ class Plotting:
                 The t-scores for each group
             alpha : float
                 The transparency of the scatter plot
+
+            Returns
+            -------
+            None
             """
             
             #Set parameters
@@ -635,7 +776,21 @@ class Plotting:
 
         return sample_sizes, t_scores
 
-    def plot_fit_distributions(self, fit_data):
+    def plot_fit_distributions(self, fit_data: dict) -> None:
+
+        """
+        Plots the distribution of BICs for each model fit.
+
+        Parameters
+        ----------
+        fit_data : dict
+            A dictionary where keys are model names and values are DataFrames containing fit data with columns 'fit'.
+        
+        Returns
+        -------
+        None
+        """
+
         models = fit_data.keys()
         fig, ax = plt.subplots(1, len(models), figsize=(5*len(models), 5))
         for i, model in enumerate(models):
@@ -675,7 +830,22 @@ class Plotting:
         plt.savefig('SOMA_RL/plots/model_fits_distributions.svg', format='svg')
         plt.close()
 
-    def plot_model_comparisons(self, fits, save_name='model_comparisons'):
+    def plot_model_comparisons(self, fits: pd.DataFrame, save_name: str = 'model_comparisons') -> None:
+
+        """
+        Plots the model fits as a bar plot with colors representing the fit values.
+
+        Parameters
+        ----------
+        fits : pd.DataFrame
+            A DataFrame where the index is the model names and the values are the fit values (e.g., BIC).
+        save_name : str, optional
+            The name to save the plot as. Default is 'model_comparisons'.
+
+        Returns
+        -------
+        None
+        """
         
         fits = fits.loc['full'][:-1]
         min_val, max_val = fits.min().min(), fits.max().max()
@@ -717,7 +887,21 @@ class Plotting:
         #Save the plot
         plt.savefig(f'SOMA_RL/plots/{save_name}.png')
 
-    def get_colors(self, color_type = None):
+    def get_colors(self, color_type: str = None) -> dict:
+
+        """
+        Returns a dictionary of colors for different plot types.
+
+        Parameters
+        ----------
+        color_type : str, optional
+            The type of colors to return. Options are 'group', 'condition', or 'condition_2'. If None, returns all colors.
+
+        Returns
+        -------
+        dict, list
+            A dictionary of colors for different plot types, or a list of colors for the specified type.
+        """
 
         colors = {'group': ['#B2DF8A', '#FFD92F', '#FB9A99'],
                 'condition': ['#095086', '#9BD2F2', '#ECA6A6', '#B00000', '#D3D3D3'],
@@ -728,7 +912,8 @@ class Plotting:
         else:
             return colors
         
-    def plot_model_parameter_correlations(self, fit_data, params_of_interest):
+    def plot_model_parameter_correlations(self, fit_data: dict, params_of_interest: dict) -> None:
+
         """
         Plots scatter plots comparing model parameters from different models.
 

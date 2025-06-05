@@ -2,21 +2,29 @@ import pandas as pd
 import numpy as np
 
 class DataLoader:
-    def __init__(self, learning_filename, transfer_filename, number_of_participants=0, reduced=True, generated=False):
+    def __init__(self, learning_filename: str, transfer_filename: str, number_of_participants: int = 0, reduced: bool = True, generated: bool = False):
 
-        '''
-        A class to load and preprocess the data from the learning and transfer phases of the experiment.
+        """
+        Initializes the DataLoader with learning and transfer data.
 
-        Parameters
-        ----------
+        Parameters:
+        -----------
         learning_filename : str
-            The filename of the learning phase data.
+            Path to the learning data CSV file.
         transfer_filename : str
-            The filename of the transfer phase data.
-        number_of_participants : int
-            The number of participants to include in the analysis. If 0, all participants are included.
-            Mostly for debugging purposes
-        '''
+            Path to the transfer data CSV file.
+        number_of_participants : int, optional
+            Number of participants to limit the data to (default is 0, which means no limit).
+        reduced : bool, optional
+            If True, reduces the data to essential columns (default is True).
+        generated : bool, optional
+            If True, indicates that the data is generated (default is False).
+
+        Returns:
+        --------
+        None
+        
+        """
 
         learning_data = pd.read_csv(learning_filename)
         transfer_data = pd.read_csv(transfer_filename)
@@ -50,8 +58,7 @@ class DataLoader:
         learning_data.columns = [colname.replace('participant_id', 'participant').replace('group_code', 'pain_group').replace('symbol_names', 'state') for colname in learning_data.columns]
         transfer_data.columns = [colname.replace('participant_id', 'participant').replace('group_code', 'pain_group') for colname in transfer_data.columns]
 
-        #DEBUGGING CLEANUP
-        #Cut the dataframe to n participants: #TODO:This is for debugging, remove it later
+        #This is for testing:
         if number_of_participants > 0:
             p_indices = learning_data['participant'].unique()[:number_of_participants]
             learning_data = learning_data[learning_data['participant'].isin(p_indices)]
@@ -60,29 +67,116 @@ class DataLoader:
         self.learning_data = learning_data
         self.transfer_data = transfer_data
 
-    def filter_participant_data(self, participant):
+    def filter_participant_data(self, participant: str) -> None:
+        """
+        Filters the learning and transfer data for a specific participant.
+
+        Parameters:
+        -----------
+        participant : str
+            The participant ID to filter the data for.
+
+        Returns:
+        --------
+        None
+        """
+
         self.learning_data = self.learning_data[self.learning_data['participant'] == participant]
         self.transfer_data = self.transfer_data[self.transfer_data['participant'] == participant]
 
-    def get_participant_ids(self):
+    def get_participant_ids(self) -> np.ndarray:
+        """
+        Gets the unique participant IDs from the learning data.
+
+        Returns:
+        --------
+        np.ndarray
+            An array of unique participant IDs.
+        """
+
         return self.learning_data['participant'].unique()
     
-    def get_group_ids(self):
+    def get_group_ids(self) -> np.ndarray:
+        """
+        Gets the unique pain group IDs from the learning data.
+
+        Returns:
+        --------
+        np.ndarray
+            An array of unique pain group IDs.
+        
+        """
         return self.learning_data['pain_group'].unique()
     
-    def get_num_samples(self):
+    def get_num_samples(self) -> int:
+
+        """
+        Gets the total number of samples across both learning and transfer data.
+
+        Returns:
+        --------
+        int
+            The total number of samples.
+
+        """
+
         return self.learning_data.shape[0] + self.transfer_data.shape[0]
     
-    def get_num_samples_by_group(self, group_id):
+    def get_num_samples_by_group(self, group_id: str) -> int:
+
+        """
+        Gets the total number of samples for a specific pain group across both learning and transfer data.
+
+        Parameters:
+        -----------
+        group_id : str
+            The pain group ID to filter the data for.
+
+        Returns:
+        --------
+        int
+            The total number of samples for the specified pain group.
+        """
+
         num_learning_samples = self.learning_data[self.learning_data['pain_group'] == group_id].shape[0]
         num_transfer_samples = self.transfer_data[self.transfer_data['pain_group'] == group_id].shape[0]
         return num_learning_samples+num_transfer_samples
     
-    def get_num_trials(self):
+    def get_num_trials(self) -> tuple:
+        
+        """
+        Gets the number of trials in the learning and transfer data.
+
+        Returns:
+        --------
+
+        tuple
+            A tuple containing the number of trials in the learning data and the transfer data.
+        """
+
         return self.learning_data.shape[0], self.transfer_data.shape[0]
 
-    def get_data(self):
+    def get_data(self) -> tuple:
+        """
+        Returns the learning and transfer data as pandas DataFrames.
+
+        Returns:
+        --------
+        tuple
+            A tuple containing the learning data and transfer data DataFrames.
+        """
+
         return self.learning_data, self.transfer_data
     
-    def get_data_dict(self):
+    def get_data_dict(self) -> dict:
+
+        """
+        Returns the learning and transfer data as a dictionary.
+
+        Returns:
+        --------
+        dict
+            A dictionary containing the learning and transfer data DataFrames.
+        """
+
         return {'learning': self.learning_data, 'transfer': self.transfer_data}

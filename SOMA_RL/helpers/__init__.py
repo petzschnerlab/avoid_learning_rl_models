@@ -8,7 +8,7 @@ class Master(Parameters,
              Export):
     
     """
-    Class to hold all functions for the SOMA project
+    Class to hold all functions for the SOMA project relevant to the master pipeline.
     """
 
     def __init__(self):

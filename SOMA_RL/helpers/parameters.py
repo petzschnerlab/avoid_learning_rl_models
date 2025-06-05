@@ -93,7 +93,6 @@ class Parameters:
 
         # Store mode
         self.mode = mode
-        self.kwargs = kwargs
 
         # Assign defaults and user values
         for param in accepted_params:
@@ -120,3 +119,7 @@ class Parameters:
                 'recovery': 'parameter'
             }.get(param, None)
             setattr(self, param, kwargs.get(param, default_value))
+
+        #Report all custom parameters (i.e. kwargs)
+        for key, value in kwargs.items():
+            print(f"{key.title()}: {value}")

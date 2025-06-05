@@ -50,15 +50,26 @@ class Help:
         }
 
     def print_help(self) -> None:
+        
         """
         Print the help information, including overview and parameter descriptions.
+
+        Returns
+        -------
+        None
         """
+
         self.print_overview()
         self.print_parameters()
 
     def print_overview(self) -> None:
+        
         """
         Print an overview of the package and usage instructions.
+
+        Returns
+        -------
+        None
         """
 
         overview = """The SOMA_RL package is a tool to deploy reinforcement learning computational models.
@@ -86,8 +97,13 @@ class Help:
         print(overview)
 
     def print_parameters(self) -> None:
+        
         """
         Print the parameters for both FIT and VALIDATION modes.
+
+        Returns
+        -------
+        None
         """
         print('\nPipeline Object Parameter')
         print('-------------------')

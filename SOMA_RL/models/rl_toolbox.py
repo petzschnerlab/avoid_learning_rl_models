@@ -16,11 +16,40 @@ class RLToolbox:
     """
 
     #Setup functions
-    def load_methods(self, methods):
+    def load_methods(self, methods: dict) -> None:
+
+        """
+        Load methods into the class instance
+
+        Parameters
+        ----------
+        methods: dict
+            Dictionary of methods to load into the class instance    
+
+        Returns
+        -------
+        None
+        """
+
         for key in methods:
             setattr(self, key, methods[key])
 
-    def get_value_type(self, model_name):
+    def get_value_type(self, model_name: str) -> str:
+
+        """
+        Get the value type based on the model name
+        
+        Parameters
+        ----------
+        model_name: str
+            Name of the model to determine the value type
+        
+        Returns
+        -------
+        str
+            The value type corresponding to the model name
+        """
+
         if model_name == 'QLearning' or model_name == 'Relative' or model_name == 'wRelative':
             return 'q_values'
         elif model_name == 'ActorCritic':
@@ -28,13 +57,40 @@ class RLToolbox:
         elif model_name == 'Hybrid2012' or model_name == 'Hybrid2021':
             return 'h_values'
         
-    def get_context_reward(self, model_name):
+    def get_context_reward(self, model_name: str) -> bool:
+
+        """
+        Check if the model uses context reward
+
+        Parameters
+        ----------
+        model_name: str
+            Name of the model to check for context reward
+
+        Returns
+        -------
+        bool
+            True if the model uses context reward, False otherwise
+        """
+
         if model_name == 'Relative':
             return True
         else:
             return False
 
-    def define_parameters(self):
+    def define_parameters(self) -> tuple:
+
+        """
+        Define the parameters of the model based on the class name and optional parameters
+
+        Returns
+        -------
+        tuple
+            A tuple containing:
+            - value_type: str, the type of value used in the model (e.g., 'q_values', 'w_values', 'h_values')
+            - context_reward: bool, whether the model uses context reward
+            - transform_reward: bool, whether the model transforms rewards (e.g., applies valence bias)
+        """
 
         # Re-Assign parameters
         self.free_params = self.parameters.copy()
@@ -50,14 +106,41 @@ class RLToolbox:
 
         return value_type, context_reward, transform_reward
     
-    def unpack_parameters(self, free_params):
+    def unpack_parameters(self, free_params: dict) -> None:
+
+        """ 
+        Unpack the free parameters into the class instance
+        
+        Parameters
+        ----------
+        free_params: dict
+            Dictionary of free parameters to unpack into the class instance
+
+        Returns
+        -------
+        None
+        """
 
         for key, value in free_params.items():
             value_torch = nn.Parameter(torch.tensor(value, dtype=torch.float32, requires_grad=True))
             setattr(self, key, value_torch)
             self.register_parameter(key, value_torch)
 
-    def unpack_optionals(self, optionals):
+    def unpack_optionals(self, optionals: list) -> None:
+
+        """
+        Unpack optional parameters into the class instance
+        
+        Parameters
+        ----------
+        optionals: list
+            List of optional parameters to unpack into the class instance
+        
+        Returns
+        -------
+        None
+        """
+
         if self.optional_parameters['bias'] == True and 'valence_factor' in self.parameters:
             self.valence_factor = optionals[0]
             optionals = optionals[1:]
@@ -68,40 +151,153 @@ class RLToolbox:
             self.decay_factor = optionals[0]
             optionals = optionals[1:]
 
-    def clamp_parameters(self, bounds):
+    def clamp_parameters(self, bounds: dict) -> None:
+
+        """
+        Clamp the free parameters to stay within the specified bounds
+
+        Parameters
+        ----------
+        bounds: dict
+            Dictionary containing the bounds for each free parameter
+        """
         for param_name in self.free_params:
             param = getattr(self, param_name)
             param.data.clamp_(bounds[param_name][0], bounds[param_name][1])
 
     #Extraction functions
-    def get_q_value(self, state):
+    def get_q_value(self, state: dict) -> dict:
+
+        """
+        Get the Q-values for the given state
+        
+        Parameters
+        ----------
+        state: dict
+            Dictionary containing the state information, including 'state_id'
+        
+        Returns
+        -------
+        state: dict
+            The input state dictionary with an additional key 'q_values' containing the Q-values for the state
+        """
+        
         state['q_values'] = self.q_values[state['state_id']]
         return state
     
-    def get_v_value(self, state):
+    def get_v_value(self, state: dict) -> dict:
+
+        """
+        Get the V-values for the given state
+
+        Parameters
+        ----------
+        state: dict
+            Dictionary containing the state information, including 'state_id'
+        
+        Returns
+        -------
+        state: dict
+            The input state dictionary with an additional key 'v_values' containing the V-values for the state
+        """
+
         state['v_values'] = self.v_values[state['state_id']]
         return state
     
-    def get_w_value(self, state):
+    def get_w_value(self, state: dict) -> dict:
+
+        """
+        Get the W-values for the given state
+
+        Parameters
+        ----------
+        state: dict
+            Dictionary containing the state information, including 'state_id'
+
+        Returns
+        -------
+        state: dict
+            The input state dictionary with an additional key 'w_values' containing the W-values for the state
+        """
+
         state['w_values'] = self.w_values[state['state_id']]
         return state
 
-    def get_c_value(self, state):
+    def get_c_value(self, state: dict) -> dict:
+
+        """
+        Get the C-values for the given state
+
+        Parameters
+        ----------
+        state: dict
+            Dictionary containing the state information, including 'state_id'
+        Returns
+        -------
+        state: dict
+            The input state dictionary with an additional key 'c_values' containing the C-values for the state
+        """
+
         state['c_values'] = self.c_values[state['state_id']]
         return state
     
-    def get_m_value(self, state):
+    def get_m_value(self, state: dict) -> dict:
+
+        """
+        Get the M-values for the given state, which is a mix of Q-values and C-values
+
+        Parameters
+        ----------
+        state: dict
+            Dictionary containing the state information, including 'state_id'
+
+        Returns
+        -------
+        state: dict
+            The input state dictionary with an additional key 'm_values' containing the M-values for the state
+        """
+
         state['m_values'] = [(state['q_values'][i] * (1-self.mixing_factor)) + (state['c_values'][i] * self.mixing_factor) for i in range(len(state['q_values']))]
         return state
     
-    def get_h_values(self, state):
+    def get_h_values(self, state: dict) -> dict:
+
+        """
+        Get the H-values for the given state, which is a mix of W-values and Q-values
+
+        Parameters
+        ----------
+        state: dict
+            Dictionary containing the state information, including 'state_id'
+
+        Returns
+        -------
+        state: dict
+            The input state dictionary with an additional key 'h_values' containing the H-values for the state
+        """
+
         if self.training == 'torch':
             state['h_values'] = state['w_values'] * (1-self.mixing_factor) + state['q_values'] * self.mixing_factor
         else:
             state['h_values'] = [(state['w_values'][i] * (1-self.mixing_factor)) + (state['q_values'][i] * self.mixing_factor) for i in range(len(state['w_values']))]
         return state
 
-    def get_final_q_values(self, state):
+    def get_final_q_values(self, state: dict) -> dict:
+
+        """
+        Get the final Q-values for the given state, applying decay if specified
+
+        Parameters
+        ----------
+        state: dict
+            Dictionary containing the state information, including 'stim_id' and 'state_id'
+        
+        Returns
+        -------
+        state: dict
+            The input state dictionary with an additional key 'q_values' containing the final Q-values for the state
+        """
+
         if self.optional_parameters['decay']:
             state['q_values'] = self.get_decayed_q_values(state)
         else:
@@ -111,25 +307,85 @@ class RLToolbox:
                 state['q_values'] = [self.final_q_values[stim].values[0] for stim in state['stim_id']]
         return state
 
-    def get_final_c_values(self, state):
+    def get_final_c_values(self, state: dict) -> dict:
+
+        """
+        Get the final C-values for the given state, applying decay if specified
+
+        Parameters
+        ----------
+        state: dict
+            Dictionary containing the state information, including 'stim_id' and 'state_id'
+
+        Returns
+        -------
+        state: dict
+            The input state dictionary with an additional key 'c_values' containing the final C-values for the state
+        """
+
         if self.training == 'torch':
             state['c_values'] = torch.stack([self.final_c_values[stim] for stim in state['stim_id']])
         else:
             state['c_values'] = [self.final_c_values[stim].values[0] for stim in state['stim_id']]
         return state
 
-    def get_context_value(self, state):
+    def get_context_value(self, state: dict) -> dict:
+
+        """
+        Get the context value for the given state
+
+        Parameters
+        ----------
+        state: dict
+            Dictionary containing the state information, including 'state_id'
+
+        Returns
+        -------
+        state: dict
+            The input state dictionary with an additional key 'context_value' containing the context value for the state
+        """
+
         state['context_value'] = self.context_values[state['state_id']]
         return state
     
-    def get_final_w_values(self, state):
+    def get_final_w_values(self, state: dict) -> dict:
+
+        """
+        Get the final W-values for the given state, applying decay if specified
+
+        Parameters
+        ----------
+        state: dict
+            Dictionary containing the state information, including 'stim_id' and 'state_id'
+        
+        Returns
+        -------
+        state: dict
+            The input state dictionary with an additional key 'w_values' containing the final W-values for the state
+        """
+
         if self.training == 'torch':
             state['w_values'] = torch.stack([self.final_w_values[stim] for stim in state['stim_id']])
         else:
             state['w_values'] = [self.final_w_values[stim].values[0] for stim in state['stim_id']]
         return state
     
-    def get_decayed_q_values(self, state):
+    def get_decayed_q_values(self, state: dict) -> list:
+
+        """
+        Get the decayed Q-values for the given state, combining final and initial Q-values based on decay factor
+
+        Parameters
+        ----------
+        state: dict
+            Dictionary containing the state information, including 'stim_id' and 'state_id'
+
+        Returns
+        -------
+        list
+            List of decayed Q-values for the stimuli in the state
+        """
+
         if self.training == 'torch':
             q_final = torch.stack([self.final_q_values[stim] for stim in state['stim_id']])
             q_initial = torch.stack([torch.tensor(self.initial_q_values[stim][0]) for stim in state['stim_id']])
@@ -142,7 +398,22 @@ class RLToolbox:
             q_values = [q_final_decayed[i].values[0] + q_initial_decayed[i].values[0] for i in range(len(q_final))]
         return q_values
 
-    def torch_select_action(self, probabilities):
+    def torch_select_action(self, probabilities: torch.Tensor) -> int:
+
+        """
+        Select an action based on the given probabilities using a random number generator
+
+        Parameters
+        ----------
+        probabilities: torch.Tensor
+            Tensor containing the probabilities for each action
+        
+        Returns
+        -------
+        int
+            The index of the selected action
+        """
+
         number_of_tries = 0
         while True:
             random_number = rnd.random()
@@ -165,7 +436,20 @@ class RLToolbox:
                     raise ValueError(f'Action selection failed too many times, check the error file, {filename}, for more information')
 
     #Update functions
-    def update_prediction_errors(self, state):
+    def update_prediction_errors(self, state: dict) -> None:
+
+        """
+        Update the prediction errors for the given state
+
+        Parameters
+        ----------
+        state: dict
+            Dictionary containing the state information, including 'state_id' and prediction errors
+
+        Returns
+        -------
+        None
+        """
 
         if 'Hybrid' in self.__class__.__name__:
             self.q_prediction_errors[state['state_id']] = state['q_prediction_errors'].detach() if self.training == 'torch' else state['q_prediction_errors']
@@ -173,7 +457,21 @@ class RLToolbox:
         else:
             self.prediction_errors[state['state_id']] = state['prediction_errors'].detach() if self.training == 'torch' else state['prediction_errors']
 
-    def update_q_values(self, state):
+    def update_q_values(self, state: dict) -> None:
+
+        """
+        Update the Q-values for the given state based on the prediction errors and learning rates
+
+        Parameters
+        ----------
+        state: dict
+            Dictionary containing the state information, including 'state_id', 'q_values', 'action', and prediction errors
+
+        Returns
+        -------
+        None
+        """
+
         if self.training == 'torch':
             if 'Hybrid' in self.__class__.__name__:
                 prediction_errors = state['q_prediction_errors']
@@ -196,7 +494,21 @@ class RLToolbox:
                 prediction_errors = state['q_prediction_errors'] if 'Hybrid' in self.__class__.__name__ else state['prediction_errors']
                 self.q_values[state['state_id']] = [state['q_values'][i] + (learning_rates[i] * prediction_errors[i]) for i in range(len(state['q_values']))]
 
-    def update_w_values(self, state):
+    def update_w_values(self, state: dict) -> None:
+
+        """
+        Update the W-values for the given state based on the prediction errors and learning rates
+
+        Parameters
+        ----------
+        state: dict
+            Dictionary containing the state information, including 'state_id', 'w_values', 'action', and prediction errors
+
+        Returns
+        -------
+        None
+        """
+
         if self.training == 'torch':
             if 'Standard' in self.model_name:
                 learning_rates = torch.stack([self.factual_actor_lr, self.factual_actor_lr])
@@ -228,7 +540,21 @@ class RLToolbox:
 
         self.w_values[state['state_id']] = new_w_values
     
-    def update_v_values(self, state):
+    def update_v_values(self, state: dict) -> None:
+
+        """
+        Update the V-values for the given state based on the prediction errors and learning rates
+
+        Parameters
+        ----------
+        state: dict
+            Dictionary containing the state information, including 'state_id', 'v_values', 'action', and prediction errors
+        
+        Returns
+        -------
+        None
+        """
+
         if self.training == 'torch':
             prediction_errors = state['v_prediction_errors'].detach() if 'Hybrid' in self.__class__.__name__ else state['prediction_errors'].detach()
             self.v_values[state['state_id']] = state['v_values'].detach() + (self.critic_lr * prediction_errors)
@@ -236,10 +562,38 @@ class RLToolbox:
             prediction_errors = state['v_prediction_errors'] if 'Hybrid' in self.__class__.__name__ else state['prediction_errors']
             self.v_values[state['state_id']] = [state['v_values'][0] + (self.critic_lr * prediction_errors[state['action']])]
     
-    def update_h_values(self, state):
+    def update_h_values(self, state: dict) -> None:
+
+        """
+        Update the H-values for the given state based on the W-values and Q-values
+
+        Parameters
+        ----------
+        state: dict
+            Dictionary containing the state information, including 'state_id', 'h_values', 'w_values', and 'q_values'
+        
+        Returns
+        -------
+        None
+        """
+
         self.h_values[state['state_id']] = state['h_values'].detach() if self.training == 'torch' else state['h_values']
 
-    def update_c_values(self, state):
+    def update_c_values(self, state: dict) -> None:
+
+        """
+        Update the C-values for the given state based on the prediction errors and learning rates
+
+        Parameters
+        ----------
+        state: dict
+            Dictionary containing the state information, including 'state_id', 'c_values', 'action', and prediction errors
+
+        Returns
+        -------
+        None
+        """
+
         if self.training == 'torch':
             learning_rates = torch.stack([self.factual_lr, self.counterfactual_lr]) if state['action'] == 0 else torch.stack([self.counterfactual_lr, self.factual_lr])
             self.c_values[state['state_id']] = state['c_values'].detach() + (learning_rates * state['c_prediction_errors'].detach())
@@ -247,7 +601,22 @@ class RLToolbox:
             learning_rates = [self.factual_lr, self.counterfactual_lr] if state['action'] == 0 else [self.counterfactual_lr, self.factual_lr]
             self.c_values[state['state_id']] = [state['c_values'][i] + (learning_rates[i] * state['c_prediction_errors'][i]) for i in range(len(state['c_values']))]
 
-    def update_context_values(self, state):
+    def update_context_values(self, state: dict) -> dict:
+
+        """
+        Update the context values for the given state based on the context prediction errors and learning rate
+
+        Parameters
+        ----------
+        state: dict
+            Dictionary containing the state information, including 'state_id', 'context_value', and 'context_prediction_errors'
+        
+        Returns
+        -------
+        state: dict
+            The input state dictionary with an updated key 'context_value' containing the updated context values for the state
+        """
+
         if self.training == 'torch':
             self.context_values[state['state_id']] = state['context_value'].detach() + (self.contextual_lr * state['context_prediction_errors'])
         else:
@@ -255,10 +624,39 @@ class RLToolbox:
         state = self.get_context_value(state)
         return state
     
-    def update_context_prediction_errors(self, state):
+    def update_context_prediction_errors(self, state: dict) -> None:
+
+        """
+        Update the context prediction errors for the given state
+        
+        Parameters
+        ----------
+        state: dict
+            Dictionary containing the state information, including 'state_id' and 'context_prediction_errors'
+
+        Returns
+        -------
+        None
+        """
+
         self.context_prediction_errors[state['state_id']] = state['context_prediction_errors'].detach() if self.training == 'torch' else state['context_prediction_errors']
 
-    def reward_valence(self, reward):
+    def reward_valence(self, reward: list) -> list:
+
+        """
+        Apply valence bias to the rewards based on the valence factor
+
+        Parameters
+        ----------
+        reward: list
+            List of rewards to apply valence bias to
+
+        Returns
+        -------
+        list
+            List of rewards after applying valence bias
+        """
+
         new_reward = []
         for ri, r in enumerate(reward):
             if r > 0:
@@ -269,7 +667,20 @@ class RLToolbox:
                 new_reward.append(r)
         return torch.stack(new_reward) if self.training == 'torch' else new_reward
     
-    def update_model(self, state):
+    def update_model(self, state: dict) -> None:
+
+        """
+        Update the model based on the current state
+
+        Parameters
+        ----------
+        state: dict
+            Dictionary containing the state information, including 'state_id', 'q_values', 'v_values', 'w_values', and prediction errors
+
+        Returns
+        -------
+        None
+        """
         
         self.update_prediction_errors(state)
 
@@ -287,7 +698,16 @@ class RLToolbox:
         if 'Hybrid' in self.__class__.__name__:
             self.update_h_values(state)
     
-    def reset_datalists(self):
+    def reset_datalists(self) -> None:
+        
+        """
+        Reset the data lists for all states in the model
+        This method clears the prediction errors, Q-values, W-values, V-values, context values, and H-values for each state.
+
+        Returns
+        -------
+        None
+        """
 
         for s in self.states:
 
@@ -311,7 +731,17 @@ class RLToolbox:
             if 'Hybrid' in self.__class__.__name__:
                 self.h_values[s] = [0]*len(self.h_values[s])
 
-    def reset_datalists_torch(self):
+    def reset_datalists_torch(self) -> None:
+
+        """
+        Reset the data lists for all states in the model using torch tensors
+        This method clears the prediction errors, Q-values, W-values, V-values, context values, and H-values for each state.
+
+        Returns
+        -------
+        None
+        """
+
         for s in self.states:
             if 'Hybrid' in self.__class__.__name__:
                 self.q_prediction_errors[s] = torch.zeros(len(self.q_prediction_errors[s]))
@@ -333,13 +763,53 @@ class RLToolbox:
             if 'Hybrid' in self.__class__.__name__:
                 self.h_values[s] = torch.zeros(len(self.h_values[s]))
 
-    def detach_values(self, values):
+    def detach_values(self, values: dict) -> dict:
+        """
+        Detach the values from the computation graph and convert them to a list
+        
+        Parameters
+        ----------
+        values: dict
+            Dictionary containing the values to detach and convert
+
+        Returns
+        -------
+        dict
+            Dictionary with the same keys as input, but values are detached and converted to lists
+        """
+
         return {state: [x.item() for x in values[state]] for state in values.keys()}
 
-    def attach_values(self, values):
+    def attach_values(self, values: dict) -> dict:
+
+        """
+        Attach the values to the computation graph and convert them to torch tensors
+        
+        Parameters
+        ----------
+        values: dict
+            Dictionary containing the values to attach and convert
+
+        Returns
+        -------
+        dict
+            Dictionary with the same keys as input, but values are converted to torch tensors
+        """
+
         return {key: torch.tensor(value, dtype=torch.float32) for key, value in values.items()}
     
-    def combine_values(self):
+    def combine_values(self) -> None:
+
+        """
+        Combine the values of the model after each training epoch
+        This method is called after the learning trials to combine the Q-values, W-values, V-values, and H-values into their final forms for the transfer trials.
+        It ensures that the values are properly updated and ready for the next training phase or evaluation.
+
+        Returns
+        -------
+        None
+        """
+
         #Inter-phase processing
         if self.__class__.__name__ == 'ActorCritic':
             self.combine_v_values()
@@ -351,18 +821,21 @@ class RLToolbox:
         else:
             self.combine_q_values()
 
-    def fit_log_likelihood(self, values):
+    def fit_log_likelihood(self, values: list) -> torch.Tensor | np.ndarray:
 
-        '''
-        Action selection function for the fitting procedure
-
-        parameters
+        """
+        Calculate the log likelihood of the observed actions given the values
+        
+        Parameters
         ----------
-        values: list[float]
-            List of Q-values
-        temperature: float
-            Temperature parameter for softmax action selection
-        '''
+        values: list
+            List of values (Q-values, W-values, etc.) for the actions taken
+            
+        Returns
+        -------
+        torch.Tensor | np.ndarray
+            The negative log likelihood of the observed actions given the values, transformed by the temperature parameter
+        """
 
         if self.training == 'torch':
             transformed_values = torch.exp(torch.divide(values, self.temperature))
@@ -378,7 +851,25 @@ class RLToolbox:
 
         return -torch.log(probability_values) if self.training == 'torch' else -np.log(probability_values)
         
-    def fit_torch(self, data, bounds):
+    def fit_torch(self, data: tuple, bounds: dict) -> tuple:
+
+        """
+        Fit the model to the data using PyTorch
+        
+        Parameters
+        ----------
+        data: tuple
+            A tuple containing the learning data and transfer data
+        bounds: dict    
+            Dictionary containing the bounds for each free parameter
+
+        Returns
+        -------
+        best_fit: float
+            The best fit value obtained during the training
+        fitted_params: dict
+            Dictionary containing the fitted parameters after training
+        """
 
         # TODO:
         # Check scipy NLL (should I minus max like nn.CrossEntropyLoss?)
@@ -480,11 +971,25 @@ class RLToolbox:
         
         return best_fit, fitted_params
     
-    def fit(self, data, bounds):
+    def fit(self, data: tuple, bounds: dict) -> tuple:
 
-        '''
-        Fit the model to the data
-        '''
+        """
+        Fit the model to the data using scipy optimization
+        
+        Parameters
+        ----------
+        data: tuple
+            A tuple containing the learning data and transfer data
+        bounds: dict
+            Dictionary containing the bounds for each free parameter
+            
+        Returns
+        -------
+        fit_results: OptimizeResult
+            The result of the optimization process containing the fitted parameters and other information
+        fitted_params: dict
+            Dictionary containing the fitted parameters after optimization
+        """
 
         #Extract the values from dict
         free_params = list(self.parameters.values())
@@ -508,7 +1013,26 @@ class RLToolbox:
 
         return fit_results, fitted_params
 
-    def fit_task(self, args, value_type, transform_reward=False, context_reward=False):
+    def fit_task(self,
+                 args: tuple,
+                 value_type: str,
+                 transform_reward: bool = False,
+                 context_reward: bool = False) -> float:
+
+        """
+        Fit the model to the task data, including both learning and transfer phases
+        
+        Parameters
+        ----------
+        args: tuple
+            A tuple containing the learning data and transfer data
+        value_type: str
+            The type of values to use for fitting (e.g., 'q_values', 'w_values', etc.)
+        transform_reward: bool, optional
+            A boolean as to whether rewards will be transformed
+        context_reward: bool, optional
+            A boolean as to whether the context_reward should be computed
+        """
         
         #Unpack data
         learning_data, transfer_data = args[0]
@@ -542,7 +1066,8 @@ class RLToolbox:
         self.combine_values()
 
         #Transfer phase
-        if False: #Toggle to switch between methods for testing. Function method is slower than loop, so it's avoided
+        #Toggle to switch between methods for testing. Function method is slower than loop, so it's avoided
+        if False:
             log_likelihood -= self.fit_transfer_forward(transfer_data, value_type, reduced = True)
         else:
             for trial, (state_id, action) in enumerate(zip(transfer_states.copy(), transfer_actions.copy())):
@@ -559,14 +1084,47 @@ class RLToolbox:
 
         return log_likelihood
     
-    def simulate(self, data):
+    def simulate(self, data: tuple) -> None:
 
-        '''
-        Simulate the model
-        '''
+        """
+        Simulate the model on the provided data
+        
+        Parameters
+        ----------
+        data: tuple
+            A tuple containing the learning data and transfer data
+
+        Returns
+        -------
+        None
+        """
+
         self.sim_func(data)
 
-    def sim_task(self, args, transform_reward=False, context_reward=False):
+    def sim_task(self,
+                 args: tuple, 
+                 transform_reward: bool = False, 
+                 context_reward: bool = False) -> tuple:
+
+        """
+        Simulate the model on the task data, including both learning and transfer phases
+
+        Parameters
+        ----------
+        args: tuple
+            A tuple containing the learning data and transfer data
+        transform_reward: bool, optional
+            A boolean indicating whether rewards should be transformed
+        context_reward: bool, optional
+            A boolean indicating whether context rewards should be computed
+
+        Returns
+        -------
+        task_learning_data: pd.DataFrame
+            DataFrame containing the learning phase data with model predictions
+        task_transfer_data: pd.DataFrame
+            DataFrame containing the transfer phase data with model predictions
+        """
 
         #Unpack data
         learning_data, transfer_data = args[0]['learning'], args[0]['transfer']
@@ -615,78 +1173,16 @@ class RLToolbox:
             self.sim_forward(state, phase='transfer')
         
         return self.task_learning_data, self.task_transfer_data
-    
-    #Plotting functions
-    def plot_model(self):
-    
-        fig, ax = plt.subplots(4, 4, figsize=(20,5))
 
-        #Plot q-values
-        if 'Hybrid' in self.__class__.__name__:
-            values = self.h_values
-            value_label = 'H-Value'
-        elif self.__class__.__name__ == 'ActorCritic':
-            values = self.v_values
-            value_label = 'V-Value'
-        else:
-            values = self.q_values
-            value_label = 'Q-Value'
-        
-        values = self.q_values if self.__class__.__name__ != 'ActorCritic' else self.w_values
-        for i, key in enumerate(values.keys()):
-            for ci, col in enumerate(values[key].columns):
-                rolling_values = values[key][col].reset_index(drop=True).rolling(window=2).mean()
-                ax[0,i].plot(rolling_values, label=['Stim 1', 'Stim 2'][ci])
-            ax[0,i].set_title(key)
-            ax[0,i].set_ylim(-1, 1)
-            if i == 0:
-                ax[0,i].set_ylabel(value_label)
-            ax[0,i].set_xlabel('')
-            if i == len(values.keys())-1:
-                ax[0,i].legend(loc='center left', bbox_to_anchor=(1, 0.5))
-            ax[0,i].set_xticklabels([])
-            if i > 0:
-                ax[0,i].set_yticklabels([])
-        
-        #Plot prediction errors
-        prediction_errors = self.prediction_errors if 'Hybrid' in self.__class__.__name__ else self.q_prediction_errors
-        for i, key in enumerate(prediction_errors.keys()):
-            for ci, col in enumerate(prediction_errors[key].columns):
-                rolling_prediction_errors = prediction_errors[key][col].reset_index(drop=True).rolling(window=2).mean()
-                ax[1,i].plot(rolling_prediction_errors, label=['Stim 1', 'Stim 2'][ci], color=['C0', 'C1'][ci])
-                if'Hybrid' in self.__class__.__name__:
-                    rolling_v_prediction_errors = self.v_prediction_errors[key][col].reset_index(drop=True).rolling(window=2).mean()
-                    ax[1,i].plot(rolling_v_prediction_errors, label=['Stim 1', 'Stim 2'][ci], color=['C0', 'C1'][ci], linestyle='dashed')
-            ax[1,i].set_title('')
-            ax[1,i].set_ylim(-1, 1)
-            if i == 0:
-                ax[1,i].set_ylabel('Prediction Error')
-            ax[1,i].set_xlabel('')
-            ax[1,i].set_xticklabels([])
-            if i > 0:
-                ax[1,i].set_yticklabels([])
+    def get_choice_rates(self) -> pd.DataFrame:
 
-        #Plot accuracy
-        for i, key in enumerate(self.accuracy.keys()):
-            rolling_accuracy = self.accuracy[key].reset_index(drop=True).rolling(window=2).mean()
-            ax[2,i].plot(rolling_accuracy)
-            ax[2,i].set_title('')
-            ax[2,i].set_ylim(-.05, 1.05)
-            if i == 0:
-                ax[2,i].set_ylabel('Accuracy')
-            ax[2,i].set_xlabel('Trial')
-            if i > 0:
-                ax[2,i].set_yticklabels([])
+        """ 
+        Get the choice rates for each state in the model
 
-        #Plot choice rate
-        x_tick_labels = ['75R', '25R', '25P', '75P', 'N']
-        ax[3,0].bar(self.choice_rate.keys(), self.choice_rate.values())
-        ax[3,0].set_ylabel('Choice Rate (%)')
-        ax[3,0].set_xlabel('Stimulus')
-        ax[3,0].set_xticks(range(len(self.choice_rate.keys())))
-        ax[3,0].set_xticklabels(x_tick_labels)
+        Returns
+        -------
+        pd.DataFrame
+            DataFrame containing the choice rates for each state, with columns 'state_id', 'choice_rate', and 'choice_count'
+        """
 
-        plt.show()
-    
-    def get_choice_rates(self):
         return self.choice_rate
