@@ -1,4 +1,4 @@
-def get_priors() -> tuple:
+def get_priors(models: list = None) -> tuple:
 
     """
     Returns fixed and bounds priors for the models used in SOMA-RL.
@@ -12,9 +12,9 @@ def get_priors() -> tuple:
         - bounds: Bounds priors for the models (currently None).
     """
 
-    return fixed_priors(), bounds_priors()
+    return fixed_priors(models=models), bounds_priors(models=models)
 
-def fixed_priors() -> dict:
+def fixed_priors(models: list = None) -> dict:
 
     """
     Returns fixed priors for the models used in SOMA_RL.
@@ -99,9 +99,12 @@ def fixed_priors() -> dict:
     fixed['StandardHybrid2021'].pop('counterfactual_lr')
     fixed['StandardHybrid2021'].pop('counterfactual_actor_lr')
 
+    if models is not None:
+        fixed = {model.split('+')[0]: fixed[model.split('+')[0]] for model in models if model.split('+')[0] in fixed}
+
     return fixed
 
-def bounds_priors() -> dict:
+def bounds_priors(models: list = None) -> dict:
 
     """
     Returns bounds priors for the models used in SOMA_RL.
