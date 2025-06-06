@@ -1,5 +1,5 @@
 from helpers.pipeline import Pipeline
-from helpers.priors import get_priors
+from helpers.priors import fixed_priors
 
 if __name__ == "__main__":
 
@@ -35,7 +35,7 @@ if __name__ == "__main__":
               'Hybrid2012+novel',   #Standard - bias + novel
     ]
 
-    fixed, _ = get_priors()
+    fixed = fixed_priors(models)
     bounds = {'QLearning':          {'temperature': (0.1, .2)},
               'ActorCritic':        {'temperature': (0.1, .2)},
               'Relative':           {'temperature': (0.1, .2)},
@@ -47,14 +47,12 @@ if __name__ == "__main__":
                        'learning_filename':         'SOMA_RL/data/pain_learning_processed.csv',
                        'transfer_filename':         'SOMA_RL/data/pain_transfer_processed.csv',
                        'models':                    models,
-                       'parameters':                'random',
+                       'random_params':             'random',
                        'fixed':                     fixed,
                        'bounds':                    bounds,
-                       'number_of_runs':            1,
-                       'training':                  'scipy',
+                       'number_of_runs':            10,
                        'multiprocessing':           True,
-                       'number_of_participants':    10,
-                       }
+    }
 
     pipeline = Pipeline(seed=1251)
     pipeline.run(recovery='parameter', **validate_params)

@@ -1,5 +1,5 @@
 from helpers.pipeline import Pipeline
-from helpers.priors import get_priors
+from helpers.priors import fixed_priors
 
 if __name__ == "__main__":
 
@@ -35,18 +35,16 @@ if __name__ == "__main__":
               'Hybrid2012+novel',   #Standard - bias + novel
     ]
         
-    fixed, bounds = get_priors()    
-    fit_params = {'mode':                      'fit',
+    fixed = fixed_priors(models)    
+    fit_params = {'mode':                       'fit',
                   'learning_filename':          'SOMA_RL/data/pain_learning_processed.csv',
                   'transfer_filename':          'SOMA_RL/data/pain_transfer_processed.csv',
                   'models':                     models,
                   'random_params':              'normal',
                   'fixed':                      fixed,
-                  'bounds':                     bounds,
                   'number_of_runs':             10,
-                  'training':                   'scipy',
                   'multiprocessing':            True,
-                 }
+    }
 
     pipeline = Pipeline(seed=1251)
     pipeline.run(**fit_params)

@@ -62,6 +62,7 @@ class Parameters:
             'task_design',
             'fixed',
             'bounds',
+            'random_params',
             'datasets_to_generate',
             'number_of_runs',
             'number_of_participants',
@@ -75,7 +76,7 @@ class Parameters:
         ]
 
         required_fit = ['mode', 'learning_filename', 'transfer_filename', 'models']
-        required_validation = ['mode', 'models', 'parameters']
+        required_validation = ['mode', 'models']
 
         accepted_params = fit_params if mode == 'FIT' else validation_params
         required_params = required_fit if mode == 'FIT' else required_validation
@@ -97,6 +98,7 @@ class Parameters:
                 'number_of_participants': 0,
                 'fixed': None,
                 'bounds': None,
+                'parameters': None,
                 'random_params': False,
                 'number_of_runs': 1,
                 'generated': False,

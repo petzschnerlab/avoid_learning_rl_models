@@ -29,10 +29,11 @@ class Help:
 
             'VALIDATION': {
                 'models': ['List of models to validate.', 'list[str]', None],
-                'parameters': ['Parameters to use for simulation or evaluation.', 'dict | list[dict]', None],
                 'learning_filename': ['Filename of the learning task data.', 'str | None', None],
                 'transfer_filename': ['Filename of the transfer task data.', 'str | None', None],
+                'parameters': ['Parameters to use for simulation or evaluation.', 'dict | list[dict]', None],
                 'fit_filename': ['Filename of pre-fit parameter results.', 'str | None', None],
+                'random_params': ['Whether to use random initialization for parameters. Can be random or normal', 'str | bool', False],
                 'task_design': ['Task structure or setup for generating new data.', 'dict | None', None],
                 'fixed': ['Optional fixed parameter values.', 'dict | None', None],
                 'bounds': ['Optional parameter bounds.', 'dict | None', None],

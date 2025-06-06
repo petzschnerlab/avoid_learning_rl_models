@@ -8,7 +8,8 @@ from models.hybrid import Hybrid2012, Hybrid2021, StandardHybrid2012, StandardHy
 
 class RLModel:
 
-    def __init__(self, model: str = None, 
+    def __init__(self,
+                 model: str = None, 
                  parameters: dict = None, 
                  fixed: dict = None, 
                  bounds: dict = None, 

@@ -208,6 +208,7 @@ class Analyses(Plotting):
         if self.generate_data:
             self.generate_simulated_data(models=self.models, 
                                     parameters=self.parameters, 
+                                    random_params=self.random_params,
                                     learning_filename=self.learning_filename, 
                                     transfer_filename=self.transfer_filename, 
                                     fit_filename=self.fit_filename,
@@ -892,7 +893,8 @@ class Analyses(Plotting):
 
     def generate_simulated_data(self,
                                 models: list,
-                                parameters: dict or str = 'random',
+                                parameters: dict = None,
+                                random_params: bool | str = 'random',
                                 learning_filename: str = None,
                                 transfer_filename: str = None,
                                 fit_filename: str = None,
@@ -911,8 +913,12 @@ class Analyses(Plotting):
         ----------
         models : list
             List of model names to generate data for.
-        parameters : dict or str
-            Dictionary of parameters for the models or 'random'/'normal' to use random parameters.
+        parameters : dict
+            Dictionary of parameters for the models.
+            If you want parameters from a fit file, use the fit_filename argument.
+            If you want random (uniform or normal) parameters, use the random_params argument instead.
+        random_params : bool or str, optional
+            Whether to use random parameters for the models. If 'random' or 'normal', random parameters will be generated. Default is 'random'.
         learning_filename : str, optional
             Path to the learning dataset. If None, no learning data will be generated.
         transfer_filename : str, optional
@@ -946,6 +952,21 @@ class Analyses(Plotting):
         #Checks
         if [learning_filename, transfer_filename].count(None) == 1:
             raise ValueError('Both learning and transfer filenames must be provided')
+        
+        if fit_filename is not None and parameters is not None:
+            warnings.warn('fit_filename is set, but parameters is also set. Using fit_filename parameters instead of provided parameters.')
+            parameters = None
+
+        if fit_filename is not None and random_params:
+            warnings.warn('fit_filename is set, but random_params is also set. Using fit_filename parameters instead of random parameters.')
+            random_params = False
+
+        if parameters is not None and random_params:
+            warnings.warn('parameters is set, but random_params is also set. Using provided parameters instead of random parameters.')
+            random_params = False
+        
+        if parameters is None and random_params is False and fit_filename is None:
+            raise ValueError('Either parameters, random_params, or fit_filename must be provided.')
 
         #Delete all folders with generated data from previous run, if desired
         if clear_data:
@@ -965,9 +986,6 @@ class Analyses(Plotting):
                 fit_data = pickle.load(f)
 
         #Set up parameters
-        random_params = True if parameters == 'random' or parameters == 'normal' else False
-        datasets_to_generate = datasets_to_generate if random_params else 1
-
         if learning_filename is not None and transfer_filename is not None:
             dataloader = DataLoader(learning_filename, transfer_filename, reduced=False, generated=False, number_of_participants=number_of_participants)
             participant_ids = dataloader.get_participant_ids()
@@ -995,10 +1013,9 @@ class Analyses(Plotting):
                     else:
                         participant_id = fit_data[model_name]['participant'][run]
                     parameters = {model_name: fit_data[model_name][fit_data[model_name]['participant']==participant_id]}
-                    random_params = False
 
-                model_parameters = parameters[model_name] if not random_params else None
-                model = RLModel(model_name, model_parameters, random_params=parameters, fixed=fixed, bounds=bounds)
+                model_parameters = parameters[model_name] if parameters else None
+                model = RLModel(model_name, model_parameters, random_params=random_params, fixed=fixed, bounds=bounds)
                 task = AvoidanceLearningTask(task_design)
                 pipeline = RLPipeline(model, dataloader=p_dataloader, task=task, training='scipy')
                 if multiprocessing:
