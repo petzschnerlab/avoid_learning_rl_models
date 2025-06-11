@@ -895,7 +895,7 @@ class Analyses(Plotting):
     def generate_simulated_data(self,
                                 models: list,
                                 parameters: dict = None,
-                                random_params: bool | str = 'random',
+                                random_params: Union[bool, str] = 'random',
                                 learning_filename: str = None,
                                 transfer_filename: str = None,
                                 fit_filename: str = None,
