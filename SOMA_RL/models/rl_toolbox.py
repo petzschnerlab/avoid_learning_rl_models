@@ -1,6 +1,6 @@
+from typing import Union
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import scipy
 import tqdm
 
@@ -821,7 +821,7 @@ class RLToolbox:
         else:
             self.combine_q_values()
 
-    def fit_log_likelihood(self, values: list) -> torch.Tensor | np.ndarray:
+    def fit_log_likelihood(self, values: list) -> Union[torch.Tensor, np.ndarray]:
 
         """
         Calculate the log likelihood of the observed actions given the values

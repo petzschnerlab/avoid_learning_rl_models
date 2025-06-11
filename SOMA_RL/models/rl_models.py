@@ -1,3 +1,4 @@
+from typing import Union
 import random as rnd
 import numpy as np
 
@@ -13,7 +14,7 @@ class RLModel:
                  parameters: dict = None, 
                  fixed: dict = None, 
                  bounds: dict = None, 
-                 random_params: bool | str = False) -> None:
+                 random_params: Union[bool, str] = False) -> None:
 
         """
         Initializes the RLModel class with a specified model and its parameters.
@@ -270,7 +271,7 @@ class RLModel:
     
         return model_parameters
     
-    def get_model_columns(self, model: str = None) -> dict | list:
+    def get_model_columns(self, model: str = None) -> Union[dict, list]:
 
         """
         Returns the columns for the model parameters, including metadata and model-specific parameters.

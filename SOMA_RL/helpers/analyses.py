@@ -1,3 +1,4 @@
+from typing import Union
 import sys
 sys.dont_write_bytecode = True
 import warnings
@@ -1062,7 +1063,7 @@ class Analyses(Plotting):
             model_transfer.to_csv(f'SOMA_RL/data/generated/{model}_generated_transfer.csv', index=False)
 
     def run_generative_fits(self,
-                            models: list | str,
+                            models: Union[list, str],
                             number_of_runs: int = 1,
                             datasets_to_generate: int = 1,
                             fixed: dict = None,
