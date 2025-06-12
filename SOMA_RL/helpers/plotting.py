@@ -958,6 +958,7 @@ class Plotting:
             merged_df = merged_df.merge(
                 model_values[model], on='participant', suffixes=('', f'_{model}')
             )
+        merged_df['contextual_lr'] = np.log(merged_df['contextual_lr'])
 
         # Create all pairwise combinations of parameters manually
         param_keys = list(params_of_interest.values())
@@ -978,7 +979,8 @@ class Plotting:
             for i, (x_param, y_param) in enumerate(param_pairs):
                 x = merged_df[x_param]
                 y = merged_df[y_param]
-                corr = x.corr(y)
+                #make sure the 
+                corr, p_value = stats.pearsonr(x, y)
 
                 model_1 = [k for k, v in params_of_interest.items() if v == x_param][0].split('+')[0]
                 model_2 = [k for k, v in params_of_interest.items() if v == y_param][0].split('+')[0]
@@ -986,11 +988,13 @@ class Plotting:
                 axs[i].scatter(x, y)
                 axs[i].set_xlabel(x_param)
                 axs[i].set_ylabel(y_param)
-                axs[i].set_title(f'{model_1}: {x_param}\nvs\n{model_2}: {y_param}\nr={corr:.2f}')
-                axs[i].plot([x.min(), x.max()], [y.min(), y.max()], 'k--', lw=2)
+                axs[i].set_title(f'{model_1}: {x_param}\nvs\n{model_2}: {y_param}\nr={corr:.2f}, p={p_value:.4e}')
+                if corr > 0:
+                    axs[i].plot([x.min(), x.max()], [y.min(), y.max()], 'k--', lw=2)
+                else:
+                    axs[i].plot([x.min(), x.max()], [y.max(), y.min()], 'k--', lw=2)
                 axs[i].set_xlim(x.min(), x.max())
                 axs[i].set_ylim(y.min(), y.max())
-                axs[i].set_aspect('equal', adjustable='box')
                 axs[i].set_xticks([x.min(), x.max()])
                 axs[i].set_yticks([y.min(), y.max()])
                 axs[i].set_xticklabels([f'{x.min():.2f}', f'{x.max():.2f}'])
