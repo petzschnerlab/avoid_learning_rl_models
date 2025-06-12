@@ -6,7 +6,21 @@ import torch
 
 class AvoidanceLearningTask:
 
-    def __init__(self, task_design=None):
+    def __init__(self, task_design: dict = None) -> None:
+
+        """
+        Initialize the Avoidance Learning Task with a specific design.
+
+        Parameters
+        ----------
+        task_design : dict, optional
+            A dictionary containing the design of the task, including parameters for learning and transfer phases.
+
+        Returns
+        -------
+        None
+        """
+
         self.task = 'Avoidance Learning Task'
         self.task_design = task_design
 
@@ -33,7 +47,25 @@ class AvoidanceLearningTask:
         self.task_transfer_data_columns = ['block_number', 'trial_number', 'state_id',
                                                     'stim_id', 'q_values', 'action']
             
-    def create_model_lists(self, states, learning_dimensions, transfer_dimensions):
+    def create_model_lists(self, states: list, learning_dimensions: list, transfer_dimensions: list) -> None:
+
+        """
+        Create and initialize lists for the reinforcement learning model to store various values.
+
+        Parameters
+        ----------
+        states : list
+            A list of state identifiers for the task.
+        learning_dimensions : list
+            A list containing the number of learning trials and the number of actions.
+        transfer_dimensions : list
+            A list containing the number of transfer trials and the number of actions.
+
+        Returns
+        -------
+        None
+        """
+
         self.rl_model.number_state_trials = learning_dimensions[0]
         self.rl_model.q_values = {state: [0]*learning_dimensions[1] for state in states}
         self.rl_model.prediction_errors = {state: [0]*learning_dimensions[1] for state in states}
@@ -67,7 +99,22 @@ class AvoidanceLearningTask:
             self.rl_model.initial_w_values = pd.DataFrame([self.rl_model.w_values[self.rl_model.states[0]][0]]*9).T
             self.rl_model.initial_w_values.columns = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'N']
     
-    def update_task_data(self, state, phase='learning'):
+    def update_task_data(self, state: dict, phase: str = 'learning') -> None:
+
+        """
+        Update the task data with the current state information.
+
+        Parameters
+        ----------
+        state : dict
+            A dictionary containing the current state information, including block number, trial number, state ID, stimulus ID, context, feedback, probabilities, rewards, action, and accuracy.
+        phase : str, optional
+            The phase of the task, either 'learning' or 'transfer'. Default is 'learning'.
+
+        Returns
+        -------
+        None
+        """
         
         if phase == 'learning':
             n = self.rl_model.task_counts['learning']
@@ -84,14 +131,36 @@ class AvoidanceLearningTask:
             self.rl_model.task_transfer_data.iloc[n] = series
             self.rl_model.task_counts['transfer'] += 1
 
-    def compute_accuracy(self):
+    def compute_accuracy(self) -> None:
+
+        """
+        Compute the accuracy of the model based on the task learning data.
+        This method calculates the accuracy for each state in the task learning data and stores it in the model's accuracy attribute.
+        The accuracy is computed as the proportion of correct actions taken in each state.
+        The accuracy is stored in a dictionary where the keys are state IDs and the values are lists of accuracy values for each trial in that state.
+
+        Returns
+        -------
+        None
+        """
 
         self.rl_model.accuracy = {}
         for state in self.rl_model.task_learning_data['state_id'].unique():
             state_data = self.rl_model.task_learning_data[self.rl_model.task_learning_data['state_id'] == state]
             self.rl_model.accuracy[state] = state_data['accuracy']
 
-    def compute_choice_rate(self):
+    def compute_choice_rate(self) -> None:
+
+        """
+        Compute the choice rate for each stimulus in the task transfer data.
+        This method calculates the percentage of times each stimulus was chosen in the transfer phase.
+        The choice rate is stored in the model's choice_rate attribute, which is a dictionary where the keys are stimulus IDs and the values are the percentage of times each stimulus was chosen.
+        The choice rate is computed by filtering the task transfer data for each stimulus, counting the number of times the stimulus was chosen, and dividing by the total number of trials for that stimulus.
+
+        Returns
+        -------
+        None
+        """
     
         choice_rate = {}
         for stimulus in self.rl_model.transfer_stimuli:
@@ -107,11 +176,28 @@ class AvoidanceLearningTask:
             self.rl_model.choice_rate[pair[0]] = (choice_rate[pair[0]] + choice_rate[pair[1]])/2
         self.rl_model.choice_rate['N'] = choice_rate['N']
     
-    def run_computations(self):
+    def run_computations(self) -> None:
+        """
+        Run the computations for the reinforcement learning model.
+
+        Returns
+        -------
+        None
+        """
+
         self.compute_accuracy()
         self.compute_choice_rate()
 
-    def combine_q_values(self):
+    def combine_q_values(self) -> None:
+        """
+        Combine the Q-values from the reinforcement learning model into a final format.
+        This method processes the Q-values stored in the model and formats them into a dictionary or DataFrame for easy access.
+
+        Returns
+        -------
+        None
+        """
+
         if self.rl_model.training == 'torch':
             final_q_values = {state.replace('State ', '')[i]: values[i].detach()
                             for state, values in self.rl_model.q_values.items() 
@@ -124,7 +210,16 @@ class AvoidanceLearningTask:
             self.rl_model.final_q_values.columns = stimuli
             self.rl_model.final_q_values['N'] = 0 if self.rl_model.novel_value is None else self.rl_model.novel_value
 
-    def combine_v_values(self):
+    def combine_v_values(self) -> None:
+        """
+        Combine the V-values from the reinforcement learning model into a final format.
+        This method processes the V-values stored in the model and formats them into a dictionary or DataFrame for easy access.
+
+        Returns
+        -------
+        None
+        """
+
         if self.rl_model.training == 'torch':
             final_v_values = {state.replace('State ', '')[i]: values.detach()
                             for state, values in self.rl_model.v_values.items()
@@ -138,7 +233,16 @@ class AvoidanceLearningTask:
             self.rl_model.final_v_values.columns = stimuli
             self.rl_model.final_v_values['N'] = 0 if self.rl_model.novel_value is None else self.rl_model.novel_value
 
-    def combine_w_values(self):
+    def combine_w_values(self) -> None:
+        
+        """
+        Combine the W-values from the reinforcement learning model into a final format.
+        This method processes the W-values stored in the model and formats them into a dictionary or DataFrame for easy access.
+        
+        Returns
+        -------
+        None
+        """
 
         if self.rl_model.training == 'torch':
             final_w_values = {state.replace('State ', '')[i]: values[i].detach()
@@ -152,7 +256,16 @@ class AvoidanceLearningTask:
             self.rl_model.final_w_values.columns = stimuli
             self.rl_model.final_w_values['N'] = 0 if self.rl_model.novel_value is None else self.rl_model.novel_value
 
-    def combine_c_values(self):
+    def combine_c_values(self) -> None:
+        
+        """
+        Combine the C-values from the reinforcement learning model into a final format.
+        This method processes the C-values stored in the model and formats them into a dictionary or DataFrame for easy access.
+        
+        Returns
+        -------
+        None
+        """
         
         if self.rl_model.training == 'torch':
             final_c_values = {state.replace('State ', '')[i]: values[i].detach()
@@ -166,7 +279,20 @@ class AvoidanceLearningTask:
             self.rl_model.final_c_values.columns = stimuli
             self.rl_model.final_c_values['N'] = 0 if self.rl_model.novel_value is None else self.rl_model.novel_value
 
-    def initiate_model(self, rl_model):
+    def initiate_model(self, rl_model: object) -> None:
+
+        """
+        Initialize the reinforcement learning model with the task design and set up necessary parameters.
+        
+        Parameters
+        ----------
+        rl_model : object
+            An instance of a reinforcement learning model that will be used for the task.
+        
+        Returns
+        -------
+        None
+        """
 
         #Initialize model, create dataframes, and load methods
         states = ['State AB', 'State CD', 'State EF', 'State GH']
@@ -218,7 +344,22 @@ class AvoidanceLearningTask:
                                 learning_dimensions=[number_of_learning_trials, 2],
                                 transfer_dimensions=[number_of_transfer_trials, 2])
 
-    def run_learning_phase(self, task_design):
+    def run_learning_phase(self, task_design: dict) -> None:
+
+        """
+        Run the learning phase of the avoidance learning task.
+        This method iterates through the specified number of blocks and trials, selecting stimuli based on a randomized order.
+        It updates the state information for each trial and runs the reinforcement learning model's forward method.
+        
+        Parameters
+        ----------
+        task_design : dict
+            A dictionary containing the design of the learning phase, including the number of trials and blocks.
+        
+        Returns
+        -------
+        None
+        """
 
         number_of_trials = task_design['learning_phase']['number_of_trials']
         number_of_blocks = task_design['learning_phase']['number_of_blocks']
@@ -256,7 +397,21 @@ class AvoidanceLearningTask:
                 #Run model
                 self.rl_model.forward(state, phase='learning')                
     
-    def run_transfer_phase(self, task_design):
+    def run_transfer_phase(self, task_design: dict) -> None:
+
+        """
+        Run the transfer phase of the avoidance learning task.
+        This method sets up the transfer pairs based on the task design and runs the reinforcement learning model's forward method for each pair.
+
+        Parameters
+        ----------
+        task_design : dict
+            A dictionary containing the design of the transfer phase, including the number of times to repeat the transfer pairs.
+        
+        Returns
+        -------
+        None
+        """
 
         #Get arguments
         times_repeated = task_design['transfer_phase']['times_repeated']
@@ -287,6 +442,15 @@ class AvoidanceLearningTask:
             #Run model
             self.rl_model.forward(state, phase='transfer')            
 
-    def run_experiment(self):
+    def run_experiment(self) -> None:
+
+        """
+        Run the entire avoidance learning task experiment, including both learning and transfer phases.
+        
+        Returns
+        -------
+        None
+        """
+
         self.run_learning_phase(self.task_design)
         self.run_transfer_phase(self.task_design)

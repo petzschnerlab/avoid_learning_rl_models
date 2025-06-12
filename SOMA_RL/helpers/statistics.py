@@ -11,7 +11,7 @@ class Statistics:
     Class to run statistical analyses
     """
 
-    def linear_model_continous(self, formula: str, data: pd.DataFrame):
+    def linear_model_continous(self, formula: str, data: pd.DataFrame) -> smf.ols:
         
         """
         Fit a linear model to continuous data

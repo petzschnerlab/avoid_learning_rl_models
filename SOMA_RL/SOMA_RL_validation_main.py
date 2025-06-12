@@ -1,22 +1,12 @@
-import os
-import random as rnd
-import pandas as pd
-import tqdm
-import matplotlib.pyplot as plt
-
-from helpers.analyses import run_recovery
-from helpers.priors import get_priors
-from helpers.pipeline import export_recovery
+from helpers.pipeline import Pipeline
+from helpers.priors import fixed_priors
 
 if __name__ == "__main__":
 
     # =========================================== #
     # ================= INPUTS ================== #
     # =========================================== #
-
-    #Seed random number generator
-    rnd.seed(1251)
-
+    
     #Models
     '''
     Supported models: 
@@ -43,9 +33,9 @@ if __name__ == "__main__":
               'Relative+novel',     #Standard + novel
               'wRelative+novel',    #Standard + novel
               'Hybrid2012+novel',   #Standard - bias + novel
-    ] 
+    ]
 
-    fixed, _ = get_priors()
+    fixed = fixed_priors(models)
     bounds = {'QLearning':          {'temperature': (0.1, .2)},
               'ActorCritic':        {'temperature': (0.1, .2)},
               'Relative':           {'temperature': (0.1, .2)},
@@ -53,17 +43,17 @@ if __name__ == "__main__":
               'Hybrid2012':         {'temperature': (0.1, .2)},
     }
 
-    generate_params = {'learning_filename':         'SOMA_RL/data/pain_learning_processed.csv',
+    validate_params = {'mode':                      'validation',
+                       'learning_filename':         'SOMA_RL/data/pain_learning_processed.csv',
                        'transfer_filename':         'SOMA_RL/data/pain_transfer_processed.csv',
                        'models':                    models,
-                       'parameters':                'random',
+                       'random_params':             'random',
                        'fixed':                     fixed,
                        'bounds':                    bounds,
                        'number_of_runs':            10,
-                       'training':                  'scipy',
                        'multiprocessing':           True,
-                       }
+    }
 
-    run_recovery(**generate_params, recovery='parameter')
-    run_recovery(**generate_params, recovery='model', generate_data=False)
-    export_recovery(path="SOMA_RL/reports")
+    pipeline = Pipeline(seed=1251)
+    pipeline.run(recovery='parameter', **validate_params)
+    pipeline.run(recovery='model', **validate_params, generate_data=False)
