@@ -958,7 +958,10 @@ class Plotting:
             merged_df = merged_df.merge(
                 model_values[model], on='participant', suffixes=('', f'_{model}')
             )
-        merged_df['contextual_lr'] = np.log(merged_df['contextual_lr'])
+
+        #Log-Transform the contextual learning rate if it exists
+        if 'contextual_lr' in merged_df.columns:
+            merged_df['contextual_lr'] = np.log(merged_df['contextual_lr'])
 
         # Create all pairwise combinations of parameters manually
         param_keys = list(params_of_interest.values())
@@ -969,9 +972,10 @@ class Plotting:
 
         # Create subplots
         n_pairs = len(param_pairs)
-
+        corr_values = {}
         if n_pairs != 0:
             fig, axs = plt.subplots(1, n_pairs, figsize=(5 * n_pairs, 5))
+            color = self.get_colors('condition')[0]
 
             if n_pairs == 1:
                 axs = [axs]  # Make it iterable
@@ -979,30 +983,34 @@ class Plotting:
             for i, (x_param, y_param) in enumerate(param_pairs):
                 x = merged_df[x_param]
                 y = merged_df[y_param]
-                #make sure the 
-                corr, p_value = stats.pearsonr(x, y)
+                model_x = [k for k, v in params_of_interest.items() if v == x_param][0].split('+')[0]
+                model_y = [k for k, v in params_of_interest.items() if v == y_param][0].split('+')[0]
+                param_x = x_param.replace('_', ' ').replace('lr', 'learning rate').title()
+                param_y = y_param.replace('_', ' ').replace('lr', 'learning rate').title()
 
-                model_1 = [k for k, v in params_of_interest.items() if v == x_param][0].split('+')[0]
-                model_2 = [k for k, v in params_of_interest.items() if v == y_param][0].split('+')[0]
+                #Run the correlation
+                corr, p_value = stats.pearsonr(x, y) 
+                corr_values[f'{model_x}_{model_y}'] = f'{corr:.2f} ({p_value:.3f})'              
 
-                axs[i].scatter(x, y)
-                axs[i].set_xlabel(x_param)
-                axs[i].set_ylabel(y_param)
-                axs[i].set_title(f'{model_1}: {x_param}\nvs\n{model_2}: {y_param}\nr={corr:.2f}, p={p_value:.4e}')
+                #Plot the scatter plot
+                axs[i].scatter(x, y, color=color, alpha=.5)
+                axs[i].set_xlabel(f"{model_x.replace('2012','')}\n{param_x.replace('Weighing', 'Weighting')}")
+                axs[i].set_ylabel(f"{model_y.replace('2012','')}\n{param_y.replace('Weighing', 'Weighting')}")
                 if corr > 0:
-                    axs[i].plot([x.min(), x.max()], [y.min(), y.max()], 'k--', lw=2)
+                    axs[i].plot([x.min(), x.max()], [y.min(), y.max()], 'k--', lw=2, alpha=0.5)
                 else:
-                    axs[i].plot([x.min(), x.max()], [y.max(), y.min()], 'k--', lw=2)
+                    axs[i].plot([x.min(), x.max()], [y.max(), y.min()], 'k--', lw=2, alpha=0.5)
                 axs[i].set_xlim(x.min(), x.max())
                 axs[i].set_ylim(y.min(), y.max())
                 axs[i].set_xticks([x.min(), x.max()])
                 axs[i].set_yticks([y.min(), y.max()])
                 axs[i].set_xticklabels([f'{x.min():.2f}', f'{x.max():.2f}'])
                 axs[i].set_yticklabels([f'{y.min():.2f}', f'{y.max():.2f}'])
-                axs[i].grid(True)
+                axs[i].spines['top'].set_visible(False)
+                axs[i].spines['right'].set_visible(False)
 
             plt.tight_layout()
             plt.savefig('SOMA_RL/plots/parameter_of_interest_comparisons.png', dpi=300)
-
-            #Close figure
             plt.close()
+
+            print(corr_values)
