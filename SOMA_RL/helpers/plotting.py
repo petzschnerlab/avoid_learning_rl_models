@@ -571,7 +571,7 @@ class Plotting:
 
             #Get descriptive statistics for the group
             group_data = group_data.set_index(condition_name)[parameter].astype(float)
-            if parameter not in ['novel_value', 'mixing_factor', 'valence_factor', 'weighting_factor']: # Exclude parameters that are not to be log-transformed
+            if parameter not in ['novel_value', 'mixing_factor', 'valence_factor', 'weighting_factor', 'weighing_factor']: # Exclude parameters that are not to be log-transformed
                 if group_data.min() <= 0: 
                     group_data = group_data - group_data.min() + 1  # Shift the parameter to be positive if it has non-positive values
                 group_data = np.log(group_data)  # Log-transform the parameter to reduce skewness
@@ -593,8 +593,8 @@ class Plotting:
             ax.set_xticks(x_values, x_labels)
             ax.set_xlabel('')
             y_label = parameter.replace('_', ' ').replace('lr', 'learning rate').title()
-            y_label = f'Log {y_label}' if parameter not in ['novel_value', 'mixing_factor', 'valence_factor', 'weighting_factor'] else f'{y_label}'
-            ax.set_ylabel(y_label)
+            y_label = f'Log {y_label}' if parameter not in ['novel_value', 'mixing_factor', 'valence_factor', 'weighting_factor', 'weighing_factor'] else f'{y_label}'
+            ax.set_ylabel(y_label.replace('Weighing', 'Weighting')) #This typo is following me everywhere. Shouldn't be a problem anymore.
             ax.spines['top'].set_visible(False)
             ax.spines['right'].set_visible(False)
             plt.tight_layout()

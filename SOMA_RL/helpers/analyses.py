@@ -328,8 +328,27 @@ class Analyses(Plotting):
         posthoc_results.to_csv('SOMA_RL/stats/pain_fits_posthoc_results.csv', index=False)
 
         for model in fit_data:
+            #Plot all data
             self.plot_parameter_data(f'{model}-model-fits', copy.copy(fit_data[model]))
             self.plot_parameter_data(f'{model}-model-fits', copy.copy(fit_data[model]), plot_type='bar')
+
+            #Plot data separately for significant and non-significant parameters
+            model_results = linear_results[linear_results['model'] == model]
+            significant_params = model_results['p_value'].values < .05
+            nonsignificant_params = model_results['p_value'].values >= .05
+
+            significant_data = copy.copy(fit_data[model])
+            significant_data = significant_data.drop(columns=model_results['parameter'].values[nonsignificant_params])
+
+            nonsignificant_data = copy.copy(fit_data[model])
+            nonsignificant_data = nonsignificant_data.drop(columns=model_results['parameter'].values[significant_params])
+            
+            if significant_params.any():
+                self.plot_parameter_data(f'{model}-model-fits-significant', copy.copy(significant_data))
+                self.plot_parameter_data(f'{model}-model-fits-significant', copy.copy(significant_data), plot_type='bar')
+            if nonsignificant_params.any():
+                self.plot_parameter_data(f'{model}-model-fits-nonsignificant', copy.copy(nonsignificant_data))
+                self.plot_parameter_data(f'{model}-model-fits-nonsignificant', copy.copy(nonsignificant_data), plot_type='bar')
 
     def create_confusion_matrix(self, dataloader: DataLoader, fit_data: dict) -> pd.DataFrame:
         
