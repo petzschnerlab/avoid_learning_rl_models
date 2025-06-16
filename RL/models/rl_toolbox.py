@@ -50,7 +50,7 @@ class RLToolbox:
             The value type corresponding to the model name
         """
 
-        if model_name == 'QLearning' or model_name == 'Relative' or model_name == 'wRelative':
+        if model_name == 'QLearning' or model_name == 'Relative' or model_name == 'Advantage':
             return 'q_values'
         elif model_name == 'ActorCritic':
             return 'w_values'
@@ -475,7 +475,7 @@ class RLToolbox:
         if self.training == 'torch':
             if 'Hybrid' in self.__class__.__name__:
                 prediction_errors = state['q_prediction_errors']
-            elif self.__class__.__name__ == 'Relative' or self.__class__.__name__ == 'wRelative':
+            elif self.__class__.__name__ == 'Relative' or self.__class__.__name__ == 'Advantage':
                 prediction_errors = state['prediction_errors']
             else:
                 prediction_errors = state['prediction_errors'].detach()

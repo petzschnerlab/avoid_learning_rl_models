@@ -4,7 +4,8 @@ import numpy as np
 
 from helpers.priors import get_priors
 from models.standard import QLearning, ActorCritic
-from models.relative import Relative, wRelative
+from models.relative import Relative
+from models.advantage import Advantage
 from models.hybrid import Hybrid2012, Hybrid2021, StandardHybrid2012, StandardHybrid2021
 
 class RLModel:
@@ -231,7 +232,7 @@ class RLModel:
                                         'novel_value',
                                         'decay_factor']
         
-        model_parameters['wRelative'] = ['factual_lr',
+        model_parameters['Advantage'] = ['factual_lr',
                                            'counterfactual_lr',
                                            'temperature',
                                            'weighting_factor',
@@ -402,7 +403,7 @@ class RLModel:
         model_classes = {'QLearning': QLearning,
                          'ActorCritic': ActorCritic,
                          'Relative': Relative,
-                         'wRelative': wRelative,
+                         'Advantage': Advantage,
                          'Hybrid2012': Hybrid2012,
                          'Hybrid2021': Hybrid2021,
                          'StandardHybrid2012': StandardHybrid2012,

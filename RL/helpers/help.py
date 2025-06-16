@@ -77,14 +77,14 @@ class Help:
             
     Supported models: 
         QLearning, ActorCritic
-        Relative, wRelative
+        Relative, Advantage
         Hybrid2012, Hybrid2021, StandardHybrid2012, StandardHybrid2021
 
     Standard models:
         QLearning: Standard Q-Learning Model
         ActorCritic: Standard Actor-Critic Model
         Relative: Standard Relative Model (Palminteri et al., 2015)
-        wRelative: Simplified Relative Model (Williams et al., in prep)
+        Advantage: Simplified Relative Model (Williams et al., in prep)
         Hybrid2012+bias: Standard Hybrid 2012 Model (Gold et al., 2012)
         Hybrid2021+bias+decay: Standard Hybrid 2021 Model (Geana et al., 2021)
 

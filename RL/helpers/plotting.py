@@ -299,7 +299,10 @@ class Plotting:
                 ax[0, gi].set_ylabel('Accuracy (%)')
                 if binned_trial:
                     ax[0, gi].set_xlabel(' ')
-                    ax[0, gi].set_xticklabels(['Early', 'Mid-Early', 'Mid-Late', 'Late'], rotation=45, ha='right')
+                    tick_positions = [0, 1, 2, 3]
+                    tick_labels = ['Early', 'Mid-Early', 'Mid-Late', 'Late']
+                    ax[0, gi].set_xticks(tick_positions)
+                    ax[0, gi].set_xticklabels(tick_labels, rotation=45, ha='right')
                 else:
                     ax[0, gi].set_xlabel('Trial')
                 ax[0, gi].spines['top'].set_visible(False)
@@ -922,7 +925,7 @@ class Plotting:
         range_val = max_val - min_val
 
         sorted_indices = np.argsort(-fits.values.flatten())
-        model_dict = {'QLearning': 'Q-Learning', 'ActorCritic': 'Actor Critic', 'Relative': 'Relative', 'wRelative': 'wRelative','Hybrid2012': 'Hybrid'}
+        model_dict = {'QLearning': 'Q-Learning', 'ActorCritic': 'Actor Critic', 'Relative': 'Relative', 'Advantage': 'Advantage','Hybrid2012': 'Hybrid'}
         models = [model_dict.get(model.split('+')[0], model) for model in fits.index]
         
         cmap = plt.get_cmap('RdBu')

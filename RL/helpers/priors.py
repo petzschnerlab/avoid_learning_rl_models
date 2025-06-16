@@ -81,7 +81,7 @@ def fixed_priors(models: list = None) -> dict:
             'novel_value': 0, # Custom
         },
 
-        'wRelative': {  # From Palminteri et al., 2015
+        'Advantage': {  # From Palminteri et al., 2015
             'factual_lr': 0.28,
             'counterfactual_lr': 0.18,
             'temperature': 0.06,

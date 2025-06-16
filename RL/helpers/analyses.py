@@ -105,7 +105,7 @@ class Analyses(Plotting):
         self.plot_fits_by_run_number(fit_data)
         self.describe_fits(fit_data)
         params_of_interest = {
-            'wRelative+novel': 'weighting_factor',
+            'Advantage+novel': 'weighting_factor',
             'Relative+novel': 'contextual_lr',
             'Hybrid2012+novel': 'mixing_factor'
         } 
