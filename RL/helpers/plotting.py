@@ -547,7 +547,7 @@ class Plotting:
                 fit = fit_results[model][fit_results[model]['fit_type']=='Fit'][parameter]
                 axs[mi, i].scatter(true, fit, s=5)
                 axs[mi, i].plot(model_bounds[parameter], model_bounds[parameter], '--', color='grey', alpha=alpha)
-                axs[mi, i].set_title(f"{parameter_name.title()}", loc='left', fontsize=12)
+                axs[mi, i].set_title(f"{parameter_name.title().replace('Learning Rate','LR')}", loc='left', fontsize=12)
                 if mi == len(models)-1:
                     axs[mi, i].set_xlabel('True')
                 else: 
@@ -560,6 +560,9 @@ class Plotting:
                 axs[mi, i].set_ylim(model_bounds[parameter])
                 axs[mi, i].set_xticks([model_bounds[parameter][0], model_bounds[parameter][1]])
                 axs[mi, i].set_yticks([model_bounds[parameter][0], model_bounds[parameter][1]])
+                #set tick label fontsize to 14
+                axs[mi, i].tick_params(axis='both', which='major', labelsize=14)
+                axs[mi, i].tick_params(axis='both', which='minor', labelsize=14)
                 axs[mi, i].spines['top'].set_visible(False)
                 axs[mi, i].spines['right'].set_visible(False)                
                 if i == len(fit_results[model].columns[2:])-1 and i != (number_columns-1):
