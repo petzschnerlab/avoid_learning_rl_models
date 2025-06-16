@@ -57,6 +57,7 @@ class Plotting:
             empirical_data = copy.copy(dataloader.get_data()[0])
             empirical_data = empirical_data[empirical_data['pain_group'] == group]
             emp_accuracy = empirical_data.groupby(['context_val_name','trial_number'], observed=False)['accuracy'].mean().reset_index()
+            emp_accuracy['context_val_name'] = emp_accuracy['context_val_name'].replace({'Loss Avoid': 'Punish'})
 
             #Get empirical choice rates
             empirical_data = copy.copy(dataloader.get_data()[1])
@@ -175,7 +176,9 @@ class Plotting:
                                     dataloader: object = None,
                                     rolling_mean: int = None,
                                     plot_type: str = 'raincloud',
-                                    alpha: float = 0.75) -> None:
+                                    alpha: float = 0.75,
+                                    binned_trial: bool = False,
+                                    subplot_title: list[str] = None) -> None:
 
         """
         Plots the model simulations for a given group, including accuracy, choice rates, and empirical data if available.
@@ -198,6 +201,10 @@ class Plotting:
             Type of plot to generate for choice rates ('raincloud' or 'bar'). Default is 'raincloud'.
         alpha : float, optional
             Transparency level for the plots. Default is 0.75.
+        binned_trial : bool, optional
+            If True, uses binned trials for the accuracy plot. Default is False.
+        subplot_title : list[str], optional
+            List of titles for each subplot. If None, no titles are set. Default is None.
        
         Returns
         -------
@@ -246,35 +253,68 @@ class Plotting:
                 number_of_participants = accuracy[m][group]['run'].nunique()
 
                 # Plot accuracy
-                model_accuracy = accuracy[m][group].groupby(['context', 'trial_total', 'run'], observed=False).mean().reset_index()
+                if binned_trial:
+                    accuracy[m][group]['binned_trial'] = pd.cut(accuracy[m][group]['trial_total'], bins=[0, 6, 12, 18, 24], labels=['Early', 'Mid-Early', 'Mid-Late', 'Late'], include_lowest=True)
+
+                trial_type = 'binned_trial' if binned_trial else 'trial_total'
+                model_accuracy = accuracy[m][group].groupby(['context', trial_type, 'run'], observed=False).mean().reset_index()
                 model_accuracy['context'] = pd.Categorical(model_accuracy['context'], categories=['Reward', 'Loss Avoid'], ordered=True)
 
                 for ci, context in enumerate(['Reward', 'Loss Avoid']):
-                    CIs = model_accuracy.groupby(['context', 'trial_total'], observed=False)['accuracy'].sem() * stats.t.ppf(0.975, number_of_participants-1)
-                    averaged_accuracy = model_accuracy.groupby(['context', 'trial_total'], observed=False).mean().reset_index()
-                    context_accuracy = averaged_accuracy[averaged_accuracy['context'] == context]['accuracy'].reset_index(drop=True).astype(float) * 100
-                    if rolling_mean is not None:
+                    CIs = model_accuracy.groupby(['context', trial_type], observed=False)['accuracy'].sem() * stats.t.ppf(0.975, number_of_participants-1)
+                    CIs = CIs.reset_index()
+                    averaged_accuracy = model_accuracy.groupby(['context', trial_type], observed=False).mean().reset_index()
+                    context_accuracy = averaged_accuracy[averaged_accuracy['context'] == context][[trial_type, 'accuracy']].set_index(trial_type)['accuracy']
+                    if rolling_mean is not None and binned_trial == False:
                         context_accuracy = context_accuracy.rolling(rolling_mean, min_periods=1, center=True).mean()
-                    context_CIs = CIs[CIs.index.get_level_values('context') == context].reset_index(drop=True) * 100
+                    context_CIs = CIs[CIs['context'] == context].set_index(trial_type)['accuracy']
                     
-                    ax[0, gi].fill_between(context_accuracy.index+1, context_accuracy - context_CIs, context_accuracy + context_CIs, alpha=0.1, color=bi_colors[ci], edgecolor='none')
-                    ax[0, gi].plot(context_accuracy.index+1, context_accuracy, color=bi_colors[ci], alpha=alpha, label=context.replace('Loss Avoid', 'Punish'), linewidth=3)
+                    if binned_trial:
+                        context_accuracy = context_accuracy.reindex(['Early', 'Mid-Early', 'Mid-Late', 'Late'])
+                        context_CIs = context_CIs.reindex(['Early', 'Mid-Early', 'Mid-Late', 'Late'])
+                        context_CIs = context_CIs.values
+                        ax[0, gi].fill_between(context_accuracy.index, context_accuracy.values - context_CIs, context_accuracy.values + context_CIs, alpha=0.1, color=bi_colors[ci], edgecolor='none')
+                        ax[0, gi].plot(context_accuracy.index, context_accuracy, color=bi_colors[ci], label=context.title().replace('Loss Avoid', 'Punish'), linewidth=3, alpha=0.25)
+                        ax[0, gi].scatter(context_accuracy.index, context_accuracy, color=bi_colors[ci], s=10, alpha=alpha)
+                    else:
+                        ax[0, gi].fill_between(context_accuracy.index+1, context_accuracy - context_CIs, context_accuracy + context_CIs, alpha=0.1, color=bi_colors[ci], edgecolor='none')
+                        ax[0, gi].plot(context_accuracy.index+1, context_accuracy, color=bi_colors[ci], alpha=alpha, label=context.replace('Loss Avoid', 'Punish'), linewidth=3)
 
                     if dataloader is not None:
-                        trials = emp_accuracy_group[group][emp_accuracy_group[group]['context_val_name'] == context]['trial_number']
-                        accuracies = emp_accuracy_group[group][emp_accuracy_group[group]['context_val_name'] == context]['accuracy']
-                        if rolling_mean is not None:
-                            accuracies = accuracies.rolling(rolling_mean, min_periods=1, center=True).mean()
-                        ax[0, gi].plot(trials, accuracies, color=bi_colors[ci], linestyle='dashed', alpha=alpha, linewidth=2)
+                        if binned_trial:
+                            emp_accuracy_group[group]['binned_trial'] = pd.cut(emp_accuracy_group[group]['trial_number'], bins=[0, 6, 12, 18, 24], labels=['Early', 'Mid-Early', 'Mid-Late', 'Late'], include_lowest=True)
+                            trials = context_accuracy.index
+                            accuracies = emp_accuracy_group[group][emp_accuracy_group[group]['context_val_name'] == context].groupby('binned_trial')['accuracy'].mean()
+                            ax[0, gi].scatter(trials, accuracies, color=bi_colors[ci], marker='D', alpha=alpha)
+                        else:
+                            trials = emp_accuracy_group[group][emp_accuracy_group[group]['context_val_name'] == context]['trial_number']
+                            accuracies = emp_accuracy_group[group][emp_accuracy_group[group]['context_val_name'] == context]['accuracy']
+                            if rolling_mean is not None:
+                                accuracies = accuracies.rolling(rolling_mean, min_periods=1, center=True).mean()
+                            ax[0, gi].plot(trials, accuracies, color=bi_colors[ci], linestyle='dashed', alpha=alpha, linewidth=2)
                 
                 ax[0, gi].set_title(f'{group.title()}')
                 ax[0, gi].set_ylim([40, 100])
                 ax[0, gi].legend(loc='lower right', frameon=False)
                 ax[0, gi].set_ylabel('Accuracy (%)')
-                ax[0, gi].set_xlabel('Trial')
+                if binned_trial:
+                    ax[0, gi].set_xlabel(' ')
+                    ax[0, gi].set_xticklabels(['Early', 'Mid-Early', 'Mid-Late', 'Late'], rotation=45, ha='right')
+                else:
+                    ax[0, gi].set_xlabel('Trial')
                 ax[0, gi].spines['top'].set_visible(False)
                 ax[0, gi].spines['right'].set_visible(False)
-                ax[0, gi].set_xticks(np.arange(0, 25, 4))
+                if binned_trial == False:
+                    ax[0, gi].set_xticks(np.arange(0, 25, 4))
+                if subplot_title and gi == 0:
+                    ax[0, gi].annotate(subplot_title[0],
+                                    xy=(-.25, 1.15),
+                                    xytext=(0, 0),
+                                    xycoords='axes fraction',
+                                    textcoords='offset points',
+                                    ha='left',
+                                    va='top',
+                                    fontweight='bold')
 
                 # Plot choice rates
                 _, t_scores = self.compute_n_and_t(choice_rates[m][group], None)
@@ -302,6 +342,16 @@ class Plotting:
                 ax[1, gi].set_ylabel('Choice Rate (%)')
                 ax[1, gi].spines['top'].set_visible(False)
                 ax[1, gi].spines['right'].set_visible(False)
+                if subplot_title and gi == 0:
+                    ax[1, gi].annotate(subplot_title[1],
+                                    xy=(-.25, 1.15),
+                                    xytext=(0, 0),
+                                    xycoords='axes fraction',
+                                    textcoords='offset points',
+                                    ha='left',
+                                    va='top',
+                                    fontweight='bold')
+                plt.subplots_adjust(left=0.2)
 
             #Metaplot settings
             fig.tight_layout()

@@ -908,8 +908,8 @@ class Analyses(Plotting):
         #Plot simulations 
         for group in accuracy:
             self.plot_simulations(accuracy[group], prediction_errors[group], values[group], choice_rates[group], models, group, dataloader)
-        self.plot_simulations_behaviours(accuracy_model, choice_rates_model, models, accuracy.keys(), dataloader, rolling_mean=5)
-        self.plot_simulations_behaviours(accuracy_model, choice_rates_model, models, accuracy.keys(), dataloader, rolling_mean=5, plot_type = 'bar')
+        self.plot_simulations_behaviours(accuracy_model, choice_rates_model, models, accuracy.keys(), dataloader, binned_trial=True, subplot_title=['A. Learning Phase', 'B. Transfer Phase'])
+        self.plot_simulations_behaviours(accuracy_model, choice_rates_model, models, accuracy.keys(), dataloader, binned_trial=True, subplot_title=['A. Learning Phase', 'B. Transfer Phase'], plot_type = 'bar')
 
     def generate_simulated_data(self,
                                 models: list,
