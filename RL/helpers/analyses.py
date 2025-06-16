@@ -1126,7 +1126,9 @@ class Analyses(Plotting):
 
         """
 
-        #Find all files in RL/data/generated that are not folders
+        #Find all generated files
+        if not os.path.exists('RL/fits/temp'):
+            os.makedirs('RL/fits/temp')
         for f in os.listdir('RL/fits/temp'):
             os.remove(os.path.join('RL','fits','temp',f))
 
