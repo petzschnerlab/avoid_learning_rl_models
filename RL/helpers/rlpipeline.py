@@ -154,7 +154,7 @@ class RLPipeline:
         participant_fitted.extend([float(fitted_params[key]) for key in columns[4:] if key in fitted_params])
 
         #Save to csv file
-        with open(f'SOMA_RL/fits/temp/{self.task.rl_model.model_name}_{participant_id}_Run{run}_fit_results.csv', 'a') as f:
+        with open(f'RL/fits/temp/{self.task.rl_model.model_name}_{participant_id}_Run{run}_fit_results.csv', 'a') as f:
             f.write(','.join([str(x) for x in participant_fitted]) + '\n')
 
     def run_simulations(self, args: list, generate_data: bool = False) -> None:
@@ -230,13 +230,13 @@ class RLPipeline:
         #Save task data
         if generate_data:
             unique_id = np.random.randint(0, 1000000) if participant_id == None else participant_id
-            while f"{model.model_name}_{unique_id}" in os.listdir(f'SOMA_RL/data/generated/'):
+            while f"{model.model_name}_{unique_id}" in os.listdir(f'RL/data/generated/'):
                 unique_id = np.random.randint(0, 1000000)
             simulation_name = f"{model.model_name}_{unique_id}"
-            os.makedirs(f'SOMA_RL/data/generated/{simulation_name}', exist_ok=True)
-            model_parameters.to_csv(f'SOMA_RL/data/generated/{simulation_name}/{simulation_name}_generated_parameters.csv', header=True, index=False)
-            task_learning_data.to_csv(f'SOMA_RL/data/generated/{simulation_name}/{simulation_name}_generated_learning.csv', header=True, index=False)
-            task_transfer_data.to_csv(f'SOMA_RL/data/generated/{simulation_name}/{simulation_name}_generated_transfer.csv', header=True, index=False)
+            os.makedirs(f'RL/data/generated/{simulation_name}', exist_ok=True)
+            model_parameters.to_csv(f'RL/data/generated/{simulation_name}/{simulation_name}_generated_parameters.csv', header=True, index=False)
+            task_learning_data.to_csv(f'RL/data/generated/{simulation_name}/{simulation_name}_generated_learning.csv', header=True, index=False)
+            task_transfer_data.to_csv(f'RL/data/generated/{simulation_name}/{simulation_name}_generated_transfer.csv', header=True, index=False)
         else:
             #Store data
             accuracy = pd.DataFrame(learning_accuracy, columns=columns['accuracy'])
@@ -245,7 +245,7 @@ class RLPipeline:
             choice_rates = pd.DataFrame([model.choice_rate], columns=columns['choice_rate'])
 
             #Save to csv file
-            accuracy.to_csv(f'SOMA_RL/fits/temp/{model.model_name}_{group}_{participant_id}_accuracy_sim_results.csv', index=False)
-            prediction_errors.to_csv(f'SOMA_RL/fits/temp/{model.model_name}_{group}_{participant_id}_pe_sim_results.csv', index=False)
-            values.to_csv(f'SOMA_RL/fits/temp/{model.model_name}_{group}_{participant_id}_values_sim_results.csv', index=False)
-            choice_rates.to_csv(f'SOMA_RL/fits/temp/{model.model_name}_{group}_{participant_id}_choice_sim_results.csv', index=False)
+            accuracy.to_csv(f'RL/fits/temp/{model.model_name}_{group}_{participant_id}_accuracy_sim_results.csv', index=False)
+            prediction_errors.to_csv(f'RL/fits/temp/{model.model_name}_{group}_{participant_id}_pe_sim_results.csv', index=False)
+            values.to_csv(f'RL/fits/temp/{model.model_name}_{group}_{participant_id}_values_sim_results.csv', index=False)
+            choice_rates.to_csv(f'RL/fits/temp/{model.model_name}_{group}_{participant_id}_choice_sim_results.csv', index=False)

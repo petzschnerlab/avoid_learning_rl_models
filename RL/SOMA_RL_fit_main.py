@@ -37,8 +37,8 @@ if __name__ == "__main__":
         
     fixed = fixed_priors(models)    
     fit_params = {'mode':                       'fit',
-                  'learning_filename':          'SOMA_RL/data/pain_learning_processed.csv',
-                  'transfer_filename':          'SOMA_RL/data/pain_transfer_processed.csv',
+                  'learning_filename':          'RL/data/pain_learning_processed.csv',
+                  'transfer_filename':          'RL/data/pain_transfer_processed.csv',
                   'models':                     models,
                   'random_params':              'normal',
                   'fixed':                      fixed,

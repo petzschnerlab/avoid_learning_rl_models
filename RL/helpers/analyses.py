@@ -200,8 +200,8 @@ class Analyses(Plotting):
                     print(f'              {key} = {self.bounds[model][key]}')
         print('--------------------------------------------------------')
 
-        if not os.path.exists('SOMA_RL/data/generated'):
-            os.makedirs('SOMA_RL/data/generated')
+        if not os.path.exists('RL/data/generated'):
+            os.makedirs('RL/data/generated')
 
         if [self.learning_filename, self.transfer_filename].count(None) == 0:
             datasets_to_generate = len(DataLoader(self.learning_filename, self.transfer_filename, number_of_participants=self.number_of_participants, reduced=False).get_participant_ids())
@@ -323,9 +323,9 @@ class Analyses(Plotting):
                 else:
                     posthoc_results = pd.concat((posthoc_results, posthoc_result), ignore_index=True)
 
-        linear_results.to_csv('SOMA_RL/stats/pain_fits_linear_results.csv', index=False)
-        ttest_results.to_csv('SOMA_RL/stats/pain_fits_ttest_results.csv', index=False)
-        posthoc_results.to_csv('SOMA_RL/stats/pain_fits_posthoc_results.csv', index=False)
+        linear_results.to_csv('RL/stats/pain_fits_linear_results.csv', index=False)
+        ttest_results.to_csv('RL/stats/pain_fits_ttest_results.csv', index=False)
+        posthoc_results.to_csv('RL/stats/pain_fits_posthoc_results.csv', index=False)
 
         for model in fit_data:
             #Plot all data
@@ -449,8 +449,8 @@ class Analyses(Plotting):
         
         #Delete any existing files
         if clear_data:
-            for f in os.listdir('SOMA_RL/fits/temp'):
-                os.remove(os.path.join('SOMA_RL','fits','temp',f))
+            for f in os.listdir('RL/fits/temp'):
+                os.remove(os.path.join('RL','fits','temp',f))
 
         #Run fits
         inputs = []
@@ -497,13 +497,13 @@ class Analyses(Plotting):
                 print('\nMultiprocessing complete!')
 
         #Combine all files that are the same except for the run number
-        files = os.listdir('SOMA_RL/fits/temp')
+        files = os.listdir('RL/fits/temp')
         files_prefix = [f.split('_Run')[0] for f in files if '_Run' in f]
         files_prefix = list(set(files_prefix))
         for file_prefix in files_prefix:
-            files_to_combine = [os.path.join('SOMA_RL','fits','temp',f'{file_prefix}_Run{i}_fit_results.csv') for i in range(number_of_runs)]
+            files_to_combine = [os.path.join('RL','fits','temp',f'{file_prefix}_Run{i}_fit_results.csv') for i in range(number_of_runs)]
             combined_file = pd.concat([pd.read_csv(f, header=None) for f in files_to_combine], ignore_index=True)
-            combined_file.to_csv(os.path.join('SOMA_RL','fits','temp',f'{file_prefix}_fit_results.csv'), index=False, header=False)
+            combined_file.to_csv(os.path.join('RL','fits','temp',f'{file_prefix}_fit_results.csv'), index=False, header=False)
             for f in files_to_combine:
                 os.remove(f)
 
@@ -541,14 +541,14 @@ class Analyses(Plotting):
                 columns[m.split('+')[0]].insert(2, 'model')
 
         #Load all data in the fit data
-        files = os.listdir('SOMA_RL/fits/temp')
+        files = os.listdir('RL/fits/temp')
         files = [f for f in files if 'ERROR' not in f]
         fit_data = {model: pd.DataFrame(columns=columns[model.split('+')[0]]) for model in models}
         full_fit_data = {model: pd.DataFrame(columns=columns[model.split('+')[0]]) for model in models}
         for f in files:
             model_name = f.split('_')[0]
             if model_name in models:
-                participant_data = pd.read_csv(os.path.join('SOMA_RL','fits','temp',f), header=None)
+                participant_data = pd.read_csv(os.path.join('RL','fits','temp',f), header=None)
                 data_model = participant_data.loc[0,0].split('_')[0][1:]
                 model_columns = RLModel(model_name).get_model_columns(model_name.split('+')[0])
                 if recovery == 'model':
@@ -581,21 +581,21 @@ class Analyses(Plotting):
 
         #Save fit data as a pickle file
         if recovery is None: 
-            with open(f'SOMA_RL/fits/full_fit_data.pkl', 'wb') as f:
+            with open(f'RL/fits/full_fit_data.pkl', 'wb') as f:
                 pickle.dump(full_fit_data, f)
 
-            with open(f'SOMA_RL/fits/fit_data.pkl', 'wb') as f:
+            with open(f'RL/fits/fit_data.pkl', 'wb') as f:
                 pickle.dump(fit_data, f)  
         else: 
-            with open(f'SOMA_RL/fits/full_fit_data_{recovery.upper()}.pkl', 'wb') as f:
+            with open(f'RL/fits/full_fit_data_{recovery.upper()}.pkl', 'wb') as f:
                 pickle.dump(full_fit_data, f)
 
-            with open(f'SOMA_RL/fits/fit_data_{recovery.upper()}.pkl', 'wb') as f:
+            with open(f'RL/fits/fit_data_{recovery.upper()}.pkl', 'wb') as f:
                 pickle.dump(fit_data, f)
 
         #Delete all files
         for f in files:
-            os.remove(os.path.join('SOMA_RL','fits','temp',f))
+            os.remove(os.path.join('RL','fits','temp',f))
 
         return fit_data
 
@@ -690,11 +690,11 @@ class Analyses(Plotting):
         #Turn nested dictionary into dataframe
         group_AIC = pd.DataFrame(group_AIC)
         group_AIC['best_model'] = group_AIC.idxmin(axis=1)
-        group_AIC.to_csv('SOMA_RL/fits/group_AIC.csv')
+        group_AIC.to_csv('RL/fits/group_AIC.csv')
 
         group_BIC = pd.DataFrame(group_BIC)
         group_BIC['best_model'] = group_BIC.idxmin(axis=1)
-        group_BIC.to_csv('SOMA_RL/fits/group_BIC.csv')
+        group_BIC.to_csv('RL/fits/group_BIC.csv')
 
         print('AIC REPORT')
         print('==========')
@@ -740,8 +740,8 @@ class Analyses(Plotting):
         best_fits_BIC_summary = best_fits_BIC_summary.div(best_fits_BIC_summary.sum(axis=1), axis=0) * 100
 
         #Save as csv files
-        best_fits_AIC_summary.to_csv('SOMA_RL/fits/group_AIC_percentages.csv')
-        best_fits_BIC_summary.to_csv('SOMA_RL/fits/group_BIC_percentages.csv')
+        best_fits_AIC_summary.to_csv('RL/fits/group_AIC_percentages.csv')
+        best_fits_BIC_summary.to_csv('RL/fits/group_BIC_percentages.csv')
 
         #Plots
         self.plot_model_comparisons(group_AIC, 'AIC_model_comparisons')
@@ -839,7 +839,7 @@ class Analyses(Plotting):
             print('\nMultiprocessing complete!')
 
         #Load all data in the fit data
-        files = os.listdir('SOMA_RL/fits/temp')
+        files = os.listdir('RL/fits/temp')
         accuracy = {group: {model: pd.DataFrame(columns=accuracy_columns) for model in models} for group in group_ids}
         prediction_errors = {group: {model: pd.DataFrame(columns=pe_columns) for model in models} for group in group_ids}
         values = {group: {model: pd.DataFrame(columns=values_columns) for model in models} for group in group_ids}
@@ -847,7 +847,7 @@ class Analyses(Plotting):
 
         for f in files:
             model_name, group, participant, value_name = f.split('_')[:4]
-            participant_data = pd.read_csv(os.path.join('SOMA_RL','fits','temp',f))
+            participant_data = pd.read_csv(os.path.join('RL','fits','temp',f))
 
             if value_name == 'accuracy':
                 participant_data['accuracy'] = participant_data['accuracy']*100
@@ -893,12 +893,12 @@ class Analyses(Plotting):
                     choice_data = pd.concat((choice_data, group_model_choice), ignore_index=True)
         accuracy_model = {model: {group: accuracy[group][model] for group in accuracy} for model in models}
         choice_rates_model = {model: {group: choice_rates[group][model] for group in choice_rates} for model in models}
-        accuracy_data.to_csv('SOMA_RL/fits/modelsimulation_accuracy_data.csv', index=False)
-        choice_data.to_csv('SOMA_RL/fits/modelsimulation_choice_data.csv', index=False)
+        accuracy_data.to_csv('RL/fits/modelsimulation_accuracy_data.csv', index=False)
+        choice_data.to_csv('RL/fits/modelsimulation_choice_data.csv', index=False)
 
         #Delete all files
         for f in files:
-            os.remove(os.path.join('SOMA_RL','fits','temp',f))
+            os.remove(os.path.join('RL','fits','temp',f))
 
         #Average across states for plotting
         for model in accuracy_model:
@@ -990,11 +990,11 @@ class Analyses(Plotting):
 
         #Delete all folders with generated data from previous run, if desired
         if clear_data:
-            for f in os.listdir('SOMA_RL/data/generated'):
+            for f in os.listdir('RL/data/generated'):
                 if '.csv' in f:
-                    os.remove(os.path.join('SOMA_RL','data','generated',f))
+                    os.remove(os.path.join('RL','data','generated',f))
                 else:
-                    shutil.rmtree(os.path.join('SOMA_RL','data','generated',f))
+                    shutil.rmtree(os.path.join('RL','data','generated',f))
 
         #Load fit data
         if fit_filename is not None:
@@ -1053,11 +1053,11 @@ class Analyses(Plotting):
             pool.close()
 
             #Progress bar checking how many have completed
-            mp_progress(len(inputs), filepath='SOMA_RL/data/generated')
+            mp_progress(len(inputs), filepath='RL/data/generated')
             print('\nMultiprocessing complete!')
 
         #For each model, combine all files for each model
-        files = os.listdir('SOMA_RL/data/generated')
+        files = os.listdir('RL/data/generated')
         for model in models:
             #Find all files that start with model
             data_names = [filename for filename in files if model == filename.split('_')[0]]
@@ -1065,8 +1065,8 @@ class Analyses(Plotting):
             model_learning = None
             model_transfer = None
             for data_name in data_names:
-                learning_data = pd.read_csv(f'SOMA_RL/data/generated/{data_name}/{data_name}_generated_learning.csv')
-                transfer_data = pd.read_csv(f'SOMA_RL/data/generated/{data_name}/{data_name}_generated_transfer.csv')
+                learning_data = pd.read_csv(f'RL/data/generated/{data_name}/{data_name}_generated_learning.csv')
+                transfer_data = pd.read_csv(f'RL/data/generated/{data_name}/{data_name}_generated_transfer.csv')
                 participant = f"[{data_name.split(']')[0].split('[')[-1]}]"
                 learning_data.insert(0, 'participant_id', participant)
                 transfer_data.insert(0, 'participant_id', participant)
@@ -1078,8 +1078,8 @@ class Analyses(Plotting):
                     model_learning = pd.concat((model_learning, learning_data), ignore_index=True)
                     model_transfer = pd.concat((model_transfer, transfer_data), ignore_index=True)
             #Save concatenated files
-            model_learning.to_csv(f'SOMA_RL/data/generated/{model}_generated_learning.csv', index=False)
-            model_transfer.to_csv(f'SOMA_RL/data/generated/{model}_generated_transfer.csv', index=False)
+            model_learning.to_csv(f'RL/data/generated/{model}_generated_learning.csv', index=False)
+            model_transfer.to_csv(f'RL/data/generated/{model}_generated_transfer.csv', index=False)
 
     def run_generative_fits(self,
                             models: Union[list, str],
@@ -1126,9 +1126,9 @@ class Analyses(Plotting):
 
         """
 
-        #Find all files in SOMA_RL/data/generated that are not folders
-        for f in os.listdir('SOMA_RL/fits/temp'):
-            os.remove(os.path.join('SOMA_RL','fits','temp',f))
+        #Find all files in RL/data/generated that are not folders
+        for f in os.listdir('RL/fits/temp'):
+            os.remove(os.path.join('RL','fits','temp',f))
 
         if recovery == 'model':
             models = [models]
@@ -1136,8 +1136,8 @@ class Analyses(Plotting):
         for mi, model in enumerate(models):
             #Create param dictionary
             num_files = (datasets_to_generate*number_of_runs)+(mi*datasets_to_generate) if recovery != 'model' else None
-            fit_params = {'learning_filename':    f'SOMA_RL/data/generated/XX_generated_learning.csv',
-                            'transfer_filename':  f'SOMA_RL/data/generated/XX_generated_transfer.csv',
+            fit_params = {'learning_filename':    f'RL/data/generated/XX_generated_learning.csv',
+                            'transfer_filename':  f'RL/data/generated/XX_generated_transfer.csv',
                             'models':             model if recovery=='model' else [model],
                             'random_params':      True,
                             'fixed':              fixed,
@@ -1202,7 +1202,7 @@ class Analyses(Plotting):
         outlier_results = self.add_outlier_data(dataloader, outlier_results)
 
         #Save participant_outliers
-        with open('SOMA_RL/fits/parameter_outlier_results.pkl', 'wb') as f:
+        with open('RL/fits/parameter_outlier_results.pkl', 'wb') as f:
             pickle.dump(outlier_results, f)
         
     def add_outlier_data(self, dataloader: DataLoader, outlier_results: dict) -> dict:
@@ -1301,4 +1301,4 @@ class Analyses(Plotting):
                 else:
                     describe_fit = pd.concat((describe_fit, pd.DataFrame([param_data], columns=['model', 'parameter'] + groups)), ignore_index=True, axis=0)
 
-        describe_fit.to_csv('SOMA_RL/stats/param_fit_descriptives.csv', index=False)
+        describe_fit.to_csv('RL/stats/param_fit_descriptives.csv', index=False)

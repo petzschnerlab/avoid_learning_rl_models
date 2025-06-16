@@ -162,8 +162,8 @@ class Plotting:
         #Metaplot settings
         fig.tight_layout()
         fig.suptitle(f"{group.title()}", x=0.001, y=.999, ha='left', fontsize=16)
-        fig.savefig(os.path.join('SOMA_RL','plots',f"{group.replace(' ','')}_model_simulations.png"))
-        fig.savefig(os.path.join('SOMA_RL','plots',f"{group.replace(' ','')}_model_simulations.svg"), format='svg')
+        fig.savefig(os.path.join('RL','plots',f"{group.replace(' ','')}_model_simulations.png"))
+        fig.savefig(os.path.join('RL','plots',f"{group.replace(' ','')}_model_simulations.svg"), format='svg')
         
         #Close figure
         plt.close()
@@ -356,8 +356,8 @@ class Plotting:
             #Metaplot settings
             fig.tight_layout()
             save_name = f"{m}_model_behaviours_supplemental.png" if plot_type == 'raincloud' else f"{m}_model_behaviours.png"
-            fig.savefig(os.path.join('SOMA_RL','plots', 'model_behaviours', save_name))
-            fig.savefig(os.path.join('SOMA_RL','plots', 'model_behaviours', save_name.replace('.png','.svg')), format='svg')
+            fig.savefig(os.path.join('RL','plots', 'model_behaviours', save_name))
+            fig.savefig(os.path.join('RL','plots', 'model_behaviours', save_name.replace('.png','.svg')), format='svg')
 
             #Close figure
             plt.close()
@@ -409,8 +409,8 @@ class Plotting:
             ax.set_ylabel('Negative Log Likelihood')
 
         plt.tight_layout()
-        plt.savefig('SOMA_RL/plots/fit-by-runs.png')
-        plt.savefig('SOMA_RL/plots/fit-by-runs.svg', format='svg')
+        plt.savefig('RL/plots/fit-by-runs.png')
+        plt.savefig('RL/plots/fit-by-runs.svg', format='svg')
 
         #Close figure
         plt.close()
@@ -481,8 +481,8 @@ class Plotting:
         
         plt.setp(ax.get_xticklabels(), rotation=45, ha='left')
         plt.tight_layout()
-        plt.savefig(f'SOMA_RL/plots/model_recovery.png')
-        plt.savefig(f'SOMA_RL/plots/model_recovery.svg', format='svg')
+        plt.savefig(f'RL/plots/model_recovery.png')
+        plt.savefig(f'RL/plots/model_recovery.svg', format='svg')
 
         #Close figure
         plt.close()
@@ -521,7 +521,7 @@ class Plotting:
             model_data = fit_data[model]
             for run_params in model_data['participant']:
                 data_name = run_params.replace('[','').replace(']','')
-                true_parameters = pd.read_csv(f'SOMA_RL/data/generated/{data_name}/{data_name}_generated_parameters.csv')
+                true_parameters = pd.read_csv(f'RL/data/generated/{data_name}/{data_name}_generated_parameters.csv')
                 fit_parameters = pd.DataFrame(model_data[model_data['participant']==run_params].values[0][4:]).T
                 fit_parameters.columns = true_parameters.columns
 
@@ -567,10 +567,10 @@ class Plotting:
                         axs[mi, j].axis('off')    
                     
         plt.tight_layout()
-        if not os.path.exists('SOMA_RL/plots/correlations'):
-            os.makedirs('SOMA_RL/plots/correlations')
-        plt.savefig(f'SOMA_RL/plots/correlations/recovery_correlation_plot.png')
-        plt.savefig(f'SOMA_RL/plots/correlations/recovery_correlation_plot.svg', format='svg')
+        if not os.path.exists('RL/plots/correlations'):
+            os.makedirs('RL/plots/correlations')
+        plt.savefig(f'RL/plots/correlations/recovery_correlation_plot.png')
+        plt.savefig(f'RL/plots/correlations/recovery_correlation_plot.svg', format='svg')
 
         #Close figure
         plt.close()
@@ -656,8 +656,8 @@ class Plotting:
 
         #Save the plot
         save_name = f'{save_name}_supplemental' if plot_type == 'raincloud' else save_name
-        plt.savefig(f'SOMA_RL/plots/fits/{save_name}.png')
-        plt.savefig(f'SOMA_RL/plots/fits/{save_name}.svg', format='svg')
+        plt.savefig(f'RL/plots/fits/{save_name}.png')
+        plt.savefig(f'RL/plots/fits/{save_name}.svg', format='svg')
 
         #Close figure
         plt.close()
@@ -891,8 +891,8 @@ class Plotting:
                 ax.set_xlabel('BIC')
                 ax.set_ylabel('Proportion')
         plt.tight_layout()
-        plt.savefig('SOMA_RL/plots/model_fits_distributions.png')
-        plt.savefig('SOMA_RL/plots/model_fits_distributions.svg', format='svg')
+        plt.savefig('RL/plots/model_fits_distributions.png')
+        plt.savefig('RL/plots/model_fits_distributions.svg', format='svg')
 
         #Close figure
         plt.close()
@@ -952,7 +952,7 @@ class Plotting:
         plt.tight_layout()
 
         #Save the plot
-        plt.savefig(f'SOMA_RL/plots/{save_name}.png')
+        plt.savefig(f'RL/plots/{save_name}.png')
         
         #Close figure
         plt.close()
@@ -1060,7 +1060,7 @@ class Plotting:
                 axs[i].spines['right'].set_visible(False)
 
             plt.tight_layout()
-            plt.savefig('SOMA_RL/plots/parameter_of_interest_comparisons.png', dpi=300)
+            plt.savefig('RL/plots/parameter_of_interest_comparisons.png', dpi=300)
             plt.close()
 
             print(corr_values)

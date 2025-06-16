@@ -200,7 +200,7 @@ class Help:
         None
         """
 
-        overview = """\nThe SOMA_RL package is a tool to deploy reinforcement learning computational models.
+        overview = """\nThe Avoid Learning RL Models package is a tool to deploy reinforcement learning computational models.
         The package is designed to be run as a function with parameters that can be set to customize the modeling procedure.
         This package is a standalone package but can also be used as a companion package to the SOMA_AL package.
         As a companion package, moves all relevant data, figures, etc. to a folder named 'report' that should be copy pasted into SOMA_AL/modelling

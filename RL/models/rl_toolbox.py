@@ -431,7 +431,7 @@ class RLToolbox:
                 print(f'Action: {action}')
 
                 if number_of_tries > 10:                
-                    filename = f'SOMA_RL/fits/temp/ERROR_{self.model_name}_{self.participant_id}_Run{self.run}_fit_results.csv'
+                    filename = f'RL/fits/temp/ERROR_{self.model_name}_{self.participant_id}_Run{self.run}_fit_results.csv'
                     pd.DataFrame(probabilities).to_csv(filename)
                     raise ValueError(f'Action selection failed too many times, check the error file, {filename}, for more information')
 

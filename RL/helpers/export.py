@@ -16,29 +16,29 @@ class Export:
         """
 
         files_to_move = [
-            'SOMA_RL/fits/fit_data.pkl',
-            'SOMA_RL/fits/full_fit_data.pkl',
-            'SOMA_RL/fits/group_AIC_percentages.csv',
-            'SOMA_RL/fits/group_BIC_percentages.csv',
-            'SOMA_RL/fits/modelsimulation_accuracy_data.csv',
-            'SOMA_RL/fits/modelsimulation_choice_data.csv',
-            'SOMA_RL/fits/parameter_outlier_results.pkl',
-            'SOMA_RL/fits/group_AIC.csv',
-            'SOMA_RL/fits/group_BIC.csv',
+            'RL/fits/fit_data.pkl',
+            'RL/fits/full_fit_data.pkl',
+            'RL/fits/group_AIC_percentages.csv',
+            'RL/fits/group_BIC_percentages.csv',
+            'RL/fits/modelsimulation_accuracy_data.csv',
+            'RL/fits/modelsimulation_choice_data.csv',
+            'RL/fits/parameter_outlier_results.pkl',
+            'RL/fits/group_AIC.csv',
+            'RL/fits/group_BIC.csv',
 
-            'SOMA_RL/plots/fit-by-runs.png',
-            'SOMA_RL/plots/acutepain_model_simulations.png',
-            'SOMA_RL/plots/chronicpain_model_simulations.png',
-            'SOMA_RL/plots/nopain_model_simulations.png',
-            'SOMA_RL/plots/model_fits_distributions.png',
-            'SOMA_RL/plots/AIC_model_comparisons.png',
-            'SOMA_RL/plots/BIC_model_comparisons.png',
-            'SOMA_RL/plots/parameter_of_interest_comparisons.png',
+            'RL/plots/fit-by-runs.png',
+            'RL/plots/acutepain_model_simulations.png',
+            'RL/plots/chronicpain_model_simulations.png',
+            'RL/plots/nopain_model_simulations.png',
+            'RL/plots/model_fits_distributions.png',
+            'RL/plots/AIC_model_comparisons.png',
+            'RL/plots/BIC_model_comparisons.png',
+            'RL/plots/parameter_of_interest_comparisons.png',
             
-            'SOMA_RL/stats/pain_fits_linear_results.csv',
-            'SOMA_RL/stats/pain_fits_ttest_results.csv',
-            'SOMA_RL/stats/pain_fits_posthoc_results.csv',
-            'SOMA_RL/stats/param_fit_descriptives.csv',
+            'RL/stats/pain_fits_linear_results.csv',
+            'RL/stats/pain_fits_ttest_results.csv',
+            'RL/stats/pain_fits_posthoc_results.csv',
+            'RL/stats/param_fit_descriptives.csv',
         ]
 
         files_to_rename = [
@@ -47,8 +47,8 @@ class Export:
         ]
 
         folders_to_move = [
-            ['SOMA_RL/plots/model_behaviours/', f'{path}/model_behaviours'],
-            ['SOMA_RL/plots/fits/',             f'{path}/parameter_fits'],
+            ['RL/plots/model_behaviours/', f'{path}/model_behaviours'],
+            ['RL/plots/fits/',             f'{path}/parameter_fits'],
         ]
 
         # Conduct the file operations
@@ -80,16 +80,16 @@ class Export:
         """
 
         files_to_move = [
-            'SOMA_RL/plots/model_recovery.png',
-            'SOMA_RL/fits/fit_data_PARAMETER.pkl',
-            'SOMA_RL/fits/full_fit_data_PARAMETER.pkl',
-            'SOMA_RL/fits/fit_data_MODEL.pkl',
-            'SOMA_RL/fits/full_fit_data_MODEL.pkl',
+            'RL/plots/model_recovery.png',
+            'RL/fits/fit_data_PARAMETER.pkl',
+            'RL/fits/full_fit_data_PARAMETER.pkl',
+            'RL/fits/fit_data_MODEL.pkl',
+            'RL/fits/full_fit_data_MODEL.pkl',
         ]
 
         folders_to_move = [
-            ['SOMA_RL/plots/correlations',      f'{path}/correlations'],
-            ['SOMA_RL/data/generated',          f'{path}/data/generated'],
+            ['RL/plots/correlations',      f'{path}/correlations'],
+            ['RL/data/generated',          f'{path}/data/generated'],
         ]
 
         # Conduct the file operations

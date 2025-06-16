@@ -34,7 +34,7 @@ def mp_run_simulations(args: list) -> None:
     else:
         rl_pipeline.run_simulations(args[1:])
 
-def mp_progress(num_files: int, filepath: str = 'SOMA_RL/fits/temp', divide_by: int = 1, multiply_by: int = 1, progress_bar: bool = True) -> None:
+def mp_progress(num_files: int, filepath: str = 'RL/fits/temp', divide_by: int = 1, multiply_by: int = 1, progress_bar: bool = True) -> None:
 
     """
     Monitor the progress of file generation in a specified directory.
@@ -44,7 +44,7 @@ def mp_progress(num_files: int, filepath: str = 'SOMA_RL/fits/temp', divide_by: 
     num_files : int
         The total number of files expected to be generated.
     filepath : str, optional
-        The directory where the files are being generated. Default is 'SOMA_RL/fits/temp'.
+        The directory where the files are being generated. Default is 'RL/fits/temp'.
     divide_by : int, optional
         The factor by which to divide the number of files for progress tracking. Default is 1.
     multiply_by : int, optional

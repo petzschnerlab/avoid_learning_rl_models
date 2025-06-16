@@ -17,7 +17,7 @@ def get_priors(models: list = None) -> tuple:
 def fixed_priors(models: list = None) -> dict:
 
     """
-    Returns fixed priors for the models used in SOMA_RL.
+    Returns fixed priors for the models used in RL.
     Fixed priors are based on previous literature and custom settings.
 
     Returns
@@ -107,7 +107,7 @@ def fixed_priors(models: list = None) -> dict:
 def bounds_priors(models: list = None) -> dict:
 
     """
-    Returns bounds priors for the models used in SOMA_RL.
+    Returns bounds priors for the models used in RL.
     Bounds priors are currently set to None, indicating no specific bounds are defined.
     
     Returns

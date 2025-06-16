@@ -8,7 +8,7 @@ class Report:
     Class to hold reporting functions for the SOMA project
     """
     
-    def table_to_png(self, table: pd.DataFrame, save_name: str = "SOMA_AL/plots/tables/Table.png") -> None:
+    def table_to_png(self, table: pd.DataFrame, save_name: str = "RL/plots/tables/Table.png") -> None:
 
         """
         Converts a table to a png

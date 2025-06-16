@@ -1,12 +1,12 @@
 
-SOMA_RL/data/pain_learning_processed.csv
-SOMA_RL/testing_fit.py
-/SOMA_RL/plots
-SOMA_RL/data/pain_transfer_processed.csv
-SOMA_RL/data/fits
+RL/data/pain_learning_processed.csv
+RL/testing_fit.py
+/RL/plots
+RL/data/pain_transfer_processed.csv
+RL/data/fits
 
-/SOMA_RL/data
-/SOMA_RL/fits
-/SOMA_RL/reports
-/SOMA_RL/stats
-/SOMA_RL/other model results
+/RL/data
+/RL/fits
+/RL/reports
+/RL/stats
+/RL/other model results
