@@ -60,6 +60,8 @@ class Pipeline(Master):
             self.run_fit()
             self.export_fits(path="RL/modelling")           
         elif self.mode == 'VALIDATION':
+            if len(self.models) <= 1:
+                raise ValueError("For model validation, at least two models must be specified.")
             self.run_validation()
             self.export_recovery(path="RL/modelling")
         else:
