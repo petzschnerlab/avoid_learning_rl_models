@@ -358,6 +358,8 @@ class Plotting:
 
             #Metaplot settings
             fig.tight_layout()
+            if not os.path.exists('RL/plots/model_behaviours'):
+                os.makedirs('RL/plots/model_behaviours')
             save_name = f"{m}_model_behaviours_supplemental.png" if plot_type == 'raincloud' else f"{m}_model_behaviours.png"
             fig.savefig(os.path.join('RL','plots', 'model_behaviours', save_name))
             fig.savefig(os.path.join('RL','plots', 'model_behaviours', save_name.replace('.png','.svg')), format='svg')
