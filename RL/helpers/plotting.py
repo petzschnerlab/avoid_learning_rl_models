@@ -661,6 +661,8 @@ class Plotting:
             fig.delaxes(ax)
 
         #Save the plot
+        if not os.path.exists('RL/plots/fits'):
+            os.makedirs('RL/plots/fits')
         save_name = f'{save_name}_supplemental' if plot_type == 'raincloud' else save_name
         plt.savefig(f'RL/plots/fits/{save_name}.png')
         plt.savefig(f'RL/plots/fits/{save_name}.svg', format='svg')
@@ -1007,7 +1009,7 @@ class Plotting:
             for model, param in params_of_interest.items()
         }
 
-        # Merge dataframes on 'participant'
+        # Merge dataframes on participant
         model_keys = list(params_of_interest.keys())
         merged_df = model_values[model_keys[0]]
         for model in model_keys[1:]:
