@@ -52,6 +52,9 @@ class Export:
         ]
 
         # Conduct the file operations
+        if not os.path.exists(path):
+            os.makedirs(path)
+
         for file_to_move in files_to_move:
             if os.path.exists(file_to_move):
                 shutil.copy(file_to_move, path)
@@ -66,6 +69,8 @@ class Export:
             if os.path.exists(folder_to_move[0]):
                 if os.path.exists(folder_to_move[1]):
                     shutil.rmtree(folder_to_move[1])
+                else:
+                    os.makedirs(folder_to_move[1])
                 shutil.copytree(folder_to_move[0], folder_to_move[1])
 
     def export_recovery(self, path: str) -> None:
@@ -93,6 +98,9 @@ class Export:
         ]
 
         # Conduct the file operations
+        if not os.path.exists(path):
+            os.makedirs(path)
+
         for file_to_move in files_to_move:
             if os.path.exists(file_to_move):
                 shutil.copy(file_to_move, path)
@@ -101,4 +109,6 @@ class Export:
             if os.path.exists(folder_to_move[0]):
                 if os.path.exists(folder_to_move[1]):
                     shutil.rmtree(folder_to_move[1])
+                else:
+                    os.makedirs(folder_to_move[1])
                 shutil.copytree(folder_to_move[0], folder_to_move[1])
