@@ -541,7 +541,7 @@ class Plotting:
                     fit_results[model] = combined_parameters            
 
         number_columns = np.max([len(fit_results[model].columns)-2 for model in models])
-        fig, axs = plt.subplots(len(models), number_columns, figsize=(5*number_columns, 5*len(models)))
+        fig, axs = plt.subplots(len(models), number_columns, figsize=(5*number_columns, 5*len(models)), squeeze=False)
         for mi, model in enumerate(models):
             model_bounds = RLModel(model, fixed=fixed, bounds=bounds).get_bounds()
             for i, parameter in enumerate(fit_results[model].columns[2:]):
