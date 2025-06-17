@@ -1,2 +1,0 @@
-factual_lr,counterfactual_lr,factual_actor_lr,counterfactual_actor_lr,critic_lr,temperature,mixing_factor,novel_value
-0.89,0.03,0.68,0.14,0.36,0.13,0.96,-0.75
