@@ -1353,3 +1353,6 @@ class Analyses(Plotting):
                 correlation = np.round(param_results.corr().iloc[0, 1],2)
                 correlation_table = pd.concat([correlation_table, pd.DataFrame({'Model': [model], 'Parameter': [param], 'Correlation': [correlation]})], ignore_index=True)
 
+        #Save table to RL/stats/param_recovery_corrs.csv
+        correlation_table.to_csv('RL/stats/param_recovery_corrs.csv', index=False)
+

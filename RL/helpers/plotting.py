@@ -436,7 +436,7 @@ class Plotting:
             The renamed model name.
         """
 
-        return model_name.split('+')[0].replace('Hybrid2', 'Hybrid 2').replace('ActorCritic', 'Actor Critic').replace('QLearning', 'Q Learning')
+        return model_name.split('+')[0].replace('Hybrid2', 'Hybrid 2').replace('ActorCritic', 'Actor Critic').replace('QLearning', 'Q Learning').replace('2012','')
 
     def plot_model_fits(self, confusion_matrix: pd.DataFrame) -> None:
 
