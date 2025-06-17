@@ -684,18 +684,19 @@ class Analyses(Plotting):
             group_AIC[model_name]['full'] = AIC
             group_BIC[model_name]['full'] = BIC
 
-            print('')
-            print(f'FIT REPORT: {model_name}')
-            print('==========')
-            print(f'AIC: {AIC.round(0)}')
-            print(f'BIC: {BIC.round(0)}')
-            col_index = 4 if recovery == 'model' else 3
-            for col in fit_data[model_name].columns[col_index:]:
-                if fit_data[model_name][col].values[0] is not None:
-                    print(f'{col}: {fit_data[model_name][col].mean().round(4)}, {fit_data[model_name][col].std().round(4)}')
-            print('==========')
-            print('')
-            
+            if not recovery:
+                print('')
+                print(f'FIT REPORT: {model_name}')
+                print('==========')
+                print(f'AIC: {AIC.round(0)}')
+                print(f'BIC: {BIC.round(0)}')
+                col_index = 4 if recovery == 'model' else 3
+                for col in fit_data[model_name].columns[col_index:]:
+                    if fit_data[model_name][col].values[0] is not None:
+                        print(f'{col}: {fit_data[model_name][col].mean().round(4)}, {fit_data[model_name][col].std().round(4)}')
+                print('==========')
+                print('')
+                
         #Turn nested dictionary into dataframe
         group_AIC = pd.DataFrame(group_AIC)
         group_AIC['best_model'] = group_AIC.idxmin(axis=1)
@@ -705,16 +706,17 @@ class Analyses(Plotting):
         group_BIC['best_model'] = group_BIC.idxmin(axis=1)
         group_BIC.to_csv('RL/fits/group_BIC.csv')
 
-        print('AIC REPORT')
-        print('==========')
-        print(group_AIC)
-        print('==========')
+        if not recovery:
+            print('AIC REPORT')
+            print('==========')
+            print(group_AIC)
+            print('==========')
 
-        print('')
-        print('BIC REPORT')
-        print('==========')
-        print(group_BIC)
-        print('==========')
+            print('')
+            print('BIC REPORT')
+            print('==========')
+            print(group_BIC)
+            print('==========')
 
         #Create a dataframe for each key within all_AIC['QLearning+novel']
         model_data_AIC = {m: {} for m in models}
