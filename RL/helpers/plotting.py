@@ -550,7 +550,7 @@ class Plotting:
                 parameter_name = parameter.replace('_', ' ').replace('lr', 'learning rate').title()
                 true = fit_results[model][fit_results[model]['fit_type']=='True'][parameter]
                 fit = fit_results[model][fit_results[model]['fit_type']=='Fit'][parameter]
-                axs[mi, i].scatter(true, fit, s=5)
+                axs[mi, i].scatter(true, fit, s=5, alpha=alpha)
                 axs[mi, i].plot(model_bounds[parameter], model_bounds[parameter], '--', color='grey', alpha=alpha)
                 axs[mi, i].set_title(f"{parameter_name.title().replace('Learning Rate','LR')}", loc='left', fontsize=12)
                 if mi == len(models)-1:
@@ -558,7 +558,7 @@ class Plotting:
                 else: 
                     axs[mi, i].set_xlabel('')
                 if i == 0:
-                    axs[mi, i].set_ylabel(f"{model.split('+')[0].replace('2012','')}\nFit")
+                    axs[mi, i].set_ylabel(f"{model.split('+')[0].replace('2012','').replace('ActorCritic', 'Actor Critic')}\nFit")
                 else:
                     axs[mi, i].set_ylabel('')
                 axs[mi, i].set_xlim(model_bounds[parameter])

@@ -255,7 +255,8 @@ class Analyses(Plotting):
             self.plot_parameter_fits(models=self.models, 
                                 fit_data=fit_data, 
                                 fixed=self.fixed, 
-                                bounds=self.bounds)
+                                bounds=self.bounds,
+                                alpha=.5)
 
     def run_fit_analyses(self, fit_data: dict, transform: bool = True) -> None:
 
