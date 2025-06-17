@@ -58,9 +58,9 @@ class Pipeline(Master):
         # Run the fit or validation process based on the mode
         if self.mode == 'FIT':
             self.run_fit()
-            self.export_fits(path="RL/reports")           
+            self.export_fits(path="RL/modelling")           
         elif self.mode == 'VALIDATION':
             self.run_validation()
-            self.export_recovery(path="RL/reports")
+            self.export_recovery(path="RL/modelling")
         else:
             raise ValueError(f"Invalid mode '{self.mode}'. Mode must be 'fit' or 'validation'.")

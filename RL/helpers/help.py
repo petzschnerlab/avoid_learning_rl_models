@@ -202,8 +202,8 @@ class Help:
 
         overview = """\nThe Avoid Learning RL Models package is a tool to deploy reinforcement learning computational models.
         The package is designed to be run as a function with parameters that can be set to customize the modeling procedure.
-        This package is a standalone package but can also be used as a companion package to the SOMA_AL package.
-        As a companion package, moves all relevant data, figures, etc. to a folder named 'report' that should be copy pasted into SOMA_AL/modelling
+        This package is a standalone package but can also be used as a companion package to the avoid_learning_analysis package.
+        As a companion package, moves all relevant data, figures, etc. to a folder named 'modelling' that should be copy pasted into AL's 'modelling' folder.
         This package supports two processing modes: FIT and VALIDATION.
 
         - FIT mode is used to fit computational models to empirical data.
