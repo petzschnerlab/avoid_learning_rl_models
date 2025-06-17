@@ -85,6 +85,9 @@ class Analyses(Plotting):
 
         if not os.path.exists('RL/plots'):
             os.makedirs('RL/plots')
+
+        if not os.path.exists('RL/stats'):
+            os.makedirs('RL/stats')
         
         dataloader = self.run_model_fit(self.learning_filename, 
                             self.transfer_filename, 
