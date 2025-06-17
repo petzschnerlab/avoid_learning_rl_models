@@ -252,6 +252,7 @@ class Analyses(Plotting):
             
             self.plot_model_fits(confusion_matrix=confusion_matrix)
         else:
+            self.describe_param_recovery_corrs(fit_data=fit_data)
             self.plot_parameter_fits(models=self.models, 
                                 fit_data=fit_data, 
                                 fixed=self.fixed, 
@@ -1316,3 +1317,39 @@ class Analyses(Plotting):
                     describe_fit = pd.concat((describe_fit, pd.DataFrame([param_data], columns=['model', 'parameter'] + groups)), ignore_index=True, axis=0)
 
         describe_fit.to_csv('RL/stats/param_fit_descriptives.csv', index=False)
+
+    def describe_param_recovery_corrs(self, fit_data):
+
+        models = list(fit_data.keys())
+        fit_results = {model: [] for model in models}
+        for model in models:
+            model_data = fit_data[model]
+            for run_params in model_data['participant']:
+                data_name = run_params.replace('[','').replace(']','')
+                true_parameters = pd.read_csv(f'RL/data/generated/{data_name}/{data_name}_generated_parameters.csv')
+                fit_parameters = pd.DataFrame(model_data[model_data['participant']==run_params].values[0][4:]).T
+                fit_parameters.columns = true_parameters.columns
+
+                true_parameters['Model'] = model
+                fit_parameters['Model'] = model
+                true_parameters['fit_type'] = 'True'
+                fit_parameters['fit_type'] = 'Fit'
+                combined_parameters = pd.concat([true_parameters, fit_parameters])
+                combined_parameters = combined_parameters[['Model', 'fit_type'] + [col for col in combined_parameters.columns if col not in ['Model', 'fit_type']]]
+
+                if isinstance(fit_results[model], pd.DataFrame):
+                    fit_results[model] = pd.concat([fit_results[model], combined_parameters])
+                else:
+                    fit_results[model] = combined_parameters
+            
+        correlation_table = pd.DataFrame(columns=['Model', 'Parameter', 'Correlation'])
+        for model in models:
+            model_results = fit_results[model]
+            for param in model_results.columns[2:]:
+                param_results = model_results[['fit_type', param]]
+                true_vals = param_results[param_results['fit_type'] == 'True'][param].reset_index(drop=True)
+                fit_vals = param_results[param_results['fit_type'] == 'Fit'][param].reset_index(drop=True)
+                param_results = pd.DataFrame({'True': true_vals, 'Fit': fit_vals})
+                correlation = np.round(param_results.corr().iloc[0, 1],2)
+                correlation_table = pd.concat([correlation_table, pd.DataFrame({'Model': [model], 'Parameter': [param], 'Correlation': [correlation]})], ignore_index=True)
+

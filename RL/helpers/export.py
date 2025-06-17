@@ -88,6 +88,7 @@ class Export:
             'RL/fits/full_fit_data_PARAMETER.pkl',
             'RL/fits/fit_data_MODEL.pkl',
             'RL/fits/full_fit_data_MODEL.pkl',
+            'RL/stats/param_recovery_corrs.csv',
         ]
 
         folders_to_move = [
