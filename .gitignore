@@ -1,12 +1,8 @@
-
-RL/data/pain_learning_processed.csv
 RL/testing_fit.py
 /RL/plots
-RL/data/pain_transfer_processed.csv
-RL/data/fits
-
-/RL/data
 /RL/fits
-/RL/reports
+/RL/modelling
 /RL/stats
 /RL/other model results
+RL/model results/parameter_outlier_results.pkl
+RL/TEST_SVG.py
