@@ -206,8 +206,8 @@ class Analyses(Plotting):
         if not os.path.exists('RL/data/generated'):
             os.makedirs('RL/data/generated')
 
-        if not os.path.exists('RL/plots/fits'):
-            os.makedirs('RL/plots/fits')
+        if not os.path.exists('RL/plots'):
+            os.makedirs('RL/plots')
 
         if [self.learning_filename, self.transfer_filename].count(None) == 0:
             datasets_to_generate = len(DataLoader(self.learning_filename, self.transfer_filename, number_of_participants=self.number_of_participants, reduced=False).get_participant_ids())
