@@ -83,8 +83,8 @@ class Analyses(Plotting):
                     print(f'              {key} = {self.bounds[model][key]}')
         print('--------------------------------------------------------')
 
-        if not os.path.exists('RL/plots/fits'):
-            os.makedirs('RL/plots/fits')
+        if not os.path.exists('RL/plots'):
+            os.makedirs('RL/plots')
         
         dataloader = self.run_model_fit(self.learning_filename, 
                             self.transfer_filename, 
