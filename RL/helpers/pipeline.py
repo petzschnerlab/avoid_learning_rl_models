@@ -57,12 +57,24 @@ class Pipeline(Master):
 
         # Run the fit or validation process based on the mode
         if self.mode == 'FIT':
+            print('============================================')
+            print("\nRunning model fitting...\n")
+            print('============================================')
+
             self.run_fit()
-            self.export_fits(path="RL/modelling")           
+            self.export_fits(path="RL/modelling")
+
+            print('============================================')
+
         elif self.mode == 'VALIDATION':
-            if len(self.models) <= 1:
-                raise ValueError("For model validation, at least two models must be specified.")
+            print('============================================')
+            print(f"\nRunning {self.recovery} recovery...\n")
+            print('============================================')
+
             self.run_validation()
             self.export_recovery(path="RL/modelling")
+
+            print('============================================')
+
         else:
             raise ValueError(f"Invalid mode '{self.mode}'. Mode must be 'fit' or 'validation'.")

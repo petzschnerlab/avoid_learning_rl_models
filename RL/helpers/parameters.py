@@ -31,6 +31,10 @@ class Parameters:
         mode = kwargs['mode']
         if mode not in ['FIT', 'VALIDATION']:
             raise ValueError(f"Invalid mode '{mode}'. Mode must be 'fit' or 'validation'.")
+        
+        if mode == 'VALIDATION':
+            if len(kwargs['models']) <= 1 and kwargs['recovery'] == 'model':
+                raise ValueError("For model validation, at least two models must be specified.")
 
         # Define accepted and required parameters
         fit_params = [
