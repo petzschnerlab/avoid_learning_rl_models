@@ -983,7 +983,7 @@ class Plotting:
             A dictionary of colors for different plot types, or a list of colors for the specified type.
         """
 
-        colors = {'group': ['#B2DF8A', '#FFD92F', '#FB9A99'],
+        colors = {'group': ['#85A947', '#3E7B27', '#123524'],
                 'condition': ['#095086', '#9BD2F2', '#ECA6A6', '#B00000', '#D3D3D3'],
                 'condition_2': ['#095086', '#B00000']}
         
