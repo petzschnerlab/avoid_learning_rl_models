@@ -1,8 +1,9 @@
 RL/testing_fit.py
 /RL/plots
 /RL/fits
-/RL/modelling
 /RL/stats
 /RL/other model results
 RL/model results/parameter_outlier_results.pkl
 RL/TEST_SVG.py
+RL/data
+
