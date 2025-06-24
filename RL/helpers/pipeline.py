@@ -13,7 +13,9 @@ class Pipeline(Master):
     methods for fitting and validating models.
     """
 
-    def __init__(self, seed: Optional[int] = None):
+    def __init__(self,
+                 seed: Optional[int] = None,
+                 help: bool = False) -> None:
 
         """
         Initializes the Pipeline class.
@@ -27,6 +29,9 @@ class Pipeline(Master):
 
         if seed is not None:
             rnd.seed(seed)
+
+        if help:
+            self.run(help=True)
             
         super().__init__()
 

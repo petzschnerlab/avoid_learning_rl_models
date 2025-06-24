@@ -13,6 +13,7 @@ class Help:
         # TODO: ADD OPTIONAL/REQUIRED TAGS
 
         self.pipeline_parameters = [
+            'help',
             'seed'
         ]
 
