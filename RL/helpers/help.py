@@ -295,7 +295,7 @@ class Help:
                 'learning_filename': 'data/learning_data.csv',
                 'transfer_filename': 'data/transfer_data.csv'}
 
-            pipeline = Pipeline()
+            pipeline = Pipeline(seed=1251)
             pipeline.run(**kwargs)
 
         Please note: The docstrings within the classes and methods of this package are mostly built using AI. They should be alright, but there may be errors
