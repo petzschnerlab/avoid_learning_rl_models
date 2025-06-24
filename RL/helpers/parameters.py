@@ -112,7 +112,6 @@ class Parameters:
                 'optimizer_lr': 0.01,
                 'learning_filename': None,
                 'transfer_filename': None,
-                'parameters': None,
                 'fit_filename': None,
                 'task_design': None,
                 'datasets_to_generate': 1,

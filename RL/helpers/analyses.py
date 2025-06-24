@@ -214,6 +214,8 @@ class Analyses(Plotting):
 
         if [self.learning_filename, self.transfer_filename].count(None) == 0:
             datasets_to_generate = len(DataLoader(self.learning_filename, self.transfer_filename, number_of_participants=self.number_of_participants, reduced=False).get_participant_ids())
+        else:
+            datasets_to_generate = self.datasets_to_generate
 
         if self.generate_data:
             self.generate_simulated_data(models=self.models, 
@@ -984,7 +986,7 @@ class Analyses(Plotting):
 
         #Checks
         if [learning_filename, transfer_filename].count(None) == 1:
-            raise ValueError('Both learning and transfer filenames must be provided')
+            raise ValueError('Both learning and transfer filenames must be provided if any are provided. You can also not provide both and instead use task_design.')
         
         if fit_filename is not None and parameters is not None:
             warnings.warn('fit_filename is set, but parameters is also set. Using fit_filename parameters instead of provided parameters.')
