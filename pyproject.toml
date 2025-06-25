@@ -1,5 +1,5 @@
 [project]
-name = "soma_rl"
+name = "RL"
 version = "0.0.1"
 authors = [
   { name="Chad Williams", email="chad_williams@brown.edu" },
