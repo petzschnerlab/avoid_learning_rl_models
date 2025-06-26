@@ -1,0 +1,38 @@
+site_name: Avoid Learning RL Models
+
+theme:
+  name: material
+  features: 
+    - navigation.path
+    - navigation.indexes 
+    - tab: true
+  palette:
+    - scheme: default
+      toggle: 
+        icon: material/toggle-switch-off-outline
+        name: Switch to dark mode
+      primary: indigo
+      accent: dark purple
+
+    - scheme: slate
+      toggle: 
+        icon: material/toggle-switch
+        name: Switch to light mode
+      primary: indigo
+      accent: dark purple
+
+markdown_extensions:
+  - attr_list
+
+plugins:
+  - mkdocs-jupyter
+
+nav: 
+  - Introduction: 'index.md'
+  - How To Use: 
+    - Install: 'HowToUse/install.md'
+    - Data Structure: 'HowToUse/datastructure.md'
+    - Parameters: 'HowToUse/parameters.md'
+  - Tutorials:
+    - RL Tutorial: 'Tutorials/RL_tutorial.ipynb'
+  - Repository: https://github.com/petzschnerlab/avoid_learning_rl_models" target="_blank

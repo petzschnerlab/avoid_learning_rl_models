@@ -289,14 +289,14 @@ class Help:
         The easiest implementation of this package is:
             from helpers.pipeline import Pipeline
 
-            kwargs = {
+            params = {
                 'mode: 'fit',
                 'models': ['QLearning']',
                 'learning_filename': 'data/learning_data.csv',
                 'transfer_filename': 'data/transfer_data.csv'}
 
             pipeline = Pipeline(seed=1251)
-            pipeline.run(**kwargs)
+            pipeline.run(**params)
 
         Please note: The docstrings within the classes and methods of this package are mostly built using AI. They should be alright, but there may be errors
         However, this help function was written by hand and should be accurate. If there is any conflict between the two, believe the help function.
