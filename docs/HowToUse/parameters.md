@@ -60,22 +60,27 @@ hide:
   </tr>
   <tr>
     <td colspan="3">
-      List of models to fit.<br><br>
-      Supported models:<br>
+      <b>Supported models</b><br>
       &nbsp;&nbsp;&nbsp;&nbsp;QLearning, ActorCritic<br>
       &nbsp;&nbsp;&nbsp;&nbsp;Relative, Advantage<br>
-      &nbsp;&nbsp;&nbsp;&nbsp;Hybrid2012, Hybrid2021, StandardHybrid2012, StandardHybrid2021<br><br>
-      Standard models:<br>
-      &nbsp;&nbsp;&nbsp;&nbsp;QLearning: Standard Q-Learning Model<br>
-      &nbsp;&nbsp;&nbsp;&nbsp;ActorCritic: Standard Actor-Critic Model<br>
-      &nbsp;&nbsp;&nbsp;&nbsp;Relative: Standard Relative Model (Palminteri et al., 2015)<br>
-      &nbsp;&nbsp;&nbsp;&nbsp;Advantage: Simplified Relative Model (Williams et al., in prep)<br>
-      &nbsp;&nbsp;&nbsp;&nbsp;Hybrid2012+bias: Standard Hybrid 2012 Model (Gold et al., 2012)<br>
-      &nbsp;&nbsp;&nbsp;&nbsp;Hybrid2021+bias+decay: Standard Hybrid 2021 Model (Geana et al., 2021)<br><br>
-      Optional Parameters: You can add optional parameters to models by adding them to the model name using a + sign<br>
-      &nbsp;&nbsp;&nbsp;&nbsp;+bias: Adds a valence bias to the model (e.g. Hybrid2012+bias), only usable with Hybrid2012, and Hybrid2021<br>
-      &nbsp;&nbsp;&nbsp;&nbsp;+novel: Adds a free parameter for the novel stimulus (e.g. QLearning+novel), useable with all models<br>
-      &nbsp;&nbsp;&nbsp;&nbsp;+decay: Adds a decay parameter to the model (e.g. QLearning+decay), useable with all models
+      &nbsp;&nbsp;&nbsp;&nbsp;Hybrid2012, Hybrid2021<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;StandardHybrid2012, StandardHybrid2021<br><br>
+
+      <b>Standard models </b><br>
+      Standard models as described in each reference, which introduces the model, with the addition of counterfactual learning rates.<br>
+      Hybrid models have alternatives versions without counterfactual learning rates: StandardHybrid2012, StandardHybrid2021
+      &nbsp;&nbsp;&nbsp;&nbsp;<b>QLearning</b>: Standard Q-Learning Model<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<b>ActorCritic</b>: Standard Actor-Critic Model<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<b>Relative</b>: Standard Relative Model (Palminteri et al., 2015)<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<b>Advantage</b>: Simplified Relative Model (Williams et al., 2025)<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<b>Hybrid2012+bias</b>: Hybrid 2012 Model (Gold et al., 2012)<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<b>Hybrid2021+bias+decay</b>: Hybrid 2021 Model (Geana et al., 2021)<br><br>
+
+      <b>Optional Parameters</b><br>
+      You can add optional parameters to models by adding them to the model name using a + sign<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<b>+bias</b>: Adds a valence bias to the model (e.g. Hybrid2012+bias), only usable with Hybrid models<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<b>+novel</b>: Adds a free parameter for the novel stimulus (e.g. QLearning+novel), useable with all models<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<b>+decay</b>: Adds a decay parameter to the model (e.g. QLearning+decay), useable with all models
     </td>
   </tr>
   <tr style="background-color:#f0f0f0;">

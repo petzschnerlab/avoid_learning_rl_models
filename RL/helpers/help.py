@@ -92,24 +92,26 @@ class Help:
             'models':
                 [
     '''
-    List of models to fit.
-            
-    Supported models: 
-        QLearning, ActorCritic
-        Relative, Advantage
-        Hybrid2012, Hybrid2021, StandardHybrid2012, StandardHybrid2021
+    Supported models
+        QLearning, ActorCritic<br>
+        Relative, Advantage<br>
+        Hybrid2012, Hybrid2021<br>
+        StandardHybrid2012, StandardHybrid2021<br><br>
 
-    Standard models:
-        QLearning: Standard Q-Learning Model
-        ActorCritic: Standard Actor-Critic Model
-        Relative: Standard Relative Model (Palminteri et al., 2015)
-        Advantage: Simplified Relative Model (Williams et al., in prep)
-        Hybrid2012+bias: Standard Hybrid 2012 Model (Gold et al., 2012)
-        Hybrid2021+bias+decay: Standard Hybrid 2021 Model (Geana et al., 2021)
+    Standard models
+        Standard models as described in each reference, which introduces the model, with the addition of counterfactual learning rates.<br>
+        Hybrid models have alternatives versions without counterfactual learning rates: StandardHybrid2012, StandardHybrid2021
+        QLearning: Standard Q-Learning Model<br>
+        ActorCritic: Standard Actor-Critic Model<br>
+        Relative: Standard Relative Model (Palminteri et al., 2015)<br>
+        Advantage: Simplified Relative Model (Williams et al., 2025)<br>
+        Hybrid2012+bias: Hybrid 2012 Model (Gold et al., 2012)<br>
+        Hybrid2021+bias+decay: Hybrid 2021 Model (Geana et al., 2021)<br><br>
 
-    Optional Parameters: You can add optional parameters to models by adding them to the model name using a + sign
-        +bias: Adds a valence bias to the model (e.g. Hybrid2012+bias), only usable with Hybrid2012, and Hybrid2021
-        +novel: Adds a free parameter for the novel stimulus (e.g. QLearning+novel), useable with all models
+    Optional Parameters<br>
+        You can add optional parameters to models by adding them to the model name using a + sign<br>
+        +bias: Adds a valence bias to the model (e.g. Hybrid2012+bias), only usable with Hybrid models<br>
+        +novel: Adds a free parameter for the novel stimulus (e.g. QLearning+novel), useable with all models<br>
         +decay: Adds a decay parameter to the model (e.g. QLearning+decay), useable with all models
     ''', 
                 'list[str] | None',
