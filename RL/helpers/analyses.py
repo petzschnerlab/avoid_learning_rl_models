@@ -697,7 +697,7 @@ class Analyses(Plotting):
                 col_index = 4 if recovery == 'model' else 3
                 for col in fit_data[model_name].columns[col_index:]:
                     if fit_data[model_name][col].values[0] is not None:
-                        print(f'{col}: {fit_data[model_name][col].mean().round(4)}, {fit_data[model_name][col].std().round(4)}')
+                        print(f'{col}: {round(fit_data[model_name][col].mean(), 4)}, {round(fit_data[model_name][col].std(),4)}')
                 print('==========')
                 print('')
                 
