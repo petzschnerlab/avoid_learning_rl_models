@@ -128,4 +128,10 @@ class Parameters:
             print(f"{key.title()}: {value}")
         print('--------------------------\n')
 
+        #Create directories if they do not exist
+        if self.mode == 'FIT':
+            if not os.path.exists('RL/fits/'):
+                os.makedirs('RL/fits/')
+            if not os.path.exists('RL/fits/temp/'):
+                os.makedirs('RL/fits/temp/')
         
