@@ -6,6 +6,12 @@ hide:
 
 Welcome to the avoidance learning reinforcement learning models repo. This repo was built for the PEAC lab to computationally model empirical data from the various avoidance learning tasks. This repo has the ability to fit RL models to empirical data and to validate these models through parameters and model recovery methods.  
 
+<div style="text-align: center; margin-top: 1em;">
+  <a href="Tutorials/RL_tutorial/" class="md-button md-button--primary">
+    Jump to the tutorial!
+  </a>
+</div>
+
 <b>Supported models</b><br>
 &nbsp;&nbsp;&nbsp;&nbsp;QLearning, ActorCritic<br>
 &nbsp;&nbsp;&nbsp;&nbsp;Relative, Advantage<br>
