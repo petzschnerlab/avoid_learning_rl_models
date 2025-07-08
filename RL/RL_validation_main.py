@@ -44,8 +44,8 @@ if __name__ == "__main__":
     }
 
     validate_params = {'mode':                      'validation',
-                       'learning_filename':         'RL/data/pain_learning_processed.csv',
-                       'transfer_filename':         'RL/data/pain_transfer_processed.csv',
+                       'learning_filename':         'RL/data/processed_learning_data.csv',
+                       'transfer_filename':         'RL/data/processed_transfer_data.csv',
                        'models':                    models,
                        'random_params':             'random',
                        'fixed':                     fixed,
