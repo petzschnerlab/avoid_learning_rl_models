@@ -11,6 +11,7 @@ import pandas as pd
 import numpy as np
 import tqdm
 import pickle
+import scipy
 
 from models.rl_models import RLModel
 from helpers.dataloader import DataLoader
@@ -665,6 +666,9 @@ class Analyses(Plotting):
         group_BIC = {m: {} for m in models}
         all_AIC = {m: {} for m in models}
         all_BIC = {m: {} for m in models}
+        AIC = pd.DataFrame(columns=['participant']+models)
+        BIC = pd.DataFrame(columns=['participant']+models)
+
         for model_name in models:
 
             #Compute AIC and BIC
@@ -700,7 +704,7 @@ class Analyses(Plotting):
                         print(f'{col}: {round(fit_data[model_name][col].mean(), 4)}, {round(fit_data[model_name][col].std(),4)}')
                 print('==========')
                 print('')
-                
+
         #Turn nested dictionary into dataframe
         group_AIC = pd.DataFrame(group_AIC)
         group_AIC['best_model'] = group_AIC.idxmin(axis=1)
@@ -722,7 +726,7 @@ class Analyses(Plotting):
             print(group_BIC)
             print('==========')
 
-        #Create a dataframe for each key within all_AIC['QLearning+novel']
+        #Create a dataframe for each key 
         model_data_AIC = {m: {} for m in models}
         model_data_BIC = {m: {} for m in models}
         for model_name in all_AIC:
@@ -758,9 +762,57 @@ class Analyses(Plotting):
         best_fits_AIC_summary.to_csv('RL/fits/group_AIC_percentages.csv')
         best_fits_BIC_summary.to_csv('RL/fits/group_BIC_percentages.csv')
 
+        #Inter-participant AIC and BIC
+        best_fit_AIC = group_AIC['best_model'].values[-1]
+        best_fit_BIC = group_BIC['best_model'].values[-1]
+        individual_AIC = pd.DataFrame(columns=['participant']+models)
+        individual_BIC = pd.DataFrame(columns=['participant']+models)
+        for participant in fit_data[models[0]]['participant'].unique():
+            p_AIC = []
+            p_BIC = []
+            p_AIC.append(participant)
+            p_BIC.append(participant)
+            for model_name in models:
+                model_data = fit_data[model_name][fit_data[model_name]['participant'] == participant]
+                number_params = len(model_data.columns) - 4 # TODO: Check if this is always correct
+                participant_AIC = 2*number_params + 2*model_data['fit'].values[0]
+                participant_BIC = np.log(number_trials)*number_params + 2*model_data['fit'].values[0]
+                p_AIC.append(participant_AIC.astype(float))
+                p_BIC.append(participant_BIC.astype(float))
+            p_AIC = pd.DataFrame(p_AIC).T
+            p_BIC = pd.DataFrame(p_BIC).T
+            p_AIC.columns = ['participant'] + models
+            p_BIC.columns = ['participant'] + models
+            individual_AIC = pd.concat((individual_AIC, p_AIC), ignore_index=True)
+            individual_BIC = pd.concat((individual_BIC, p_BIC), ignore_index=True)
+        
+        difference_AIC = individual_AIC.copy()
+        difference_BIC = individual_BIC.copy()
+        difference_AIC.iloc[:,1:] = difference_AIC.iloc[:,1:].sub(difference_AIC[best_fit_AIC], axis=0)
+        difference_BIC.iloc[:,1:] = difference_BIC.iloc[:,1:].sub(difference_BIC[best_fit_BIC], axis=0)
+        difference_AIC = difference_AIC.drop(columns=[best_fit_AIC])
+        difference_BIC = difference_BIC.drop(columns=[best_fit_BIC])
+        diff_AIC_mean = difference_AIC.iloc[:,1:].mean(axis=0)
+        diff_BIC_mean = difference_BIC.iloc[:,1:].mean(axis=0)
+        diff_AIC_std = difference_AIC.iloc[:,1:].std(axis=0) #TODO: Correct SD?
+        diff_BIC_std = difference_BIC.iloc[:,1:].std(axis=0)
+
+        n = difference_AIC.shape[0]
+        t_crit = scipy.stats.t.ppf(.975, n-1)  # Two-tailed t-test critical value
+        diff_AIC_CI = t_crit * diff_AIC_std / np.sqrt(n)
+        diff_BIC_CI = t_crit * diff_BIC_std / np.sqrt(n)
+
+        #Turn into two row dataframe with mean and CIs 
+        diff_AIC = pd.DataFrame({'mean': diff_AIC_mean, 'ci': diff_AIC_CI}).T
+        diff_BIC = pd.DataFrame({'mean': diff_BIC_mean, 'ci': diff_BIC_CI}).T
+
+        #Save as csv files
+        diff_AIC.to_csv('RL/fits/group_AIC_differences.csv')
+        diff_BIC.to_csv('RL/fits/group_BIC_differences.csv')
+
         #Plots
-        self.plot_model_comparisons(group_AIC, 'AIC_model_comparisons')
-        self.plot_model_comparisons(group_BIC, 'BIC_model_comparisons')
+        self.plot_model_comparisons(group_AIC, diff_AIC,  'AIC_model_comparisons')
+        self.plot_model_comparisons(group_BIC, diff_BIC,  'BIC_model_comparisons')
 
     def run_fit_simulations(self, 
                             learning_filename: str,
