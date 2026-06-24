@@ -214,6 +214,7 @@ class RLModel:
         model_parameters['QLearning'] = ['factual_lr', 
                                          'counterfactual_lr',
                                          'temperature',
+                                         'valence_factor',
                                          'novel_value',
                                          'decay_factor']
         
@@ -229,6 +230,7 @@ class RLModel:
                                         'counterfactual_lr',
                                         'contextual_lr',
                                         'temperature',
+                                        'valence_factor',
                                         'novel_value',
                                         'decay_factor']
         
@@ -236,6 +238,7 @@ class RLModel:
                                            'counterfactual_lr',
                                            'temperature',
                                            'weighting_factor',
+                                           'valence_factor',
                                            'novel_value',
                                            'decay_factor']
 

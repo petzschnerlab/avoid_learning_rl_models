@@ -110,7 +110,7 @@ class Help:
 
     Optional Parameters<br>
         You can add optional parameters to models by adding them to the model name using a + sign<br>
-        +bias: Adds a valence bias to the model (e.g. Hybrid2012+bias), only usable with Hybrid models<br>
+        +bias: Adds a valence bias to the model (e.g. Hybrid2012+bias), useable with all models<br>
         +novel: Adds a free parameter for the novel stimulus (e.g. QLearning+novel), useable with all models<br>
         +decay: Adds a decay parameter to the model (e.g. QLearning+decay), useable with all models
     ''', 

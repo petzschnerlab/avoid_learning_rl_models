@@ -10,8 +10,13 @@ class Relative(RLToolbox, nn.Module):
     Reinforcement Learning Model: Relative (Palminteri et al., 2015)
     """
 
-    def __init__(self, factual_lr: float, counterfactual_lr: float, contextual_lr: float,
-                 temperature: float, novel_value: float, decay_factor: float):
+    def __init__(self, factual_lr: float, 
+                 counterfactual_lr: float, 
+                 contextual_lr: float,
+                 temperature: float, 
+                 valence_factor: float,
+                 novel_value: float, 
+                 decay_factor: float):
         
         
         """
@@ -27,6 +32,8 @@ class Relative(RLToolbox, nn.Module):
             Learning rate for contextual value updates.
         temperature : float
             Temperature parameter for softmax action selection.
+        valence_factor : float
+            Factor for adjusting reward valence
         novel_value : float
             Initial value assigned to novel stimuli.
         decay_factor : float
@@ -44,6 +51,7 @@ class Relative(RLToolbox, nn.Module):
         self.counterfactual_lr = counterfactual_lr
         self.contextual_lr = contextual_lr
         self.temperature = temperature
+        self.valence_factor = valence_factor
         self.novel_value = novel_value
         self.decay_factor = decay_factor
 
@@ -52,6 +60,7 @@ class Relative(RLToolbox, nn.Module):
             'counterfactual_lr': self.counterfactual_lr,
             'contextual_lr': self.contextual_lr,
             'temperature': self.temperature,
+            'valence_factor': self.valence_factor,
             'novel_value': self.novel_value,
             'decay_factor': self.decay_factor
         }
@@ -284,9 +293,7 @@ class Relative(RLToolbox, nn.Module):
         # Unpack free parameters
         self.factual_lr, self.counterfactual_lr, self.contextual_lr, self.temperature, *optionals = x
         self.unpack_optionals(optionals)
-
-        # Return negative log likelihood of all observed actions
-        return -self.fit_task(args, 'q_values', context_reward=True)
+        return -self.fit_task(args, 'q_values', transform_reward=self.optional_parameters['bias'], context_reward=True)
 
     def sim_func(self, *args):
         

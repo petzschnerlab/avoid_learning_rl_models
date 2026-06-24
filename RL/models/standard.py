@@ -11,6 +11,7 @@ class QLearning(RLToolbox, nn.Module):
                  factual_lr: float,
                  counterfactual_lr: float,
                  temperature: float,
+                 valence_factor: float,
                  novel_value: float,
                  decay_factor: float):
             
@@ -25,6 +26,8 @@ class QLearning(RLToolbox, nn.Module):
             Learning rate for counterfactual Q-value update
         temperature : float
             Temperature parameter for softmax action selection
+        valence_factor : float
+            Factor for adjusting reward valence
         novel_value : float
             Initial value assigned to novel stimuli
         decay_factor : float
@@ -37,11 +40,13 @@ class QLearning(RLToolbox, nn.Module):
         self.factual_lr = factual_lr
         self.counterfactual_lr = counterfactual_lr
         self.temperature = temperature
+        self.valence_factor = valence_factor
         self.novel_value = novel_value
         self.decay_factor = decay_factor
         self.parameters = {'factual_lr': self.factual_lr, 
                            'counterfactual_lr': self.counterfactual_lr, 
                            'temperature': self.temperature,
+                           'valence_factor': self.valence_factor,
                            'novel_value': self.novel_value,
                            'decay_factor': self.decay_factor}
 
@@ -242,7 +247,7 @@ class QLearning(RLToolbox, nn.Module):
         self.reset_datalists()
         self.factual_lr, self.counterfactual_lr, self.temperature, *optionals = x
         self.unpack_optionals(optionals)
-        return -self.fit_task(args, 'q_values')
+        return -self.fit_task(args, 'q_values', transform_reward=self.optional_parameters['bias'])
 
     def sim_func(self, *args: tuple) -> any:
 
