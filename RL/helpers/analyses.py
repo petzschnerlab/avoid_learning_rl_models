@@ -112,10 +112,14 @@ class Analyses(Plotting):
         self.plot_fits_by_run_number(fit_data)
         self.describe_fits(fit_data)
         params_of_interest = {
-            'Advantage+novel': 'weighting_factor',
-            'Relative+novel': 'contextual_lr',
-            'Hybrid2012+novel': 'mixing_factor'
+            'Advantage': 'weighting_factor',
+            'Relative': 'contextual_lr',
+            'Hybrid2012': 'mixing_factor'
         } 
+        params_of_interest = {
+            next((m for m in self.models if key in m), key): val
+            for key, val in params_of_interest.items()
+        }
         self.plot_model_parameter_correlations(fit_data, params_of_interest)
         
         self.run_fit_analyses(copy.deepcopy(fit_data))

@@ -16,6 +16,7 @@ class Advantage(RLToolbox, nn.Module):
                  counterfactual_lr: float,
                  temperature: float,
                  weighting_factor: float,
+                 valence_factor: float,
                  novel_value: float,
                  decay_factor: float):
 
@@ -33,6 +34,8 @@ class Advantage(RLToolbox, nn.Module):
             Temperature parameter for softmax action selection
         weighting_factor : float
             Weighting factor for contextual information
+        valence_factor : float
+            Factor for adjusting reward valence
         novel_value : float
             Initial value assigned to novel stimuli
         decay_factor : float
@@ -46,12 +49,14 @@ class Advantage(RLToolbox, nn.Module):
         self.counterfactual_lr = counterfactual_lr
         self.temperature = temperature
         self.weighting_factor = weighting_factor
+        self.valence_factor = valence_factor
         self.novel_value = novel_value
         self.decay_factor = decay_factor
         self.parameters = {'factual_lr': self.factual_lr, 
                            'counterfactual_lr': self.counterfactual_lr, 
                            'temperature': self.temperature,
                            'weighting_factor': self.weighting_factor,
+                           'valence_factor': self.valence_factor,
                            'novel_value': self.novel_value,
                            'decay_factor': self.decay_factor}
 
@@ -254,8 +259,7 @@ class Advantage(RLToolbox, nn.Module):
         # Unpack free parameters
         self.factual_lr, self.counterfactual_lr, self.temperature, self.weighting_factor, *optionals = x
         self.unpack_optionals(optionals)
-
-        return -self.fit_task(args, 'q_values')
+        return -self.fit_task(args, 'q_values', transform_reward=self.optional_parameters['bias'])
 
     def sim_func(self, *args: tuple) -> any:
 

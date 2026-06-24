@@ -31,6 +31,7 @@ def fixed_priors(models: list = None) -> dict:
             'factual_lr': 0.28,
             'counterfactual_lr': 0.18,
             'temperature': 0.06,
+            'valence_factor': .33, # From Geana et al., 2021:
             'decay_factor': 0.08, # From Geana et al., 2021:
             'novel_value': 0, # Custom
         },
@@ -50,6 +51,7 @@ def fixed_priors(models: list = None) -> dict:
             'counterfactual_lr': 0.15,
             'contextual_lr': 0.33,
             'temperature': 0.05,
+            'valence_factor': .33, # From Geana et al., 2021:
             'decay_factor': 0.08, # From Geana et al., 2021:
             'novel_value': 0, # Custom
         },
@@ -86,6 +88,7 @@ def fixed_priors(models: list = None) -> dict:
             'counterfactual_lr': 0.18,
             'temperature': 0.06,
             'weighting_factor': 0.5, # Custom
+            'valence_factor': .33, # From Geana et al., 2021:
             'decay_factor': 0.08, # From Geana et al., 2021:
             'novel_value': 0, # Custom
         },
