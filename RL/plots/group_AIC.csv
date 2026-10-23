@@ -1,0 +1,5 @@
+,QLearning,best_model
+chronic pain,2028.9625302497298,QLearning
+acute pain,1695.9569753482938,QLearning
+no pain,1192.8749258928,QLearning
+full,4907.794431490824,QLearning

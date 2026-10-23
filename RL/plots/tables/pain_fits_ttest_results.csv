@@ -1,0 +1,7 @@
+model,parameter,condition1,condition2,comparison,t_value,p_value,cohens_d,df,homogeneity_assumption,normality_assumption
+QLearning,factual_lr,no pain,acute pain,no pain vs acute pain,0.09165704037600826,0.9270566729599318,0.012735630445854441,213.0,met,violated
+QLearning,factual_lr,no pain,chronic pain,no pain vs chronic pain,-1.5236557059324987,0.12889506450919835,-0.19488210810118903,243.0,met,violated
+QLearning,counterfactual_lr,no pain,acute pain,no pain vs acute pain,-1.1714676987795352,0.2427195935204533,-0.16277396291334886,213.0,met,violated
+QLearning,counterfactual_lr,no pain,chronic pain,no pain vs chronic pain,-0.963602373435036,0.3362032476899499,-0.12324888173565406,243.0,met,violated
+QLearning,temperature,no pain,acute pain,no pain vs acute pain,-1.9170095800693192,0.05743180094486057,-0.29055565623745405,129.94982808951076,violated,violated
+QLearning,temperature,no pain,chronic pain,no pain vs chronic pain,0.497458995337229,0.6193152397081787,0.06362714183246966,243.0,met,violated
