@@ -982,6 +982,10 @@ class Analyses(Plotting):
         self.plot_simulations_behaviours(accuracy_model, choice_rates_model, models, accuracy.keys(), dataloader, binned_trial=True, subplot_title=['a. Learning Phase', 'b. Transfer Phase'])
         self.plot_simulations_behaviours(accuracy_model, choice_rates_model, models, accuracy.keys(), dataloader, binned_trial=True, subplot_title=['a. Learning Phase', 'b. Transfer Phase'], plot_type = 'bar')
 
+        for model in models:
+            self.plot_combined_simulations(f'{model}_combined_model_behaviours', f'{model}_model_behaviours', f'{model}-model-fits')
+            self.plot_combined_simulations(f'{model}_combined_sig_model_behaviours', f'{model}_model_behaviours', f'{model}-model-fits-significant', orientation='horizontal')
+
     def generate_simulated_data(self,
                                 models: list,
                                 parameters: dict = None,
