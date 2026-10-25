@@ -1,10 +1,12 @@
 import os
 import copy
+import warnings
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib import font_manager
 from scipy import stats
+from PIL import Image, ImageDraw, ImageFont
 
 from models.rl_models import RLModel
 
@@ -650,7 +652,7 @@ class Plotting:
             #Create horizontal line for the mean the same width
             ax.set_xticks(x_values, x_labels)
             ax.set_xlabel('')
-            y_label = parameter.replace('_', ' ').replace('lr', 'learning rate').title()
+            y_label = parameter.replace('_', ' ').title().replace('Lr', 'LR')
             y_label = f'Log {y_label}' if parameter not in ['novel_value', 'mixing_factor', 'valence_factor', 'weighting_factor'] else f'{y_label}'
             ax.set_ylabel(y_label)
             ax.spines['top'].set_visible(False)
@@ -954,7 +956,7 @@ class Plotting:
         ax[0].spines['top'].set_visible(False)
         ax[0].spines['right'].set_visible(False)
         ax[0].set_ylim([min_val-(range_val*.5), max_val+(range_val*0.1)])
-        ax[0].annotate('A', xy=(-0.1, 1.05), xytext=(0, 0), xycoords='axes fraction', textcoords='offset points', ha='right', va='top', fontweight='bold', fontsize=16)
+        ax[0].annotate('a', xy=(-0.1, 1.05), xytext=(0, 0), xycoords='axes fraction', textcoords='offset points', ha='right', va='top', fontweight='bold', fontsize=16)
 
         #Normalized values
         diffs = diffs.T
@@ -974,7 +976,7 @@ class Plotting:
         ax[1].spines['right'].set_visible(False)
         #ax[1].set_ylim([0, max_val+(range_val*0.1)])
         ax[1].axhline(0, color='dimgray', linestyle='--', linewidth=1, alpha=0.5)
-        ax[1].annotate('B', xy=(-0.1, 1.05), xytext=(0, 0), xycoords='axes fraction', textcoords='offset points', ha='right', va='top', fontweight='bold', fontsize=16)
+        ax[1].annotate('b', xy=(-0.1, 1.05), xytext=(0, 0), xycoords='axes fraction', textcoords='offset points', ha='right', va='top', fontweight='bold', fontsize=16)
 
         plt.tight_layout()
 
@@ -1091,3 +1093,79 @@ class Plotting:
             plt.close()
 
             print(corr_values)
+
+    def plot_combined_simulations(self, save_name: str, simulation_name: str, parameter_name: str, orientation: str = 'vertical') -> None:
+        
+        """
+        Combine separately saved learning and transfer plots into a single stacked image.
+
+        Parameters
+        ----------
+        save_name : str
+            The filename (no extension) to save the combined image as.
+        simulation_name : str
+            The name of the simulation plot.
+        parameter_name : str
+            The name of the parameter plot.
+        orientation : str, optional
+            The orientation of the combined image. 'vertical' for stacking vertically, 'horizontal' for side by side. Default is 'vertical'.
+
+        Returns (External)
+        ------------------
+        Image: PNG
+            A combined image of the learning and transfer plots.
+        """
+
+        #Check if simulation_name and parameter_name are valid
+        if os.path.exists(f'RL/plots/model_behaviours/{simulation_name}.png') is False:
+            warnings.warn(f"Simulation image '{simulation_name}.png' not found in 'RL/plots/model_behaviours'.")
+            return False
+        
+        if os.path.exists(f'RL/plots/fits/{parameter_name}.png') is False:
+            warnings.warn(f"Parameter image '{parameter_name}.png' not found in 'RL/plots/fits'.")
+            return False
+
+        sim_path = f'RL/plots/model_behaviours'
+        param_path = f'RL/plots/fits'
+        simulation_path = f'{sim_path}/{simulation_name}.png'
+        parameter_path = f'{param_path}/{parameter_name}.png'
+
+        # Open the images
+        simulation_img = Image.open(simulation_path)
+        parameter_img = Image.open(parameter_path)
+
+        # Resize images to have the same width (whichever is smaller)
+        if orientation == 'vertical':
+            width = min(simulation_img.width, parameter_img.width)
+            height = simulation_img.height + parameter_img.height
+            simulation_img = simulation_img.resize((width, int(simulation_img.height * width / simulation_img.width)))
+            parameter_img = parameter_img.resize((width, int(parameter_img.height * width / parameter_img.width)))
+            height = simulation_img.height + parameter_img.height
+        else:
+            width = simulation_img.width + parameter_img.width
+            height = max(simulation_img.height, parameter_img.height)
+            simulation_img = simulation_img.resize((int(simulation_img.width * height / simulation_img.height), height))
+            parameter_img = parameter_img.resize((int(parameter_img.width * height / parameter_img.height), height))
+            width = simulation_img.width + parameter_img.width
+
+        combined_img = Image.new('RGB', (width, height))
+        combined_img.paste(simulation_img, (0, 0))
+        if orientation == 'vertical':
+            combined_img.paste(parameter_img, (0, simulation_img.height))
+        else:
+            combined_img.paste(parameter_img, (simulation_img.width, 0))
+
+        draw = ImageDraw.Draw(combined_img)
+        try:
+            font = ImageFont.truetype("arialbd.ttf", 26)
+        except IOError:
+            font = ImageFont.load_default()
+
+        if orientation == 'vertical':
+            draw.text((10, simulation_img.height), 'c. Parameters', font=font, fill=(0, 0, 0))
+        else:
+            draw.text((simulation_img.width + 10, 25), 'c. Parameters', font=font, fill=(0, 0, 0))
+
+        # Save combined image
+        combined_path = f'RL/plots/model_behaviours/{save_name}.png'
+        combined_img.save(combined_path)
