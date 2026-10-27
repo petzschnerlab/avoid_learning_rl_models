@@ -36,12 +36,15 @@ if __name__ == "__main__":
     ]
 
     fixed = fixed_priors(models)
+    
+    ''' Removed this constraint for this analysis
     bounds = {'QLearning':          {'temperature': (0.1, .2)},
               'ActorCritic':        {'temperature': (0.1, .2)},
               'Relative':           {'temperature': (0.1, .2)},
               'Advantage':          {'temperature': (0.1, .2)},
               'Hybrid2012':         {'temperature': (0.1, .2)},
     }
+    '''
 
     validate_params = {'mode':                      'validation',
                        'learning_filename':         'RL/data/processed_learning_data.csv',
@@ -49,7 +52,7 @@ if __name__ == "__main__":
                        'models':                    models,
                        'random_params':             'random',
                        'fixed':                     fixed,
-                       'bounds':                    bounds,
+                       #'bounds':                    bounds, #Removed for this analysis
                        'number_of_runs':            10,
                        'multiprocessing':           True,
     }
