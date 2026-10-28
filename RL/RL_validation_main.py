@@ -58,5 +58,5 @@ if __name__ == "__main__":
     }
 
     pipeline = Pipeline(seed=1251)
-    pipeline.run(recovery='parameter', **validate_params)
+    #pipeline.run(recovery='parameter', **validate_params)
     pipeline.run(recovery='model', **validate_params, generate_data=False)
