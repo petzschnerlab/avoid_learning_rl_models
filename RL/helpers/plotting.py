@@ -287,7 +287,7 @@ class Plotting:
                             emp_accuracy_group[group]['binned_trial'] = pd.cut(emp_accuracy_group[group]['trial_number'], bins=[0, 6, 12, 18, 24], labels=['Early', 'Mid-Early', 'Mid-Late', 'Late'], include_lowest=True)
                             trials = context_accuracy.index
                             accuracies = emp_accuracy_group[group][emp_accuracy_group[group]['context_val_name'] == context].groupby('binned_trial')['accuracy'].mean()
-                            ax[0, gi].scatter(trials, accuracies, color=bi_colors[ci], marker='D', alpha=alpha)
+                            ax[0, gi].scatter(trials, accuracies, color=bi_colors[ci], marker='D', s=120, alpha=alpha)
                         else:
                             trials = emp_accuracy_group[group][emp_accuracy_group[group]['context_val_name'] == context]['trial_number']
                             accuracies = emp_accuracy_group[group][emp_accuracy_group[group]['context_val_name'] == context]['accuracy']
@@ -338,7 +338,7 @@ class Plotting:
                 ax[1, gi].errorbar(np.arange(1,choice_data_long.index.nunique()+1), choice_rates[m][group].mean(axis=0), yerr=choice_rates[m][group].sem()*stats.t.ppf(0.975, number_of_participants-1), fmt='.', color='grey')
                 
                 if dataloader is not None:
-                    ax[1, gi].scatter(np.arange(1,choice_data_long.index.nunique()+1), list(emp_choice_groups[group].values()), color='grey', marker='D', alpha=alpha)
+                    ax[1, gi].scatter(np.arange(1, choice_data_long.index.nunique()+1), list(emp_choice_groups[group].values()), color='grey', marker='D', s=120, alpha=alpha)
 
                 #Set x-ticks and labels for the choice rate plot
                 ax[1, gi].set_xticks(np.arange(1,choice_data_long.index.nunique()+1), ['HR', 'LR', 'LP', 'HP', 'N'])
