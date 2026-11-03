@@ -28,11 +28,7 @@ if __name__ == "__main__":
         +decay: Adds a decay parameter to the model (e.g. QLearning+decay), useable with all models
     '''
 
-    models = ['QLearning+novel',    #Standard + novel
-              'ActorCritic+novel',  #Standard + novel
-              'Relative+novel',     #Standard + novel
-              'Advantage+novel',    #Standard + novel
-              'Hybrid2012+novel',   #Standard - bias + novel
+    models = ['Advantage+novel',    #Standard + novel
     ]
         
     fixed = fixed_priors(models)    
@@ -40,7 +36,7 @@ if __name__ == "__main__":
                   'learning_filename':          'RL/data/processed_learning_data.csv',
                   'transfer_filename':          'RL/data/processed_transfer_data.csv',
                   'models':                     models,
-                  'random_params':              'normal',
+                  'random_params':              'random',
                   'fixed':                      fixed,
                   'number_of_runs':             10,
                   'multiprocessing':            True,

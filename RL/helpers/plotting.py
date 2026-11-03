@@ -945,8 +945,8 @@ class Plotting:
         ax[0].errorbar(np.arange(1, len(fits.index)+1), means.values, yerr=cis.values, fmt='none', ecolor='dimgray', capsize=5, elinewidth=2, alpha=1.0)
         #for i, (v, ci) in enumerate(zip(means.values, cis.values)):
         #    ax[0].text(i+1, v + ci + (range_val*0.02), str(int(np.round(v, 0))), color='darkgrey', ha='center', fontweight='bold', fontsize=14)
-        lower_bar_index = int(np.argmin(means.values))
-        lowest_bar_value = means.values.min()
+        lower_bar_index = np.where(diffs.values == diffs.values.min())[0][0]
+        lowest_bar_value = diffs.values.min()
         ax[0].add_patch(plt.Rectangle((lower_bar_index+0.6, y_bottom), .8, lowest_bar_value-y_bottom, fill=False, edgecolor='black', lw=2, alpha=.6))
 
         ax[0].set_xticks(np.arange(1, len(fits.index)+1), models)

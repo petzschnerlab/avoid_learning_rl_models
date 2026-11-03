@@ -655,10 +655,19 @@ class Analyses(Plotting):
         n, k = fits.shape
 
         #Friedman test across all models
-        chi_squared, p = scipy.stats.friedmanchisquare(*[fits[model] for model in fits.columns])
-        kendalls_w = chi_squared / (n * (k - 1)) # Effect size (Kendall's W)
-        friedman_results = pd.DataFrame({'chi_squared': [chi_squared], 'df': [k - 1], 'n': [n], 'p': [p],
-                                         'kendalls_w': [kendalls_w]}, index=[criterion])
+        if k < 2:
+            warnings.warn(f'Only one model provided; skipping {criterion} model comparison statistics.')
+            return None, None
+
+        #Friedman test across all models (requires at least three models)
+        if k >= 3:
+            chi_squared, p = scipy.stats.friedmanchisquare(*[fits[model] for model in fits.columns])
+            kendalls_w = chi_squared / (n * (k - 1)) # Effect size (Kendall's W)
+            friedman_results = pd.DataFrame({'chi_squared': [chi_squared], 'df': [k - 1], 'n': [n], 'p': [p],
+                                             'kendalls_w': [kendalls_w]}, index=[criterion])
+        else:
+            warnings.warn(f'Friedman test requires at least three models; skipping it for {criterion}. Wilcoxon comparisons are still run.')
+            friedman_results = None
 
         #Post-hoc Wilcoxon signed-rank tests versus the best model
         t_crit = scipy.stats.t.ppf(.975, n-1)
@@ -687,7 +696,8 @@ class Analyses(Plotting):
 
         #Save as csv files
         os.makedirs('RL/stats', exist_ok=True)
-        friedman_results.to_csv(f'RL/stats/group_{criterion}_friedman.csv')
+        if friedman_results is not None:
+            friedman_results.to_csv(f'RL/stats/group_{criterion}_friedman.csv')
         posthoc_results.to_csv(f'RL/stats/group_{criterion}_posthoc.csv')
 
         return friedman_results, posthoc_results
@@ -899,12 +909,13 @@ class Analyses(Plotting):
         #Statistical comparisons of model fits (Friedman + Holm-corrected Wilcoxon signed-rank tests vs best model)
         for criterion, individual, best_fit in [('AIC', individual_AIC, best_fit_AIC), ('BIC', individual_BIC, best_fit_BIC)]:
             friedman_results, posthoc_results = self.compare_model_fits(individual, best_fit, criterion)
-            if not recovery:
+            if not recovery and posthoc_results is not None:
                 print('')
                 print(f'{criterion} MODEL COMPARISON STATISTICS')
                 print('==========')
-                print(friedman_results.round(4).T)
-                print('')
+                if friedman_results is not None:
+                    print(friedman_results.round(4).T)
+                    print('')
                 print(posthoc_results.round(4))
                 print('==========')
 
