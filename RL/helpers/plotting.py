@@ -909,16 +909,15 @@ class Plotting:
         #Close figure
         plt.close()
 
-    def plot_model_comparisons(self, fits: pd.DataFrame, diffs = pd.DataFrame, save_name: str = 'model_comparisons') -> None:
-
+    def plot_model_comparisons(self, fits: pd.DataFrame, diffs: pd.DataFrame, save_name: str = 'model_comparisons') -> None:
         """
         Plots the model fits as a bar plot with colors representing the fit values.
 
         Parameters
         ----------
         fits : pd.DataFrame
-            A DataFrame where the index is the model names and the values are the fit values (e.g., BIC).
-        diffs : pd.DataFrame, optional
+            A DataFrame with rows 'mean' and 'ci' and one column per model, containing the mean fit values (e.g., BIC) and their 95% CIs.
+        diffs : pd.DataFrame
             A DataFrame where the index is the model names and the values are the differences from the best fitting model. It contains mean and 95% CIs.
         save_name : str, optional
             The name to save the plot as. Default is 'model_comparisons'.
@@ -928,12 +927,12 @@ class Plotting:
         None
         """
 
-        fits = fits.loc['full'][:-1]
-        min_val, max_val = fits.min().min(), fits.max().max()
+        fits = fits.T
+        means, cis = fits['mean'].astype(float), fits['ci'].astype(float)
+        min_val, max_val = means.min(), means.max()
         range_val = max_val - min_val
-
-        fit_diffs = fits - fits.min()
-        fit_diffs = fit_diffs[fit_diffs != 0].dropna()
+        y_bottom = min(min_val-(range_val*.5), (means-cis).min()-(range_val*0.05))
+        y_top = (means+cis).max() + (range_val*0.1)
 
         model_dict = {'QLearning': 'Q-Learning', 'ActorCritic': 'Actor Critic', 'Relative': 'Relative', 'Advantage': 'Advantage','Hybrid2012': 'Hybrid'}
         models = [model_dict.get(model.split('+')[0], model) for model in fits.index]
@@ -942,12 +941,13 @@ class Plotting:
         fig, ax = plt.subplots(1, 2, figsize=(10, 5))
 
         #Raw values
-        ax[0].bar(np.arange(1, len(fits.index)+1), fits.values, color=self.get_colors('group')[0], alpha=0.9)
-        for i, v in enumerate(fits.values):
-            ax[0].text(i+1, v + (range_val*0.02), str(int(np.round(v, 0))), color='darkgrey', ha='center', fontweight='bold', fontsize=14)
-        lower_bar_index = np.where(fits.values == fits.values.min())[0][0]
-        lowest_bar_value = fits.values.min()
-        ax[0].add_patch(plt.Rectangle((lower_bar_index+0.6, min_val-(range_val*.5)), .8, lowest_bar_value-(min_val-(range_val*.5)), fill=False, edgecolor='black', lw=2, alpha=.6))
+        ax[0].bar(np.arange(1, len(fits.index)+1), means.values, color=self.get_colors('group')[0], alpha=0.9)
+        ax[0].errorbar(np.arange(1, len(fits.index)+1), means.values, yerr=cis.values, fmt='none', ecolor='dimgray', capsize=5, elinewidth=2, alpha=1.0)
+        #for i, (v, ci) in enumerate(zip(means.values, cis.values)):
+        #    ax[0].text(i+1, v + ci + (range_val*0.02), str(int(np.round(v, 0))), color='darkgrey', ha='center', fontweight='bold', fontsize=14)
+        lower_bar_index = int(np.argmin(means.values))
+        lowest_bar_value = means.values.min()
+        ax[0].add_patch(plt.Rectangle((lower_bar_index+0.6, y_bottom), .8, lowest_bar_value-y_bottom, fill=False, edgecolor='black', lw=2, alpha=.6))
 
         ax[0].set_xticks(np.arange(1, len(fits.index)+1), models)
         plt.setp(ax[0].get_xticklabels(), rotation=45, ha='right', rotation_mode='anchor')    
@@ -955,7 +955,7 @@ class Plotting:
         ax[0].set_xlabel('')
         ax[0].spines['top'].set_visible(False)
         ax[0].spines['right'].set_visible(False)
-        ax[0].set_ylim([min_val-(range_val*.5), max_val+(range_val*0.1)])
+        ax[0].set_ylim([y_bottom, y_top])
         ax[0].annotate('a', xy=(-0.1, 1.05), xytext=(0, 0), xycoords='axes fraction', textcoords='offset points', ha='right', va='top', fontweight='bold', fontsize=16)
 
         #Normalized values
@@ -965,8 +965,6 @@ class Plotting:
         range_val = max_val - min_val
         ax[1].bar(np.arange(1, len(diffs.index)+1), diffs['mean'].values, color=self.get_colors('group')[0], alpha=0.9)
         ax[1].errorbar(np.arange(1, len(diffs.index)+1), diffs['mean'].values, yerr=diffs['ci'].values, fmt='none', ecolor='dimgray', capsize=5, elinewidth=2, alpha=1.0)
-        lower_bar_index = np.where(diffs.values == diffs.values.min())[0][0]
-        lowest_bar_value = diffs.values.min()
 
         ax[1].set_xticks(np.arange(1, len(diffs.index)+1), models)
         plt.setp(ax[1].get_xticklabels(), rotation=45, ha='right', rotation_mode='anchor')    

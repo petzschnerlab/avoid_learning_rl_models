@@ -12,6 +12,7 @@ import numpy as np
 import tqdm
 import pickle
 import scipy
+from statsmodels.stats.multitest import multipletests
 
 from models.rl_models import RLModel
 from helpers.dataloader import DataLoader
@@ -616,6 +617,80 @@ class Analyses(Plotting):
             os.remove(os.path.join('RL','fits','temp',f))
 
         return fit_data
+    
+    def compare_model_fits(self, individual_fits: pd.DataFrame, best_model: str, criterion: str = 'BIC') -> tuple:
+
+        """
+        Statistically compare model fits (e.g., BIC) across models, treating models as a within-participant factor.
+
+        Because differences in fit between models are highly skewed, non-parametric tests are used:
+        a Friedman test across all models, followed by Wilcoxon signed-rank tests comparing each model
+        to the best fitting model, Holm-corrected for multiple comparisons.
+
+        Parameters
+        ----------
+        individual_fits : pd.DataFrame
+            DataFrame with a 'participant' column and one column per model containing each participant's fit value.
+        best_model : str
+            Name of the best fitting model (lowest mean fit), used as the reference for post-hoc comparisons.
+        criterion : str, optional
+            Name of the fit criterion, used in the output file names. Default is 'BIC'.
+
+        Returns
+        -------
+        friedman_results : pd.DataFrame
+            Friedman test results.
+        posthoc_results : pd.DataFrame
+            Wilcoxon signed-rank test results for each model versus the best model.
+
+        Returns (External)
+        ------------------
+        RL/stats/group_{criterion}_friedman : csv
+            CSV file containing the Friedman test results.
+        RL/stats/group_{criterion}_posthoc : csv
+            CSV file containing the post-hoc comparison results.
+        """
+
+        fits = individual_fits.set_index('participant').astype(float)
+        n, k = fits.shape
+
+        #Friedman test across all models
+        chi_squared, p = scipy.stats.friedmanchisquare(*[fits[model] for model in fits.columns])
+        kendalls_w = chi_squared / (n * (k - 1)) # Effect size (Kendall's W)
+        friedman_results = pd.DataFrame({'chi_squared': [chi_squared], 'df': [k - 1], 'n': [n], 'p': [p],
+                                         'kendalls_w': [kendalls_w]}, index=[criterion])
+
+        #Post-hoc Wilcoxon signed-rank tests versus the best model
+        t_crit = scipy.stats.t.ppf(.975, n-1)
+        posthoc_results = []
+        for model in [m for m in fits.columns if m != best_model]:
+            differences = fits[model] - fits[best_model]
+            W, p_value = scipy.stats.wilcoxon(differences)
+
+            #Effect size (matched-pairs rank-biserial correlation; positive = reference model fits better)
+            nonzero = differences[differences != 0]
+            ranks = scipy.stats.rankdata(nonzero.abs())
+            rank_biserial = (ranks[nonzero > 0].sum() - ranks[nonzero < 0].sum()) / ranks.sum()
+
+            posthoc_results.append({'model': model,
+                                    'reference': best_model,
+                                    'median_difference': differences.median(),
+                                    'mean_difference': differences.mean(),
+                                    'ci': t_crit * differences.std() / np.sqrt(n),
+                                    'W': W,
+                                    'n': len(nonzero),
+                                    'p': p_value,
+                                    'rank_biserial': rank_biserial,
+                                    'percent_better_fit_by_reference': (differences > 0).mean() * 100})
+        posthoc_results = pd.DataFrame(posthoc_results).set_index('model')
+        posthoc_results['p_holm'] = multipletests(posthoc_results['p'], method='holm')[1]
+
+        #Save as csv files
+        os.makedirs('RL/stats', exist_ok=True)
+        friedman_results.to_csv(f'RL/stats/group_{criterion}_friedman.csv')
+        posthoc_results.to_csv(f'RL/stats/group_{criterion}_posthoc.csv')
+
+        return friedman_results, posthoc_results
 
     def compute_criterions(self, dataloader: DataLoader,
                            fit_data: dict, 
@@ -790,6 +865,9 @@ class Analyses(Plotting):
             individual_AIC = pd.concat((individual_AIC, p_AIC), ignore_index=True)
             individual_BIC = pd.concat((individual_BIC, p_BIC), ignore_index=True)
         
+        fit_AIC_values = individual_AIC.iloc[:,1:].astype(float)
+        fit_BIC_values = individual_BIC.iloc[:,1:].astype(float)
+        
         difference_AIC = individual_AIC.copy()
         difference_BIC = individual_BIC.copy()
         difference_AIC.iloc[:,1:] = difference_AIC.iloc[:,1:].sub(difference_AIC[best_fit_AIC], axis=0)
@@ -809,14 +887,30 @@ class Analyses(Plotting):
         #Turn into two row dataframe with mean and CIs 
         diff_AIC = pd.DataFrame({'mean': diff_AIC_mean, 'ci': diff_AIC_CI}).T
         diff_BIC = pd.DataFrame({'mean': diff_BIC_mean, 'ci': diff_BIC_CI}).T
+        fit_AIC = pd.DataFrame({'mean': fit_AIC_values.mean(axis=0),
+                                'ci': t_crit * fit_AIC_values.std(axis=0) / np.sqrt(n)}).T
+        fit_BIC = pd.DataFrame({'mean': fit_BIC_values.mean(axis=0),
+                                'ci': t_crit * fit_BIC_values.std(axis=0) / np.sqrt(n)}).T
 
         #Save as csv files
         diff_AIC.to_csv('RL/fits/group_AIC_differences.csv')
         diff_BIC.to_csv('RL/fits/group_BIC_differences.csv')
 
+        #Statistical comparisons of model fits (Friedman + Holm-corrected Wilcoxon signed-rank tests vs best model)
+        for criterion, individual, best_fit in [('AIC', individual_AIC, best_fit_AIC), ('BIC', individual_BIC, best_fit_BIC)]:
+            friedman_results, posthoc_results = self.compare_model_fits(individual, best_fit, criterion)
+            if not recovery:
+                print('')
+                print(f'{criterion} MODEL COMPARISON STATISTICS')
+                print('==========')
+                print(friedman_results.round(4).T)
+                print('')
+                print(posthoc_results.round(4))
+                print('==========')
+
         #Plots
-        self.plot_model_comparisons(group_AIC, diff_AIC,  'AIC_model_comparisons')
-        self.plot_model_comparisons(group_BIC, diff_BIC,  'BIC_model_comparisons')
+        self.plot_model_comparisons(fit_AIC, diff_AIC,  'AIC_model_comparisons')
+        self.plot_model_comparisons(fit_BIC, diff_BIC,  'BIC_model_comparisons')
 
     def run_fit_simulations(self, 
                             learning_filename: str,
