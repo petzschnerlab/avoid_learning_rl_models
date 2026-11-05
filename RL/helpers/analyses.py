@@ -124,6 +124,7 @@ class Analyses(Plotting):
         self.plot_model_parameter_correlations(fit_data, params_of_interest)
         
         self.run_fit_analyses(copy.deepcopy(fit_data))
+        self.run_age_correlations(copy.deepcopy(fit_data), self.learning_filename)
         
         self.run_fit_simulations(self.learning_filename, 
                             self.transfer_filename, 
@@ -368,6 +369,77 @@ class Analyses(Plotting):
             if nonsignificant_params.any():
                 self.plot_parameter_data(f'{model}-model-fits-nonsignificant', copy.copy(nonsignificant_data))
                 self.plot_parameter_data(f'{model}-model-fits-nonsignificant', copy.copy(nonsignificant_data), plot_type='bar')
+
+    def run_age_correlations(self, fit_data: dict, learning_filename: str, method: str = 'pearson', transform: bool = True) -> pd.DataFrame:
+
+        """
+        Correlate age with each fitted parameter of every model, across all participants and within each pain group.
+
+        Parameters
+        ----------
+        fit_data : dict
+            Dictionary containing the fit data for each model, with keys as model names and values as DataFrames.
+        learning_filename : str
+            Path to the learning dataset, which contains each participant's age.
+        method : str, optional
+            Correlation method, 'pearson' (default) or 'spearman'.
+        transform : bool, optional
+            Whether to log-transform skewed parameters before correlating (as in run_fit_analyses). Default is True.
+
+        Returns
+        -------
+        correlation_results : pd.DataFrame
+            Correlations between age and each parameter, for every model, across all participants ('all')
+            and within each pain group.
+
+        Returns (External)
+        ------------------
+        age_parameter_correlations : csv
+            CSV file containing the correlations for all models, parameters, and groups.
+        {model}_age_correlations : png & svg
+            Plots of age against each parameter, one figure per model.
+        """
+
+        #Get each participant's age
+        ages = pd.read_csv(learning_filename, usecols=['participant_id', 'age'])
+        ages = ages.drop_duplicates().rename(columns={'participant_id': 'participant'})
+
+        statistics = Statistics()
+        correlation_results = []
+        for model in fit_data:
+            model_data = fit_data[model].merge(ages, on='participant', how='inner')
+            parameters = list(fit_data[model].columns[4:])
+
+            #Log-transform skewed parameters (same convention as run_fit_analyses and plot_parameter_data)
+            if transform:
+                for parameter in parameters:
+                    if parameter not in ['novel_value', 'mixing_factor', 'valence_factor', 'weighting_factor']:
+                        if model_data[parameter].min() <= 0:
+                            model_data[parameter] = model_data[parameter] - model_data[parameter].min() + 1
+                        model_data[parameter] = np.log(model_data[parameter].astype(float))
+
+            #Correlate age with each parameter, across all participants and within each pain group
+            #(FDR-corrected across the parameters of each model, separately for each set of participants)
+            model_results = []
+            for group in ['all', 'no pain', 'acute pain', 'chronic pain']:
+                group_data = model_data if group == 'all' else model_data[model_data['pain_group'] == group]
+                group_results = statistics.correlation_tests(group_data, parameters, 'age', method=method)
+                group_results.insert(0, 'group', group)
+                model_results.append(group_results)
+            model_results = pd.concat(model_results, ignore_index=True)
+            model_results.insert(0, 'model', model)
+            correlation_results.append(model_results)
+
+            #Plot (statistics shown are for all participants)
+            self.plot_age_correlations(model, model_data, parameters, model_results[model_results['group'] == 'all'], transformed=transform)
+
+        correlation_results = pd.concat(correlation_results, ignore_index=True)
+
+        #Save as csv file
+        os.makedirs('RL/stats', exist_ok=True)
+        correlation_results.to_csv('RL/stats/age_parameter_correlations.csv', index=False)
+
+        return correlation_results
 
     def create_confusion_matrix(self, dataloader: DataLoader, fit_data: dict) -> pd.DataFrame:
         
@@ -654,7 +726,7 @@ class Analyses(Plotting):
         fits = individual_fits.set_index('participant').astype(float)
         n, k = fits.shape
 
-        #Friedman test across all models
+        #Statistical comparisons require at least two models
         if k < 2:
             warnings.warn(f'Only one model provided; skipping {criterion} model comparison statistics.')
             return None, None
@@ -920,9 +992,8 @@ class Analyses(Plotting):
                 print('==========')
 
         #Plots
-        if not diff_AIC.empty:
-            self.plot_model_comparisons(fit_AIC, diff_AIC,  'AIC_model_comparisons')
-            self.plot_model_comparisons(fit_BIC, diff_BIC,  'BIC_model_comparisons')
+        self.plot_model_comparisons(fit_AIC, diff_AIC,  'AIC_model_comparisons')
+        self.plot_model_comparisons(fit_BIC, diff_BIC,  'BIC_model_comparisons')
 
     def run_fit_simulations(self, 
                             learning_filename: str,

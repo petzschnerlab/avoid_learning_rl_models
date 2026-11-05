@@ -3,6 +3,7 @@ import numpy as np
 import statsmodels.formula.api as smf
 import scipy as sp
 import statsmodels.api as sm
+from statsmodels.stats.multitest import multipletests
 
 
 class Statistics:
@@ -296,3 +297,46 @@ class Statistics:
             tukey_table.at[comparison, 'cohens_d'] = cohens_d
 
         return tukey_table
+
+    def correlation_tests(self, data: pd.DataFrame, variables: list[str], covariate: str, method: str = 'spearman') -> pd.DataFrame:
+
+        """
+        Correlate each variable with a covariate (e.g., model parameters with age), with
+        Benjamini-Hochberg false discovery rate (FDR) correction across the variables.
+
+        Parameters
+        ----------
+        data : pd.DataFrame
+            The data containing the variables and the covariate, one row per participant
+        variables : list[str]
+            The columns to correlate with the covariate
+        covariate : str
+            The column to correlate each variable with
+        method : str, optional
+            'spearman' (default) or 'pearson'
+
+        Returns
+        -------
+        correlation_table : pd.DataFrame
+            One row per variable with the sample size, correlation coefficient, p-value, and FDR-corrected p-value
+        """
+
+        if method not in ['spearman', 'pearson']:
+            raise ValueError(f"Invalid correlation method {method}. Choose either 'spearman' or 'pearson'.")
+        correlation_function = sp.stats.spearmanr if method == 'spearman' else sp.stats.pearsonr
+
+        results = []
+        for variable in variables:
+            pair = data[[variable, covariate]].astype(float).dropna()
+            r, p = correlation_function(pair[variable], pair[covariate])
+            results.append({'parameter': variable,
+                            'covariate': covariate,
+                            'method': method,
+                            'n': len(pair),
+                            'r': r,
+                            'p': p})
+
+        correlation_table = pd.DataFrame(results)
+        correlation_table['p_fdr'] = multipletests(correlation_table['p'], method='fdr_bh')[1]
+
+        return correlation_table

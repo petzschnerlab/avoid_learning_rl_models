@@ -287,7 +287,7 @@ class Plotting:
                             emp_accuracy_group[group]['binned_trial'] = pd.cut(emp_accuracy_group[group]['trial_number'], bins=[0, 6, 12, 18, 24], labels=['Early', 'Mid-Early', 'Mid-Late', 'Late'], include_lowest=True)
                             trials = context_accuracy.index
                             accuracies = emp_accuracy_group[group][emp_accuracy_group[group]['context_val_name'] == context].groupby('binned_trial')['accuracy'].mean()
-                            ax[0, gi].scatter(trials, accuracies, color=bi_colors[ci], marker='D', s=120, alpha=alpha)
+                            ax[0, gi].scatter(trials, accuracies, color=bi_colors[ci], marker='D', s=80, alpha=alpha)
                         else:
                             trials = emp_accuracy_group[group][emp_accuracy_group[group]['context_val_name'] == context]['trial_number']
                             accuracies = emp_accuracy_group[group][emp_accuracy_group[group]['context_val_name'] == context]['accuracy']
@@ -338,7 +338,7 @@ class Plotting:
                 ax[1, gi].errorbar(np.arange(1,choice_data_long.index.nunique()+1), choice_rates[m][group].mean(axis=0), yerr=choice_rates[m][group].sem()*stats.t.ppf(0.975, number_of_participants-1), fmt='.', color='grey')
                 
                 if dataloader is not None:
-                    ax[1, gi].scatter(np.arange(1, choice_data_long.index.nunique()+1), list(emp_choice_groups[group].values()), color='grey', marker='D', s=120, alpha=alpha)
+                    ax[1, gi].scatter(np.arange(1, choice_data_long.index.nunique()+1), list(emp_choice_groups[group].values()), color='grey', marker='D', s=80, alpha=alpha)
 
                 #Set x-ticks and labels for the choice rate plot
                 ax[1, gi].set_xticks(np.arange(1,choice_data_long.index.nunique()+1), ['HR', 'LR', 'LP', 'HP', 'N'])
@@ -910,6 +910,7 @@ class Plotting:
         plt.close()
 
     def plot_model_comparisons(self, fits: pd.DataFrame, diffs: pd.DataFrame, save_name: str = 'model_comparisons') -> None:
+
         """
         Plots the model fits as a bar plot with colors representing the fit values.
 
@@ -917,7 +918,7 @@ class Plotting:
         ----------
         fits : pd.DataFrame
             A DataFrame with rows 'mean' and 'ci' and one column per model, containing the mean fit values (e.g., BIC) and their 95% CIs.
-        diffs : pd.DataFrame
+        diffs : pd.DataFrame, optional
             A DataFrame where the index is the model names and the values are the differences from the best fitting model. It contains mean and 95% CIs.
         save_name : str, optional
             The name to save the plot as. Default is 'model_comparisons'.
@@ -943,8 +944,8 @@ class Plotting:
         #Raw values
         ax[0].bar(np.arange(1, len(fits.index)+1), means.values, color=self.get_colors('group')[0], alpha=0.9)
         ax[0].errorbar(np.arange(1, len(fits.index)+1), means.values, yerr=cis.values, fmt='none', ecolor='dimgray', capsize=5, elinewidth=2, alpha=1.0)
-        #for i, (v, ci) in enumerate(zip(means.values, cis.values)):
-        #    ax[0].text(i+1, v + ci + (range_val*0.02), str(int(np.round(v, 0))), color='darkgrey', ha='center', fontweight='bold', fontsize=14)
+        for i, (v, ci) in enumerate(zip(means.values, cis.values)):
+            ax[0].text(i+1, v + ci + (range_val*0.02), str(int(np.round(v, 0))), color='darkgrey', ha='center', fontweight='bold', fontsize=14)
         lower_bar_index = int(np.argmin(means.values))
         lowest_bar_value = means.values.min()
         ax[0].add_patch(plt.Rectangle((lower_bar_index+0.6, y_bottom), .8, lowest_bar_value-y_bottom, fill=False, edgecolor='black', lw=2, alpha=.6))
@@ -1091,6 +1092,88 @@ class Plotting:
             plt.close()
 
             print(corr_values)
+
+    def plot_age_correlations(self, model: str, model_data: pd.DataFrame, parameters: list[str], correlation_results: pd.DataFrame, transformed: bool = True, alpha: float = 0.7) -> None:
+
+        """
+        Plots age against each fitted parameter of a model, one panel per parameter.
+
+        Parameters
+        ----------
+        model : str
+            The model name, used in the file name.
+        model_data : pd.DataFrame
+            The fit data for the model, with 'age' and 'pain_group' columns and one column per parameter.
+        parameters : list[str]
+            The parameters to plot.
+        correlation_results : pd.DataFrame
+            Output of Statistics.correlation_tests for this model (columns 'parameter', 'method', 'r', 'p_fdr').
+        transformed : bool, optional
+            Whether skewed parameters in model_data have already been log-transformed (labels them as 'Log'). Default is True.
+        alpha : float, optional
+            Transparency of the scatter points. Default is 0.7.
+
+        Returns (External)
+        ------------------
+        {model}_age_correlations : png & svg
+            Scatter plots of age against each parameter.
+        """
+
+        untransformed = ['novel_value', 'mixing_factor', 'valence_factor', 'weighting_factor'] # Same convention as plot_parameter_data
+        groups = ['no pain', 'acute pain', 'chronic pain']
+        group_colors = self.get_colors('group')
+        group_markers = ['o', '^', 's']
+
+        number_of_columns = min(len(parameters), 5)
+        number_of_rows = int(np.ceil(len(parameters) / number_of_columns))
+        fig, axs = plt.subplots(number_of_rows, number_of_columns, figsize=(5*number_of_columns, 5*number_of_rows), squeeze=False)
+
+        for pi, parameter in enumerate(parameters):
+            ax = axs[pi // number_of_columns, pi % number_of_columns]
+            x = model_data['age'].astype(float)
+            y = model_data[parameter].astype(float)
+
+            #Plot the same (possibly log-transformed) values that were correlated
+            y_label = parameter.replace('_', ' ').title().replace('Lr', 'LR')
+            if transformed and parameter not in untransformed:
+                y_label = f'Log {y_label}'
+
+            for group, group_color, group_marker in zip(groups, group_colors, group_markers):
+                in_group = model_data['pain_group'] == group
+                ax.scatter(x[in_group], y[in_group], color=group_color, marker=group_marker, alpha=alpha, s=28,
+                           edgecolor='white', linewidth=0.4, label=group.title())
+
+            #Trend line across all participants
+            slope, intercept = np.polyfit(x, y, 1)
+            x_line = np.array([x.min(), x.max()])
+            ax.plot(x_line, slope * x_line + intercept, 'k--', lw=2, alpha=0.5)
+
+            #Annotate with correlation statistics
+            result = correlation_results[correlation_results['parameter'] == parameter].iloc[0]
+            symbol = '\u03c1' if result['method'] == 'spearman' else 'r'
+            p_text = '$p_{FDR}$ < .001' if result['p_fdr'] < .001 else f"$p_{{FDR}}$ = {result['p_fdr']:.3f}".replace('0.', '.')
+            ax.set_title(f"{symbol} = {result['r']:.2f}, {p_text}", fontsize=14, loc='left')
+
+            ax.set_xlabel('Age')
+            ax.set_ylabel(y_label)
+            ax.spines['top'].set_visible(False)
+            ax.spines['right'].set_visible(False)
+
+        #Remove unused panels
+        for pi in range(len(parameters), number_of_rows * number_of_columns):
+            fig.delaxes(axs[pi // number_of_columns, pi % number_of_columns])
+
+        #Group legend
+        handles, labels = axs[0, 0].get_legend_handles_labels()
+        fig.legend(handles, labels, loc='upper center', ncol=len(groups), frameon=False, bbox_to_anchor=(0.5, 1.0), markerscale=2, fontsize=16)
+
+        plt.tight_layout(rect=(0, 0, 1, 0.88 if number_of_rows == 1 else 0.94))
+        os.makedirs('RL/plots/correlations', exist_ok=True)
+        plt.savefig(f'RL/plots/correlations/{model}_age_correlations.png')
+        plt.savefig(f'RL/plots/correlations/{model}_age_correlations.svg', format='svg')
+
+        #Close figure
+        plt.close()
 
     def plot_combined_simulations(self, save_name: str, simulation_name: str, parameter_name: str, orientation: str = 'vertical') -> None:
         
