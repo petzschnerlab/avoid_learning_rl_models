@@ -1,5 +1,5 @@
-,QLearning+novel,ActorCritic+novel,Relative+novel,Advantage+novel,Hybrid2012+novel,best_model
-chronic pain,417.0489013,379.4247492,368.7994426,365.8819169,358.3388704,Hybrid2012+novel
-acute pain,416.5266,386.5678367,386.2550793,379.6330869,362.458588,Hybrid2012+novel
-no pain,372.2021303,352.2852674,346.2752794,339.7745816,329.9578248,Hybrid2012+novel
-full,396.6675907,368.7449149,362.4920749,357.1338826,346.4275403,Hybrid2012+novel
+,Advantage+novel,best_model
+chronic pain,365.66745197890157,Advantage+novel
+acute pain,378.78815166296874,Advantage+novel
+no pain,338.91795604928825,Advantage+novel
+full,356.4894248778863,Advantage+novel
