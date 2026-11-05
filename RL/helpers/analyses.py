@@ -920,8 +920,9 @@ class Analyses(Plotting):
                 print('==========')
 
         #Plots
-        self.plot_model_comparisons(fit_AIC, diff_AIC,  'AIC_model_comparisons')
-        self.plot_model_comparisons(fit_BIC, diff_BIC,  'BIC_model_comparisons')
+        if not diff_AIC.empty:
+            self.plot_model_comparisons(fit_AIC, diff_AIC,  'AIC_model_comparisons')
+            self.plot_model_comparisons(fit_BIC, diff_BIC,  'BIC_model_comparisons')
 
     def run_fit_simulations(self, 
                             learning_filename: str,
