@@ -302,7 +302,7 @@ class Statistics:
 
         """
         Correlate each variable with a covariate (e.g., model parameters with age), with
-        Benjamini-Hochberg false discovery rate (FDR) correction across the variables.
+        Holm correction for multiple comparisons across the variables.
 
         Parameters
         ----------
@@ -318,7 +318,7 @@ class Statistics:
         Returns
         -------
         correlation_table : pd.DataFrame
-            One row per variable with the sample size, correlation coefficient, p-value, and FDR-corrected p-value
+            One row per variable with the sample size, correlation coefficient, p-value, and Holm-corrected p-value
         """
 
         if method not in ['spearman', 'pearson']:
@@ -337,6 +337,6 @@ class Statistics:
                             'p': p})
 
         correlation_table = pd.DataFrame(results)
-        correlation_table['p_fdr'] = multipletests(correlation_table['p'], method='fdr_bh')[1]
+        correlation_table['p_holm'] = multipletests(correlation_table['p'], method='holm')[1]
 
         return correlation_table

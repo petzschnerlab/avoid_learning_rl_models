@@ -57,7 +57,7 @@ if __name__ == '__main__':
     results = Analyses().run_age_correlations(fit_data, LEARNING_FILE, method=METHOD, transform=TRANSFORM)
 
     print('')
-    print('AGE CORRELATIONS (FDR-corrected across each model\'s parameters, separately for each group)')
+    print('AGE CORRELATIONS (Holm-corrected across each model\'s parameters, separately for each group)')
     print('==========')
     print(results.drop(columns=['covariate', 'method']).to_string(index=False, float_format=lambda v: f'{v:.4f}'))
     print('==========')
