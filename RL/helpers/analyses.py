@@ -296,7 +296,7 @@ class Analyses(Plotting):
         ttest_results = None
         posthoc_results = None
         for model in fit_data:
-            model_data = fit_data[model]
+            model_data = fit_data[model].copy() # Copy so the log-transforms below don't alter fit_data, which is plotted (and transformed) afterwards
             fit_parameters = model_data.columns[4:]
             for parameter in fit_parameters:
                 statistics = Statistics()
@@ -348,9 +348,19 @@ class Analyses(Plotting):
         posthoc_results.to_csv('RL/stats/pain_fits_posthoc_results.csv', index=False)
 
         for model in fit_data:
+            #Group comparisons for significance brackets: planned t-tests (no pain vs each pain group)
+            #and Tukey HSD for the remaining comparison (acute vs chronic pain)
+            comparisons = {}
+            for parameter in fit_data[model].columns[4:]:
+                planned = ttest_results[(ttest_results['model'] == model) & (ttest_results['parameter'] == parameter)]
+                comparisons[parameter] = [(row['condition1'], row['condition2'], row['p_value']) for _, row in planned.iterrows()]
+                tukey = posthoc_results[(posthoc_results['model'] == model) & (posthoc_results['parameter'] == parameter) &
+                                        (posthoc_results['factor'] == 'acute pain vs chronic pain')]
+                comparisons[parameter] += [('acute pain', 'chronic pain', float(row['p-adj'])) for _, row in tukey.iterrows()]
+
             #Plot all data
             self.plot_parameter_data(f'{model}-model-fits', copy.copy(fit_data[model]))
-            self.plot_parameter_data(f'{model}-model-fits', copy.copy(fit_data[model]), plot_type='bar')
+            self.plot_parameter_data(f'{model}-model-fits', copy.copy(fit_data[model]), plot_type='bar', comparisons=comparisons)
 
             #Plot data separately for significant and non-significant parameters
             model_results = linear_results[linear_results['model'] == model]
@@ -365,10 +375,10 @@ class Analyses(Plotting):
             
             if significant_params.any():
                 self.plot_parameter_data(f'{model}-model-fits-significant', copy.copy(significant_data))
-                self.plot_parameter_data(f'{model}-model-fits-significant', copy.copy(significant_data), plot_type='bar')
+                self.plot_parameter_data(f'{model}-model-fits-significant', copy.copy(significant_data), plot_type='bar', comparisons=comparisons)
             if nonsignificant_params.any():
                 self.plot_parameter_data(f'{model}-model-fits-nonsignificant', copy.copy(nonsignificant_data))
-                self.plot_parameter_data(f'{model}-model-fits-nonsignificant', copy.copy(nonsignificant_data), plot_type='bar')
+                self.plot_parameter_data(f'{model}-model-fits-nonsignificant', copy.copy(nonsignificant_data), plot_type='bar', comparisons=comparisons)
 
     def run_age_correlations(self, fit_data: dict, learning_filename: str, method: str = 'pearson', transform: bool = True) -> pd.DataFrame:
 
@@ -419,7 +429,7 @@ class Analyses(Plotting):
                         model_data[parameter] = np.log(model_data[parameter].astype(float))
 
             #Correlate age with each parameter, across all participants and within each pain group
-            #(FDR-corrected across the parameters of each model, separately for each set of participants)
+            #(Holm-corrected across the parameters of each model, separately for each set of participants)
             model_results = []
             for group in ['all', 'no pain', 'acute pain', 'chronic pain']:
                 group_data = model_data if group == 'all' else model_data[model_data['pain_group'] == group]

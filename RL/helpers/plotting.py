@@ -585,7 +585,7 @@ class Plotting:
         #Close figure
         plt.close()
 
-    def plot_parameter_data(self, save_name: str, model_data: pd.DataFrame = None, plot_type: str = 'raincloud') -> None:
+    def plot_parameter_data(self, save_name: str, model_data: pd.DataFrame = None, plot_type: str = 'raincloud', comparisons: dict = None) -> None:
 
         """
         Create raincloud plots of the data
@@ -594,6 +594,13 @@ class Plotting:
         ----------
         save_name : str
             The name to save the plot as
+        model_data : pd.DataFrame, optional
+            The (untransformed) fit data for the model
+        plot_type : str, optional
+            'raincloud' (default) or 'bar'
+        comparisons : dict, optional
+            Group comparisons to draw as significance brackets on bar plots, keyed by parameter:
+            {parameter: [(group1, group2, p_value), ...]}. Default is None (no brackets).
 
         Returns
         -------
@@ -646,6 +653,20 @@ class Plotting:
                 self.raincloud_plot(data=group_data, ax=ax, t_scores=t_scores)
             elif plot_type == 'bar':
                 self.group_bar_plot(data=group_data, ax=ax, t_scores=t_scores)
+
+                #Add group comparison significance brackets
+                if comparisons is not None and parameter in comparisons:
+                    positions = {group: i + 1 for i, group in enumerate(condition_values)}
+
+                    #Top of each bar's 95% CI, so the brackets clear the error bars
+                    bar_tops = {}
+                    for group, x in positions.items():
+                        scores = group_data[group_data.index == group].dropna()
+                        ci = scores.sem() * stats.t.ppf(0.975, len(scores) - 1)
+                        bar_tops[x] = scores.mean() + ci
+
+                    bracket_comparisons = [(positions[group1], positions[group2], p_value) for group1, group2, p_value in comparisons[parameter]]
+                    self.add_significance_brackets(ax, bracket_comparisons, bar_tops, show_ns=True)
             else:
                 raise ValueError(f"Invalid plot type {plot_type}. Choose either 'raincloud' or 'bar'.")
 
@@ -673,6 +694,83 @@ class Plotting:
 
         #Close figure
         plt.close()
+
+    def p_to_stars(self, p_value: float) -> str:
+
+        """
+        Convert a p-value to a significance label
+
+        Parameters
+        ----------
+        p_value : float
+            The p-value
+
+        Returns
+        -------
+        str
+            '*' (p < .05) or 'ns'
+        """
+
+        if p_value < 0.05:
+            return '*'
+        return 'ns'
+
+    def add_significance_brackets(self, ax: plt.axes, comparisons: list, bar_tops: dict, show_ns: bool = False, fontsize: int = 22) -> None:
+
+        """
+        Draw significance brackets (lines with asterisks) between bars
+
+        Parameters
+        ----------
+        ax : Axes
+            The axes to draw on (the y-limits should already be set)
+        comparisons : list
+            List of (x1, x2, p_value) tuples, where x1 and x2 are bar x positions
+        bar_tops : dict
+            The top of each bar's error bar, keyed by x position, so brackets clear the error bars
+        show_ns : bool
+            Whether to draw brackets for non-significant comparisons (labelled 'ns'), by default False
+        fontsize : int
+            Font size of the asterisks
+
+        Returns
+        -------
+        None
+        """
+
+        comparisons = [c for c in comparisons if show_ns or c[2] < 0.05]
+        if len(comparisons) == 0:
+            return
+
+        y_min, y_max = ax.get_ylim()
+        y_range = y_max - y_min
+        gap = 0.04 * y_range #space between an error bar (or a lower bracket) and a bracket
+        tick = 0.02 * y_range #height of the bracket's downward ticks
+        level_height = 0.09 * y_range #vertical space a bracket and its asterisks take up
+
+        #Draw narrower comparisons first so wider ones stack above them
+        comparisons = sorted(comparisons, key=lambda c: (abs(c[1] - c[0]), min(c[0], c[1])))
+        occupied = {x: max(top, 0) for x, top in bar_tops.items()} #height already used above each bar
+        for x1, x2, p_value in comparisons:
+            x_left, x_right = min(x1, x2), max(x1, x2)
+            spanned = [x for x in occupied if x_left <= x <= x_right]
+            y = max(occupied[x] for x in spanned) + gap + tick
+            label = self.p_to_stars(p_value)
+
+            ax.plot([x_left, x_left, x_right, x_right], [y - tick, y, y, y - tick], color='black', linewidth=1.2)
+            if label == 'ns':
+                ax.text((x_left + x_right) / 2, y + 0.01 * y_range, label, ha='center', va='bottom', fontsize=fontsize * 0.7)
+            else:
+                #Asterisks sit high in their text box, so anchor the box bottom slightly below the line
+                ax.text((x_left + x_right) / 2, y - 0.025 * y_range, label, ha='center', va='bottom', fontsize=fontsize)
+
+            for x in spanned:
+                occupied[x] = y + level_height - gap - tick
+
+        #Expand the y-axis if the brackets extend beyond it
+        top_needed = max(occupied.values()) + gap
+        if top_needed > y_max:
+            ax.set_ylim(y_min, top_needed)
 
     def raincloud_plot(self, data: pd.DataFrame, ax: plt.axes, t_scores: list[float], alpha: float=0.75) -> None:
             
@@ -1107,7 +1205,7 @@ class Plotting:
         parameters : list[str]
             The parameters to plot.
         correlation_results : pd.DataFrame
-            Output of Statistics.correlation_tests for this model (columns 'parameter', 'method', 'r', 'p_fdr').
+            Output of Statistics.correlation_tests for this model (columns 'parameter', 'method', 'r', 'p_holm').
         transformed : bool, optional
             Whether skewed parameters in model_data have already been log-transformed (labels them as 'Log'). Default is True.
         alpha : float, optional
@@ -1151,7 +1249,7 @@ class Plotting:
             #Annotate with correlation statistics
             result = correlation_results[correlation_results['parameter'] == parameter].iloc[0]
             symbol = '\u03c1' if result['method'] == 'spearman' else 'r'
-            p_text = '$p_{FDR}$ < .001' if result['p_fdr'] < .001 else f"$p_{{FDR}}$ = {result['p_fdr']:.3f}".replace('0.', '.')
+            p_text = '$p_{Holm}$ < .001' if result['p_holm'] < .001 else f"$p_{{Holm}}$ = {result['p_holm']:.3f}".replace('0.', '.')
             ax.set_title(f"{symbol} = {result['r']:.2f}, {p_text}", fontsize=14, loc='left')
 
             ax.set_xlabel('Age')
