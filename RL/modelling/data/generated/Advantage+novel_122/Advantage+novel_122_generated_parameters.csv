@@ -1,2 +1,2 @@
 factual_lr,counterfactual_lr,temperature,weighting_factor,novel_value
-0.53,0.6,0.14,0.78,0.62
+0.45,0.41,0.96,0.32,-0.22

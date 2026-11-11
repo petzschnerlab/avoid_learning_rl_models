@@ -37,7 +37,8 @@ if __name__ == "__main__":
 
     fixed = fixed_priors(models)
     
-    ''' Removed this constraint for this analysis
+    ''' 
+    Removed this constraint for this analysis
     bounds = {'QLearning':          {'temperature': (0.1, .2)},
               'ActorCritic':        {'temperature': (0.1, .2)},
               'Relative':           {'temperature': (0.1, .2)},
@@ -58,5 +59,5 @@ if __name__ == "__main__":
     }
 
     pipeline = Pipeline(seed=1251)
-    #pipeline.run(recovery='parameter', **validate_params)
-    pipeline.run(recovery='model', **validate_params, generate_data=False)
+    pipeline.run(recovery='parameter', **validate_params)
+    #pipeline.run(recovery='model', **validate_params, generate_data=False)

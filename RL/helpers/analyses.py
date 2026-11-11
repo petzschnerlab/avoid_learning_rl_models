@@ -769,6 +769,8 @@ class Analyses(Plotting):
         #Inter-participant AIC and BIC
         best_fit_AIC = group_AIC['best_model'].values[-1]
         best_fit_BIC = group_BIC['best_model'].values[-1]
+        
+        '''        
         individual_AIC = pd.DataFrame(columns=['participant']+models)
         individual_BIC = pd.DataFrame(columns=['participant']+models)
         for participant in fit_data[models[0]]['participant'].unique():
@@ -789,7 +791,29 @@ class Analyses(Plotting):
             p_BIC.columns = ['participant'] + models
             individual_AIC = pd.concat((individual_AIC, p_AIC), ignore_index=True)
             individual_BIC = pd.concat((individual_BIC, p_BIC), ignore_index=True)
-        
+        '''     
+
+        #### The following code block hacks the commented code above for parameter estimation, which has a major bug that needs fixing
+        #### This is a temporary solution to move a revision comment forward 
+        #Inter-participant AIC and BIC
+        best_fit_AIC = group_AIC['best_model'].values[-1]
+        best_fit_BIC = group_BIC['best_model'].values[-1]
+
+        # Participant names differ across models in parameter recovery (e.g. [Qlearning_01]),
+        # so sort each model's fits by name and pair them up by row position instead of by name
+        sorted_fits = {m: fit_data[m].sort_values('participant').reset_index(drop=True) for m in models}
+        individual_AIC = pd.DataFrame({
+            m: 2*(len(sorted_fits[m].columns) - 4) + 2*sorted_fits[m]['fit'].astype(float)  # TODO: Check if this is always correct
+            for m in models
+        })
+        individual_BIC = pd.DataFrame({
+            m: np.log(number_trials)*(len(sorted_fits[m].columns) - 4) + 2*sorted_fits[m]['fit'].astype(float)
+            for m in models
+        })
+        individual_AIC.insert(0, 'participant', sorted_fits[models[0]]['participant'])
+        individual_BIC.insert(0, 'participant', sorted_fits[models[0]]['participant'])
+        #### End of hack
+
         difference_AIC = individual_AIC.copy()
         difference_BIC = individual_BIC.copy()
         difference_AIC.iloc[:,1:] = difference_AIC.iloc[:,1:].sub(difference_AIC[best_fit_AIC], axis=0)

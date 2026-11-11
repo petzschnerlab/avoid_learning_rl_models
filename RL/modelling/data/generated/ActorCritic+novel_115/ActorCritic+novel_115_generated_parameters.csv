@@ -1,2 +1,2 @@
 factual_actor_lr,counterfactual_actor_lr,critic_lr,temperature,novel_value
-0.69,0.83,0.17,0.15,0.72
+0.46,0.8,0.53,0.53,-1.0

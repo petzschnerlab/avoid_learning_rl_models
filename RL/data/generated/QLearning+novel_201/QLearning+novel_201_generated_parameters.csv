@@ -1,2 +1,2 @@
 factual_lr,counterfactual_lr,temperature,novel_value
-0.02,0.21,0.17,-0.31
+0.5,0.15,0.95,-0.34
