@@ -499,7 +499,9 @@ class Plotting:
                             fit_data: dict,
                             fixed: dict = None,
                             bounds: dict = None,
-                            alpha: float = 0.75) -> None:
+                            alpha: float = 0.75,
+                            panel_size: tuple = (2.4, 2),
+                            marker_size: float = 5) -> None:
 
         """
         Plots the parameter fits for each model, comparing true parameters with fitted parameters.
@@ -516,6 +518,10 @@ class Plotting:
             A dictionary specifying the bounds for each parameter in each model. Default is None.
         alpha : float, optional
             Transparency level for the scatter plots. Default is 0.75.
+        panel_size : tuple, optional
+            Width and height (inches) of each subplot. Default is (2.4, 2).
+        marker_size : float, optional
+            Size of the scatter points. Default is 5.
 
         Returns
         -------
@@ -545,14 +551,14 @@ class Plotting:
                     fit_results[model] = combined_parameters            
 
         number_columns = np.max([len(fit_results[model].columns)-2 for model in models])
-        fig, axs = plt.subplots(len(models), number_columns, figsize=(5*number_columns, 5*len(models)), squeeze=False)
+        fig, axs = plt.subplots(len(models), number_columns, figsize=(panel_size[0]*number_columns, panel_size[1]*len(models)), squeeze=False)
         for mi, model in enumerate(models):
             model_bounds = RLModel(model, fixed=fixed, bounds=bounds).get_bounds()
             for i, parameter in enumerate(fit_results[model].columns[2:]):
                 parameter_name = parameter.replace('_', ' ').replace('lr', 'learning rate').title()
                 true = fit_results[model][fit_results[model]['fit_type']=='True'][parameter]
                 fit = fit_results[model][fit_results[model]['fit_type']=='Fit'][parameter]
-                axs[mi, i].scatter(true, fit, s=5, alpha=alpha)
+                axs[mi, i].scatter(true, fit, s=marker_size, alpha=alpha)
                 axs[mi, i].plot(model_bounds[parameter], model_bounds[parameter], '--', color='grey', alpha=alpha)
                 axs[mi, i].set_title(f"{parameter_name.title().replace('Learning Rate','LR')}", loc='left', fontsize=12)
                 if mi == len(models)-1:
@@ -579,9 +585,9 @@ class Plotting:
         plt.tight_layout()
         if not os.path.exists('RL/plots/correlations'):
             os.makedirs('RL/plots/correlations')
-        plt.savefig(f'RL/plots/correlations/recovery_correlation_plot.png')
-        plt.savefig(f'RL/plots/correlations/recovery_correlation_plot.svg', format='svg')
-
+        plt.savefig(f'RL/plots/correlations/recovery_correlation_plot.png', bbox_inches='tight')
+        plt.savefig(f'RL/plots/correlations/recovery_correlation_plot.svg', format='svg', bbox_inches='tight')
+        
         #Close figure
         plt.close()
 
