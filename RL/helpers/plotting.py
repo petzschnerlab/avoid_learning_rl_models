@@ -287,7 +287,7 @@ class Plotting:
                             emp_accuracy_group[group]['binned_trial'] = pd.cut(emp_accuracy_group[group]['trial_number'], bins=[0, 6, 12, 18, 24], labels=['Early', 'Mid-Early', 'Mid-Late', 'Late'], include_lowest=True)
                             trials = context_accuracy.index
                             accuracies = emp_accuracy_group[group][emp_accuracy_group[group]['context_val_name'] == context].groupby('binned_trial')['accuracy'].mean()
-                            ax[0, gi].scatter(trials, accuracies, color=bi_colors[ci], marker='D', s=80, alpha=alpha)
+                            ax[0, gi].scatter(trials, accuracies, color=bi_colors[ci], marker='D', alpha=alpha)
                         else:
                             trials = emp_accuracy_group[group][emp_accuracy_group[group]['context_val_name'] == context]['trial_number']
                             accuracies = emp_accuracy_group[group][emp_accuracy_group[group]['context_val_name'] == context]['accuracy']
@@ -338,7 +338,7 @@ class Plotting:
                 ax[1, gi].errorbar(np.arange(1,choice_data_long.index.nunique()+1), choice_rates[m][group].mean(axis=0), yerr=choice_rates[m][group].sem()*stats.t.ppf(0.975, number_of_participants-1), fmt='.', color='grey')
                 
                 if dataloader is not None:
-                    ax[1, gi].scatter(np.arange(1, choice_data_long.index.nunique()+1), list(emp_choice_groups[group].values()), color='grey', marker='D', s=80, alpha=alpha)
+                    ax[1, gi].scatter(np.arange(1,choice_data_long.index.nunique()+1), list(emp_choice_groups[group].values()), color='grey', marker='D', alpha=alpha)
 
                 #Set x-ticks and labels for the choice rate plot
                 ax[1, gi].set_xticks(np.arange(1,choice_data_long.index.nunique()+1), ['HR', 'LR', 'LP', 'HP', 'N'])
@@ -473,6 +473,9 @@ class Plotting:
         ax.set_xticklabels([self.rename_models(col) for col in confusion_matrix.columns])
         ax.set_yticklabels([self.rename_models(ind) for ind in confusion_matrix.index])
         cbar.set_label('Normalized BIC')
+        ax.set_xlabel('Simulated Model')
+        ax.xaxis.set_label_position('top') # matshow puts the x-axis (simulated models) at the top
+        ax.set_ylabel('Recovered Model')
         for i in range(len(confusion_matrix.index)):
             for j in range(len(confusion_matrix.columns)):
                 if confusion_matrix.iloc[i, j] == confusion_matrix.iloc[:, j].min():
@@ -499,7 +502,9 @@ class Plotting:
                             fit_data: dict,
                             fixed: dict = None,
                             bounds: dict = None,
-                            alpha: float = 0.75) -> None:
+                            alpha: float = 0.75,
+                            panel_size: tuple = (2.4, 2),
+                            marker_size: float = 5) -> None:
 
         """
         Plots the parameter fits for each model, comparing true parameters with fitted parameters.
@@ -516,6 +521,10 @@ class Plotting:
             A dictionary specifying the bounds for each parameter in each model. Default is None.
         alpha : float, optional
             Transparency level for the scatter plots. Default is 0.75.
+        panel_size : tuple, optional
+            Width and height (inches) of each subplot. Default is (2.4, 2).
+        marker_size : float, optional
+            Size of the scatter points. Default is 5.
 
         Returns
         -------
@@ -545,14 +554,14 @@ class Plotting:
                     fit_results[model] = combined_parameters            
 
         number_columns = np.max([len(fit_results[model].columns)-2 for model in models])
-        fig, axs = plt.subplots(len(models), number_columns, figsize=(5*number_columns, 5*len(models)), squeeze=False)
+        fig, axs = plt.subplots(len(models), number_columns, figsize=(panel_size[0]*number_columns, panel_size[1]*len(models)), squeeze=False)
         for mi, model in enumerate(models):
             model_bounds = RLModel(model, fixed=fixed, bounds=bounds).get_bounds()
             for i, parameter in enumerate(fit_results[model].columns[2:]):
                 parameter_name = parameter.replace('_', ' ').replace('lr', 'learning rate').title()
                 true = fit_results[model][fit_results[model]['fit_type']=='True'][parameter]
                 fit = fit_results[model][fit_results[model]['fit_type']=='Fit'][parameter]
-                axs[mi, i].scatter(true, fit, s=5, alpha=alpha)
+                axs[mi, i].scatter(true, fit, s=marker_size, alpha=alpha)
                 axs[mi, i].plot(model_bounds[parameter], model_bounds[parameter], '--', color='grey', alpha=alpha)
                 axs[mi, i].set_title(f"{parameter_name.title().replace('Learning Rate','LR')}", loc='left', fontsize=12)
                 if mi == len(models)-1:
@@ -579,13 +588,13 @@ class Plotting:
         plt.tight_layout()
         if not os.path.exists('RL/plots/correlations'):
             os.makedirs('RL/plots/correlations')
-        plt.savefig(f'RL/plots/correlations/recovery_correlation_plot.png')
-        plt.savefig(f'RL/plots/correlations/recovery_correlation_plot.svg', format='svg')
-
+        plt.savefig(f'RL/plots/correlations/recovery_correlation_plot.png', bbox_inches='tight')
+        plt.savefig(f'RL/plots/correlations/recovery_correlation_plot.svg', format='svg', bbox_inches='tight')
+        
         #Close figure
         plt.close()
 
-    def plot_parameter_data(self, save_name: str, model_data: pd.DataFrame = None, plot_type: str = 'raincloud', comparisons: dict = None) -> None:
+    def plot_parameter_data(self, save_name: str, model_data: pd.DataFrame = None, plot_type: str = 'raincloud') -> None:
 
         """
         Create raincloud plots of the data
@@ -594,13 +603,6 @@ class Plotting:
         ----------
         save_name : str
             The name to save the plot as
-        model_data : pd.DataFrame, optional
-            The (untransformed) fit data for the model
-        plot_type : str, optional
-            'raincloud' (default) or 'bar'
-        comparisons : dict, optional
-            Group comparisons to draw as significance brackets on bar plots, keyed by parameter:
-            {parameter: [(group1, group2, p_value), ...]}. Default is None (no brackets).
 
         Returns
         -------
@@ -653,20 +655,6 @@ class Plotting:
                 self.raincloud_plot(data=group_data, ax=ax, t_scores=t_scores)
             elif plot_type == 'bar':
                 self.group_bar_plot(data=group_data, ax=ax, t_scores=t_scores)
-
-                #Add group comparison significance brackets
-                if comparisons is not None and parameter in comparisons:
-                    positions = {group: i + 1 for i, group in enumerate(condition_values)}
-
-                    #Top of each bar's 95% CI, so the brackets clear the error bars
-                    bar_tops = {}
-                    for group, x in positions.items():
-                        scores = group_data[group_data.index == group].dropna()
-                        ci = scores.sem() * stats.t.ppf(0.975, len(scores) - 1)
-                        bar_tops[x] = scores.mean() + ci
-
-                    bracket_comparisons = [(positions[group1], positions[group2], p_value) for group1, group2, p_value in comparisons[parameter]]
-                    self.add_significance_brackets(ax, bracket_comparisons, bar_tops, show_ns=True)
             else:
                 raise ValueError(f"Invalid plot type {plot_type}. Choose either 'raincloud' or 'bar'.")
 
@@ -694,83 +682,6 @@ class Plotting:
 
         #Close figure
         plt.close()
-
-    def p_to_stars(self, p_value: float) -> str:
-
-        """
-        Convert a p-value to a significance label
-
-        Parameters
-        ----------
-        p_value : float
-            The p-value
-
-        Returns
-        -------
-        str
-            '*' (p < .05) or 'ns'
-        """
-
-        if p_value < 0.05:
-            return '*'
-        return 'ns'
-
-    def add_significance_brackets(self, ax: plt.axes, comparisons: list, bar_tops: dict, show_ns: bool = False, fontsize: int = 22) -> None:
-
-        """
-        Draw significance brackets (lines with asterisks) between bars
-
-        Parameters
-        ----------
-        ax : Axes
-            The axes to draw on (the y-limits should already be set)
-        comparisons : list
-            List of (x1, x2, p_value) tuples, where x1 and x2 are bar x positions
-        bar_tops : dict
-            The top of each bar's error bar, keyed by x position, so brackets clear the error bars
-        show_ns : bool
-            Whether to draw brackets for non-significant comparisons (labelled 'ns'), by default False
-        fontsize : int
-            Font size of the asterisks
-
-        Returns
-        -------
-        None
-        """
-
-        comparisons = [c for c in comparisons if show_ns or c[2] < 0.05]
-        if len(comparisons) == 0:
-            return
-
-        y_min, y_max = ax.get_ylim()
-        y_range = y_max - y_min
-        gap = 0.04 * y_range #space between an error bar (or a lower bracket) and a bracket
-        tick = 0.02 * y_range #height of the bracket's downward ticks
-        level_height = 0.09 * y_range #vertical space a bracket and its asterisks take up
-
-        #Draw narrower comparisons first so wider ones stack above them
-        comparisons = sorted(comparisons, key=lambda c: (abs(c[1] - c[0]), min(c[0], c[1])))
-        occupied = {x: max(top, 0) for x, top in bar_tops.items()} #height already used above each bar
-        for x1, x2, p_value in comparisons:
-            x_left, x_right = min(x1, x2), max(x1, x2)
-            spanned = [x for x in occupied if x_left <= x <= x_right]
-            y = max(occupied[x] for x in spanned) + gap + tick
-            label = self.p_to_stars(p_value)
-
-            ax.plot([x_left, x_left, x_right, x_right], [y - tick, y, y, y - tick], color='black', linewidth=1.2)
-            if label == 'ns':
-                ax.text((x_left + x_right) / 2, y + 0.01 * y_range, label, ha='center', va='bottom', fontsize=fontsize * 0.7)
-            else:
-                #Asterisks sit high in their text box, so anchor the box bottom slightly below the line
-                ax.text((x_left + x_right) / 2, y - 0.025 * y_range, label, ha='center', va='bottom', fontsize=fontsize)
-
-            for x in spanned:
-                occupied[x] = y + level_height - gap - tick
-
-        #Expand the y-axis if the brackets extend beyond it
-        top_needed = max(occupied.values()) + gap
-        if top_needed > y_max:
-            ax.set_ylim(y_min, top_needed)
 
     def raincloud_plot(self, data: pd.DataFrame, ax: plt.axes, t_scores: list[float], alpha: float=0.75) -> None:
             
@@ -1007,7 +918,7 @@ class Plotting:
         #Close figure
         plt.close()
 
-    def plot_model_comparisons(self, fits: pd.DataFrame, diffs: pd.DataFrame, save_name: str = 'model_comparisons') -> None:
+    def plot_model_comparisons(self, fits: pd.DataFrame, diffs = pd.DataFrame, save_name: str = 'model_comparisons') -> None:
 
         """
         Plots the model fits as a bar plot with colors representing the fit values.
@@ -1015,7 +926,7 @@ class Plotting:
         Parameters
         ----------
         fits : pd.DataFrame
-            A DataFrame with rows 'mean' and 'ci' and one column per model, containing the mean fit values (e.g., BIC) and their 95% CIs.
+            A DataFrame where the index is the model names and the values are the fit values (e.g., BIC).
         diffs : pd.DataFrame, optional
             A DataFrame where the index is the model names and the values are the differences from the best fitting model. It contains mean and 95% CIs.
         save_name : str, optional
@@ -1026,12 +937,12 @@ class Plotting:
         None
         """
 
-        fits = fits.T
-        means, cis = fits['mean'].astype(float), fits['ci'].astype(float)
-        min_val, max_val = means.min(), means.max()
+        fits = fits.loc['full'][:-1]
+        min_val, max_val = fits.min().min(), fits.max().max()
         range_val = max_val - min_val
-        y_bottom = min(min_val-(range_val*.5), (means-cis).min()-(range_val*0.05))
-        y_top = (means+cis).max() + (range_val*0.1)
+
+        fit_diffs = fits - fits.min()
+        fit_diffs = fit_diffs[fit_diffs != 0].dropna()
 
         model_dict = {'QLearning': 'Q-Learning', 'ActorCritic': 'Actor Critic', 'Relative': 'Relative', 'Advantage': 'Advantage','Hybrid2012': 'Hybrid'}
         models = [model_dict.get(model.split('+')[0], model) for model in fits.index]
@@ -1040,13 +951,12 @@ class Plotting:
         fig, ax = plt.subplots(1, 2, figsize=(10, 5))
 
         #Raw values
-        ax[0].bar(np.arange(1, len(fits.index)+1), means.values, color=self.get_colors('group')[0], alpha=0.9)
-        ax[0].errorbar(np.arange(1, len(fits.index)+1), means.values, yerr=cis.values, fmt='none', ecolor='dimgray', capsize=5, elinewidth=2, alpha=1.0)
-        for i, (v, ci) in enumerate(zip(means.values, cis.values)):
-            ax[0].text(i+1, v + ci + (range_val*0.02), str(int(np.round(v, 0))), color='darkgrey', ha='center', fontweight='bold', fontsize=14)
-        lower_bar_index = int(np.argmin(means.values))
-        lowest_bar_value = means.values.min()
-        ax[0].add_patch(plt.Rectangle((lower_bar_index+0.6, y_bottom), .8, lowest_bar_value-y_bottom, fill=False, edgecolor='black', lw=2, alpha=.6))
+        ax[0].bar(np.arange(1, len(fits.index)+1), fits.values, color=self.get_colors('group')[0], alpha=0.9)
+        for i, v in enumerate(fits.values):
+            ax[0].text(i+1, v + (range_val*0.02), str(int(np.round(v, 0))), color='darkgrey', ha='center', fontweight='bold', fontsize=14)
+        lower_bar_index = np.where(fits.values == fits.values.min())[0][0]
+        lowest_bar_value = fits.values.min()
+        ax[0].add_patch(plt.Rectangle((lower_bar_index+0.6, min_val-(range_val*.5)), .8, lowest_bar_value-(min_val-(range_val*.5)), fill=False, edgecolor='black', lw=2, alpha=.6))
 
         ax[0].set_xticks(np.arange(1, len(fits.index)+1), models)
         plt.setp(ax[0].get_xticklabels(), rotation=45, ha='right', rotation_mode='anchor')    
@@ -1054,7 +964,7 @@ class Plotting:
         ax[0].set_xlabel('')
         ax[0].spines['top'].set_visible(False)
         ax[0].spines['right'].set_visible(False)
-        ax[0].set_ylim([y_bottom, y_top])
+        ax[0].set_ylim([min_val-(range_val*.5), max_val+(range_val*0.1)])
         ax[0].annotate('a', xy=(-0.1, 1.05), xytext=(0, 0), xycoords='axes fraction', textcoords='offset points', ha='right', va='top', fontweight='bold', fontsize=16)
 
         #Normalized values
@@ -1064,6 +974,8 @@ class Plotting:
         range_val = max_val - min_val
         ax[1].bar(np.arange(1, len(diffs.index)+1), diffs['mean'].values, color=self.get_colors('group')[0], alpha=0.9)
         ax[1].errorbar(np.arange(1, len(diffs.index)+1), diffs['mean'].values, yerr=diffs['ci'].values, fmt='none', ecolor='dimgray', capsize=5, elinewidth=2, alpha=1.0)
+        lower_bar_index = np.where(diffs.values == diffs.values.min())[0][0]
+        lowest_bar_value = diffs.values.min()
 
         ax[1].set_xticks(np.arange(1, len(diffs.index)+1), models)
         plt.setp(ax[1].get_xticklabels(), rotation=45, ha='right', rotation_mode='anchor')    
@@ -1190,88 +1102,6 @@ class Plotting:
             plt.close()
 
             print(corr_values)
-
-    def plot_age_correlations(self, model: str, model_data: pd.DataFrame, parameters: list[str], correlation_results: pd.DataFrame, transformed: bool = True, alpha: float = 0.7) -> None:
-
-        """
-        Plots age against each fitted parameter of a model, one panel per parameter.
-
-        Parameters
-        ----------
-        model : str
-            The model name, used in the file name.
-        model_data : pd.DataFrame
-            The fit data for the model, with 'age' and 'pain_group' columns and one column per parameter.
-        parameters : list[str]
-            The parameters to plot.
-        correlation_results : pd.DataFrame
-            Output of Statistics.correlation_tests for this model (columns 'parameter', 'method', 'r', 'p_holm').
-        transformed : bool, optional
-            Whether skewed parameters in model_data have already been log-transformed (labels them as 'Log'). Default is True.
-        alpha : float, optional
-            Transparency of the scatter points. Default is 0.7.
-
-        Returns (External)
-        ------------------
-        {model}_age_correlations : png & svg
-            Scatter plots of age against each parameter.
-        """
-
-        untransformed = ['novel_value', 'mixing_factor', 'valence_factor', 'weighting_factor'] # Same convention as plot_parameter_data
-        groups = ['no pain', 'acute pain', 'chronic pain']
-        group_colors = self.get_colors('group')
-        group_markers = ['o', '^', 's']
-
-        number_of_columns = min(len(parameters), 5)
-        number_of_rows = int(np.ceil(len(parameters) / number_of_columns))
-        fig, axs = plt.subplots(number_of_rows, number_of_columns, figsize=(5*number_of_columns, 5*number_of_rows), squeeze=False)
-
-        for pi, parameter in enumerate(parameters):
-            ax = axs[pi // number_of_columns, pi % number_of_columns]
-            x = model_data['age'].astype(float)
-            y = model_data[parameter].astype(float)
-
-            #Plot the same (possibly log-transformed) values that were correlated
-            y_label = parameter.replace('_', ' ').title().replace('Lr', 'LR')
-            if transformed and parameter not in untransformed:
-                y_label = f'Log {y_label}'
-
-            for group, group_color, group_marker in zip(groups, group_colors, group_markers):
-                in_group = model_data['pain_group'] == group
-                ax.scatter(x[in_group], y[in_group], color=group_color, marker=group_marker, alpha=alpha, s=28,
-                           edgecolor='white', linewidth=0.4, label=group.title())
-
-            #Trend line across all participants
-            slope, intercept = np.polyfit(x, y, 1)
-            x_line = np.array([x.min(), x.max()])
-            ax.plot(x_line, slope * x_line + intercept, 'k--', lw=2, alpha=0.5)
-
-            #Annotate with correlation statistics
-            result = correlation_results[correlation_results['parameter'] == parameter].iloc[0]
-            symbol = '\u03c1' if result['method'] == 'spearman' else 'r'
-            p_text = '$p_{Holm}$ < .001' if result['p_holm'] < .001 else f"$p_{{Holm}}$ = {result['p_holm']:.3f}".replace('0.', '.')
-            ax.set_title(f"{symbol} = {result['r']:.2f}, {p_text}", fontsize=14, loc='left')
-
-            ax.set_xlabel('Age')
-            ax.set_ylabel(y_label)
-            ax.spines['top'].set_visible(False)
-            ax.spines['right'].set_visible(False)
-
-        #Remove unused panels
-        for pi in range(len(parameters), number_of_rows * number_of_columns):
-            fig.delaxes(axs[pi // number_of_columns, pi % number_of_columns])
-
-        #Group legend
-        handles, labels = axs[0, 0].get_legend_handles_labels()
-        fig.legend(handles, labels, loc='upper center', ncol=len(groups), frameon=False, bbox_to_anchor=(0.5, 1.0), markerscale=2, fontsize=16)
-
-        plt.tight_layout(rect=(0, 0, 1, 0.88 if number_of_rows == 1 else 0.94))
-        os.makedirs('RL/plots/correlations', exist_ok=True)
-        plt.savefig(f'RL/plots/correlations/{model}_age_correlations.png')
-        plt.savefig(f'RL/plots/correlations/{model}_age_correlations.svg', format='svg')
-
-        #Close figure
-        plt.close()
 
     def plot_combined_simulations(self, save_name: str, simulation_name: str, parameter_name: str, orientation: str = 'vertical') -> None:
         
