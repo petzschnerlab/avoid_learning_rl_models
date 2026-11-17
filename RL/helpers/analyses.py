@@ -380,10 +380,11 @@ class Analyses(Plotting):
                 self.plot_parameter_data(f'{model}-model-fits-nonsignificant', copy.copy(nonsignificant_data))
                 self.plot_parameter_data(f'{model}-model-fits-nonsignificant', copy.copy(nonsignificant_data), plot_type='bar', comparisons=comparisons)
 
-    def run_age_correlations(self, fit_data: dict, learning_filename: str, method: str = 'pearson', transform: bool = True) -> pd.DataFrame:
+    def run_age_correlations(self, fit_data: dict, learning_filename: str, method: str = 'pearson', transform: bool = True, controls: list[str] = ['composite_pain']) -> pd.DataFrame:
 
         """
         Correlate age with each fitted parameter of every model, across all participants and within each pain group.
+        By default these are partial correlations controlling for composite pain scores.
 
         Parameters
         ----------
@@ -395,6 +396,9 @@ class Analyses(Plotting):
             Correlation method, 'pearson' (default) or 'spearman'.
         transform : bool, optional
             Whether to log-transform skewed parameters before correlating (as in run_fit_analyses). Default is True.
+        controls : list[str], optional
+            Participant-level variables in the learning dataset to control for (partial correlations).
+            Default is ['composite_pain']. Use [] or None for simple correlations.
 
         Returns
         -------
@@ -407,11 +411,13 @@ class Analyses(Plotting):
         age_parameter_correlations : csv
             CSV file containing the correlations for all models, parameters, and groups.
         {model}_age_correlations : png & svg
-            Plots of age against each parameter, one figure per model.
+            Plots of age against each parameter, one figure per model (partial regression plots if controls are given).
         """
 
-        #Get each participant's age
-        ages = pd.read_csv(learning_filename, usecols=['participant_id', 'age'])
+        controls = controls or []
+
+        #Get each participant's age (and any control variables)
+        ages = pd.read_csv(learning_filename, usecols=['participant_id', 'age'] + controls)
         ages = ages.drop_duplicates().rename(columns={'participant_id': 'participant'})
 
         statistics = Statistics()
@@ -433,15 +439,21 @@ class Analyses(Plotting):
             model_results = []
             for group in ['all', 'no pain', 'acute pain', 'chronic pain']:
                 group_data = model_data if group == 'all' else model_data[model_data['pain_group'] == group]
-                group_results = statistics.correlation_tests(group_data, parameters, 'age', method=method)
+                group_results = statistics.correlation_tests(group_data, parameters, 'age', method=method, controls=controls)
                 group_results.insert(0, 'group', group)
                 model_results.append(group_results)
             model_results = pd.concat(model_results, ignore_index=True)
             model_results.insert(0, 'model', model)
             correlation_results.append(model_results)
 
-            #Plot (statistics shown are for all participants)
-            self.plot_age_correlations(model, model_data, parameters, model_results[model_results['group'] == 'all'], transformed=transform)
+            #Plot (statistics shown are for all participants). For partial correlations, plot the residuals
+            #of age and each parameter after regressing out the controls (partial regression plot)
+            plot_data = model_data.copy()
+            if controls:
+                plot_data['age'] = statistics.residualize(plot_data['age'], plot_data[controls])
+                for parameter in parameters:
+                    plot_data[parameter] = statistics.residualize(plot_data[parameter], plot_data[controls])
+            self.plot_age_correlations(model, plot_data, parameters, model_results[model_results['group'] == 'all'], transformed=transform, controls=controls)
 
         correlation_results = pd.concat(correlation_results, ignore_index=True)
 

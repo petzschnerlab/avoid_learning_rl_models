@@ -1,109 +1,109 @@
-model,group,parameter,covariate,method,n,r,p,p_holm
-QLearning+novel,all,factual_lr,age,pearson,239,0.024782940261720288,0.7030661015590769,1.0
-QLearning+novel,all,counterfactual_lr,age,pearson,239,-0.0369782085245921,0.5694465945596732,1.0
-QLearning+novel,all,temperature,age,pearson,239,0.03511229346278171,0.589098009417982,1.0
-QLearning+novel,all,novel_value,age,pearson,239,0.060477279847862345,0.3519018219909476,1.0
-QLearning+novel,no pain,factual_lr,age,pearson,108,-0.05339635700064395,0.5831111666378247,0.6467344229332757
-QLearning+novel,no pain,counterfactual_lr,age,pearson,108,-0.14856539402273078,0.12490661898395149,0.37471985695185445
-QLearning+novel,no pain,temperature,age,pearson,108,-0.16872443949470461,0.08088567216910066,0.3235426886764026
-QLearning+novel,no pain,novel_value,age,pearson,108,0.09592504219938724,0.3233672114666378,0.6467344229332757
-QLearning+novel,acute pain,factual_lr,age,pearson,53,-0.02953729831685781,0.8337043821423087,1.0
-QLearning+novel,acute pain,counterfactual_lr,age,pearson,53,0.18432848820023826,0.18640554332303988,0.7456221732921595
-QLearning+novel,acute pain,temperature,age,pearson,53,0.09716010940036723,0.48886835362112513,1.0
-QLearning+novel,acute pain,novel_value,age,pearson,53,-0.007022708973504611,0.9601960503098076,1.0
-QLearning+novel,chronic pain,factual_lr,age,pearson,78,0.12123090854298602,0.2903739192717773,1.0
-QLearning+novel,chronic pain,counterfactual_lr,age,pearson,78,-0.07985888118163259,0.4870435782499266,1.0
-QLearning+novel,chronic pain,temperature,age,pearson,78,0.12698792707690873,0.2678997310869192,1.0
-QLearning+novel,chronic pain,novel_value,age,pearson,78,0.05016565469271352,0.6627113852253559,1.0
-ActorCritic+novel,all,factual_actor_lr,age,pearson,239,0.07479918421484427,0.2493542797244999,0.9974171188979996
-ActorCritic+novel,all,counterfactual_actor_lr,age,pearson,239,0.030180275640892967,0.6424791226248117,1.0
-ActorCritic+novel,all,critic_lr,age,pearson,239,0.1376926776133958,0.03336514852900441,0.16682574264502203
-ActorCritic+novel,all,temperature,age,pearson,239,-0.053069843075354436,0.41409176409687876,1.0
-ActorCritic+novel,all,novel_value,age,pearson,239,0.03916073600762344,0.5468630373902926,1.0
-ActorCritic+novel,no pain,factual_actor_lr,age,pearson,108,0.07249885127365309,0.4558818279681424,1.0
-ActorCritic+novel,no pain,counterfactual_actor_lr,age,pearson,108,-0.07947789046758862,0.4135616441750864,1.0
-ActorCritic+novel,no pain,critic_lr,age,pearson,108,0.0983197526542609,0.31137808909529746,1.0
-ActorCritic+novel,no pain,temperature,age,pearson,108,-0.08810018425691514,0.36457873167730426,1.0
-ActorCritic+novel,no pain,novel_value,age,pearson,108,0.040938755331238294,0.6739932410173971,1.0
-ActorCritic+novel,acute pain,factual_actor_lr,age,pearson,53,0.09690818519662805,0.4900012947510498,1.0
-ActorCritic+novel,acute pain,counterfactual_actor_lr,age,pearson,53,0.019652255027176404,0.888918800224415,1.0
-ActorCritic+novel,acute pain,critic_lr,age,pearson,53,0.08142549232995215,0.5621741401667268,1.0
-ActorCritic+novel,acute pain,temperature,age,pearson,53,-0.1847033515907921,0.18549583736374395,0.9274791868187198
-ActorCritic+novel,acute pain,novel_value,age,pearson,53,0.013090904115683706,0.9258760539309819,1.0
-ActorCritic+novel,chronic pain,factual_actor_lr,age,pearson,78,0.04880413356879868,0.6713321062730284,1.0
-ActorCritic+novel,chronic pain,counterfactual_actor_lr,age,pearson,78,0.08801697607379087,0.4435076497658884,1.0
-ActorCritic+novel,chronic pain,critic_lr,age,pearson,78,0.21661036373783157,0.056800019212573494,0.28400009606286747
-ActorCritic+novel,chronic pain,temperature,age,pearson,78,0.00047072895706352924,0.9967364668641656,1.0
-ActorCritic+novel,chronic pain,novel_value,age,pearson,78,0.052027190904564445,0.6509954284064479,1.0
-Relative+novel,all,factual_lr,age,pearson,239,-0.02807531669315062,0.6658551806878765,0.6658551806878765
-Relative+novel,all,counterfactual_lr,age,pearson,239,-0.12793631671571024,0.048199657545523654,0.19279863018209462
-Relative+novel,all,contextual_lr,age,pearson,239,0.10174999766203673,0.11668424972412929,0.3500527491723879
-Relative+novel,all,temperature,age,pearson,239,-0.13707267499136047,0.03417595586109654,0.1708797793054827
-Relative+novel,all,novel_value,age,pearson,239,0.06725716594636647,0.30043907774035983,0.6008781554807197
-Relative+novel,no pain,factual_lr,age,pearson,108,-0.07679918089811386,0.4295270975181198,1.0
-Relative+novel,no pain,counterfactual_lr,age,pearson,108,-0.18366145665123912,0.05708301263519555,0.2283320505407822
-Relative+novel,no pain,contextual_lr,age,pearson,108,0.0023000760949608806,0.9811517466373147,1.0
-Relative+novel,no pain,temperature,age,pearson,108,-0.2127837551625257,0.02703809709867263,0.13519048549336316
-Relative+novel,no pain,novel_value,age,pearson,108,0.04442602732445914,0.6480002417122467,1.0
-Relative+novel,acute pain,factual_lr,age,pearson,53,0.020959941836382324,0.8815785581787595,1.0
-Relative+novel,acute pain,counterfactual_lr,age,pearson,53,0.01806639080833105,0.8978328504497164,1.0
-Relative+novel,acute pain,contextual_lr,age,pearson,53,0.01363232696881872,0.9228194939680989,1.0
-Relative+novel,acute pain,temperature,age,pearson,53,-0.08795355110927368,0.5311453141317316,1.0
-Relative+novel,acute pain,novel_value,age,pearson,53,-0.017693476136906153,0.8999308413695108,1.0
-Relative+novel,chronic pain,factual_lr,age,pearson,78,0.018089844066845478,0.8750883429151718,0.9080402610005744
-Relative+novel,chronic pain,counterfactual_lr,age,pearson,78,-0.1714256081339589,0.13343851769825193,0.6671925884912597
-Relative+novel,chronic pain,contextual_lr,age,pearson,78,0.1600865051501255,0.16149333271126104,0.6671925884912597
-Relative+novel,chronic pain,temperature,age,pearson,78,-0.08600828543529726,0.4540201305002872,0.9080402610005744
-Relative+novel,chronic pain,novel_value,age,pearson,78,0.12124165637348538,0.29033083668852694,0.8709925100655809
-Advantage+novel,all,factual_lr,age,pearson,239,-0.018557944802584006,0.7753229175228925,0.7753229175228925
-Advantage+novel,all,counterfactual_lr,age,pearson,239,-0.07647925325453052,0.23884933528243446,0.7165480058473034
-Advantage+novel,all,temperature,age,pearson,239,-0.1199468447861282,0.06412630770917009,0.25650523083668036
-Advantage+novel,all,weighting_factor,age,pearson,239,0.1721544003500342,0.007643300709591898,0.03821650354795949
-Advantage+novel,all,novel_value,age,pearson,239,0.06553328772549122,0.31302574285318774,0.7165480058473034
-Advantage+novel,no pain,factual_lr,age,pearson,108,-0.06588817420432166,0.4980893485643153,1.0
-Advantage+novel,no pain,counterfactual_lr,age,pearson,108,-0.12930949827719104,0.1822713657419313,0.7290854629677253
-Advantage+novel,no pain,temperature,age,pearson,108,-0.1730815332264387,0.07324014365909812,0.3662007182954906
-Advantage+novel,no pain,weighting_factor,age,pearson,108,0.05791731655695943,0.551582292268726,1.0
-Advantage+novel,no pain,novel_value,age,pearson,108,0.0412733979862836,0.6714815955425746,1.0
-Advantage+novel,acute pain,factual_lr,age,pearson,53,-0.026717636329712226,0.8493850755534526,1.0
-Advantage+novel,acute pain,counterfactual_lr,age,pearson,53,0.0849884341433702,0.5451339335343359,1.0
-Advantage+novel,acute pain,temperature,age,pearson,53,-0.18532936795361668,0.18398375091430613,0.908790670256818
-Advantage+novel,acute pain,weighting_factor,age,pearson,53,0.18625755256238727,0.1817581340513636,0.908790670256818
-Advantage+novel,acute pain,novel_value,age,pearson,53,0.09010841155688534,0.5210913557528541,1.0
-Advantage+novel,chronic pain,factual_lr,age,pearson,78,0.04901279730973089,0.6700081251754096,1.0
-Advantage+novel,chronic pain,counterfactual_lr,age,pearson,78,-0.1218520812029734,0.28789087302549266,1.0
-Advantage+novel,chronic pain,temperature,age,pearson,78,-0.03260058243505655,0.7769105780883191,1.0
-Advantage+novel,chronic pain,weighting_factor,age,pearson,78,0.19465558315407616,0.08767847444480373,0.4383923722240186
-Advantage+novel,chronic pain,novel_value,age,pearson,78,0.06518391984877879,0.5707156862517285,1.0
-Hybrid2012+novel,all,factual_lr,age,pearson,239,0.05928806460617799,0.36146930999755844,1.0
-Hybrid2012+novel,all,counterfactual_lr,age,pearson,239,-0.1493992056781495,0.020858882957474442,0.16687106365979554
-Hybrid2012+novel,all,factual_actor_lr,age,pearson,239,-0.005576934847959186,0.9316524582917711,1.0
-Hybrid2012+novel,all,counterfactual_actor_lr,age,pearson,239,-0.017031851010639993,0.7933641689390589,1.0
-Hybrid2012+novel,all,critic_lr,age,pearson,239,-0.04119878288980895,0.5261802134111346,1.0
-Hybrid2012+novel,all,temperature,age,pearson,239,-0.03944282342746774,0.5439766352683983,1.0
-Hybrid2012+novel,all,mixing_factor,age,pearson,239,-0.10641469809394224,0.10076222592013298,0.7053355814409309
-Hybrid2012+novel,all,novel_value,age,pearson,239,0.03332845683308935,0.6081705668596914,1.0
-Hybrid2012+novel,no pain,factual_lr,age,pearson,108,-0.10042624512650511,0.3010739831272201,1.0
-Hybrid2012+novel,no pain,counterfactual_lr,age,pearson,108,-0.16564359746953328,0.08666755906529361,0.6895486751841226
-Hybrid2012+novel,no pain,factual_actor_lr,age,pearson,108,0.029685345843517924,0.7603839471392888,1.0
-Hybrid2012+novel,no pain,counterfactual_actor_lr,age,pearson,108,-0.14230393941607364,0.14179334982403174,0.8507600989441905
-Hybrid2012+novel,no pain,critic_lr,age,pearson,108,-0.10064541850515997,0.3000148870608793,1.0
-Hybrid2012+novel,no pain,temperature,age,pearson,108,-0.16588987782902415,0.08619358439801532,0.6895486751841226
-Hybrid2012+novel,no pain,mixing_factor,age,pearson,108,-0.022916260561176217,0.813888595134782,1.0
-Hybrid2012+novel,no pain,novel_value,age,pearson,108,0.08886319477632584,0.360423470440983,1.0
-Hybrid2012+novel,acute pain,factual_lr,age,pearson,53,0.12699059825877748,0.364863617343889,1.0
-Hybrid2012+novel,acute pain,counterfactual_lr,age,pearson,53,0.020749178995532816,0.8827609511121645,1.0
-Hybrid2012+novel,acute pain,factual_actor_lr,age,pearson,53,0.12675791684132354,0.36575013670050793,1.0
-Hybrid2012+novel,acute pain,counterfactual_actor_lr,age,pearson,53,0.03640722817917113,0.795778566557701,1.0
-Hybrid2012+novel,acute pain,critic_lr,age,pearson,53,-0.04917960791969249,0.7265583791835829,1.0
-Hybrid2012+novel,acute pain,temperature,age,pearson,53,-0.02140942209025376,0.8790578037924254,1.0
-Hybrid2012+novel,acute pain,mixing_factor,age,pearson,53,-0.18806488667101418,0.17748021248183599,1.0
-Hybrid2012+novel,acute pain,novel_value,age,pearson,53,-0.05959632921515007,0.6716392734524369,1.0
-Hybrid2012+novel,chronic pain,factual_lr,age,pearson,78,0.179767608141749,0.11528160435162096,0.9184787472843117
-Hybrid2012+novel,chronic pain,counterfactual_lr,age,pearson,78,-0.17999741056139784,0.11480984341053896,0.9184787472843117
-Hybrid2012+novel,chronic pain,factual_actor_lr,age,pearson,78,-0.053546700175935574,0.6414941659228196,1.0
-Hybrid2012+novel,chronic pain,counterfactual_actor_lr,age,pearson,78,0.005964666957617604,0.9586653783183806,1.0
-Hybrid2012+novel,chronic pain,critic_lr,age,pearson,78,0.017331717591905597,0.8802837317863335,1.0
-Hybrid2012+novel,chronic pain,temperature,age,pearson,78,0.0471818520660932,0.6816594100399224,1.0
-Hybrid2012+novel,chronic pain,mixing_factor,age,pearson,78,-0.08101768574359638,0.48072500744696933,1.0
-Hybrid2012+novel,chronic pain,novel_value,age,pearson,78,0.03644037161787713,0.7514394911394633,1.0
+model,group,parameter,covariate,controlling_for,method,n,r,p,p_holm
+QLearning+novel,all,factual_lr,age,composite_pain,pearson,239,0.023236237982802947,0.7213672522790566,1.0
+QLearning+novel,all,counterfactual_lr,age,composite_pain,pearson,239,-0.04579577294568405,0.4819609194618403,1.0
+QLearning+novel,all,temperature,age,composite_pain,pearson,239,0.007599076659778447,0.9071633149155718,1.0
+QLearning+novel,all,novel_value,age,composite_pain,pearson,239,0.07601403147303279,0.2427243641413432,0.9708974565653729
+QLearning+novel,no pain,factual_lr,age,composite_pain,pearson,108,-0.06722432482486741,0.4914621427097564,0.6257427606671163
+QLearning+novel,no pain,counterfactual_lr,age,composite_pain,pearson,108,-0.13626385533405352,0.1616613861035571,0.4849841583106713
+QLearning+novel,no pain,temperature,age,composite_pain,pearson,108,-0.17202144555723806,0.07643839817016401,0.30575359268065605
+QLearning+novel,no pain,novel_value,age,composite_pain,pearson,108,0.09848384975355261,0.31287138033355816,0.6257427606671163
+QLearning+novel,acute pain,factual_lr,age,composite_pain,pearson,53,-0.028917147172916956,0.8387458276352767,1.0
+QLearning+novel,acute pain,counterfactual_lr,age,composite_pain,pearson,53,0.1763377984185923,0.21111502161186113,0.8444600864474445
+QLearning+novel,acute pain,temperature,age,composite_pain,pearson,53,0.08958016181881243,0.527687204905857,1.0
+QLearning+novel,acute pain,novel_value,age,composite_pain,pearson,53,0.006620639977811647,0.9628463542052709,1.0
+QLearning+novel,chronic pain,factual_lr,age,composite_pain,pearson,78,0.13071437870254896,0.2571627275226632,0.7714881825679897
+QLearning+novel,chronic pain,counterfactual_lr,age,composite_pain,pearson,78,-0.05920305237100852,0.6090314766877652,1.0
+QLearning+novel,chronic pain,temperature,age,composite_pain,pearson,78,0.19743139089402573,0.08523235565819441,0.34092942263277765
+QLearning+novel,chronic pain,novel_value,age,composite_pain,pearson,78,0.013457176805480123,0.9075257232640976,1.0
+ActorCritic+novel,all,factual_actor_lr,age,composite_pain,pearson,239,0.08515397593850725,0.19048209223217372,0.7619283689286949
+ActorCritic+novel,all,counterfactual_actor_lr,age,composite_pain,pearson,239,0.01921194250033889,0.7681052605204766,0.7796291172981306
+ActorCritic+novel,all,critic_lr,age,composite_pain,pearson,239,0.1299550627810746,0.04519931389539709,0.22599656947698543
+ActorCritic+novel,all,temperature,age,composite_pain,pearson,239,-0.07501473191028338,0.24899122072249982,0.7619283689286949
+ActorCritic+novel,all,novel_value,age,composite_pain,pearson,239,0.05599356969390062,0.3898145586490653,0.7796291172981306
+ActorCritic+novel,no pain,factual_actor_lr,age,composite_pain,pearson,108,0.07372680976224946,0.4504251447017588,1.0
+ActorCritic+novel,no pain,counterfactual_actor_lr,age,composite_pain,pearson,108,-0.07148525499991956,0.4643511806063095,1.0
+ActorCritic+novel,no pain,critic_lr,age,composite_pain,pearson,108,0.07749295650447303,0.42756095691860496,1.0
+ActorCritic+novel,no pain,temperature,age,composite_pain,pearson,108,-0.0711526382171272,0.4664375507231662,1.0
+ActorCritic+novel,no pain,novel_value,age,composite_pain,pearson,108,0.044294071412941026,0.6505326737101904,1.0
+ActorCritic+novel,acute pain,factual_actor_lr,age,composite_pain,pearson,53,0.10191318700996967,0.47219226456403723,1.0
+ActorCritic+novel,acute pain,counterfactual_actor_lr,age,composite_pain,pearson,53,0.03324637349856914,0.8150007214525821,1.0
+ActorCritic+novel,acute pain,critic_lr,age,composite_pain,pearson,53,0.08364862681088105,0.5554786773075093,1.0
+ActorCritic+novel,acute pain,temperature,age,composite_pain,pearson,53,-0.19300180686691454,0.17042113465703046,0.8521056732851523
+ActorCritic+novel,acute pain,novel_value,age,composite_pain,pearson,53,0.018050782633691854,0.898930808901895,1.0
+ActorCritic+novel,chronic pain,factual_actor_lr,age,composite_pain,pearson,78,-0.015125848608531802,0.8961192238774834,1.0
+ActorCritic+novel,chronic pain,counterfactual_actor_lr,age,composite_pain,pearson,78,0.10074367231359166,0.38332646337251225,1.0
+ActorCritic+novel,chronic pain,critic_lr,age,composite_pain,pearson,78,0.2276307391268464,0.04648071664237988,0.23240358321189938
+ActorCritic+novel,chronic pain,temperature,age,composite_pain,pearson,78,0.022526526405687457,0.8458149623490419,1.0
+ActorCritic+novel,chronic pain,novel_value,age,composite_pain,pearson,78,0.006854844760210968,0.9528184200793316,1.0
+Relative+novel,all,factual_lr,age,composite_pain,pearson,239,-0.022773703507659133,0.7266905504614118,0.7266905504614118
+Relative+novel,all,counterfactual_lr,age,composite_pain,pearson,239,-0.13725122990132585,0.03432044996861549,0.13728179987446196
+Relative+novel,all,contextual_lr,age,composite_pain,pearson,239,0.08918032011468581,0.170282264372349,0.5108467931170471
+Relative+novel,all,temperature,age,composite_pain,pearson,239,-0.14817991926902174,0.02221855447356,0.1110927723678
+Relative+novel,all,novel_value,age,composite_pain,pearson,239,0.0789867859252798,0.22473588648341347,0.5108467931170471
+Relative+novel,no pain,factual_lr,age,composite_pain,pearson,108,-0.10757970013527121,0.2700501917806244,0.8101505753418732
+Relative+novel,no pain,counterfactual_lr,age,composite_pain,pearson,108,-0.17695244891636583,0.06825370053024234,0.27301480212096935
+Relative+novel,no pain,contextual_lr,age,composite_pain,pearson,108,-0.008371688724878912,0.9317988822328759,1.0
+Relative+novel,no pain,temperature,age,composite_pain,pearson,108,-0.20689066260226077,0.032504740244204806,0.16252370122102403
+Relative+novel,no pain,novel_value,age,composite_pain,pearson,108,0.05190032029402644,0.5954787892220395,1.0
+Relative+novel,acute pain,factual_lr,age,composite_pain,pearson,53,0.00837609700980634,0.9530049921174759,1.0
+Relative+novel,acute pain,counterfactual_lr,age,composite_pain,pearson,53,0.006612508817036018,0.9628919526428787,1.0
+Relative+novel,acute pain,contextual_lr,age,composite_pain,pearson,53,0.03212924928945665,0.8211131140160004,1.0
+Relative+novel,acute pain,temperature,age,composite_pain,pearson,53,-0.10615283120086834,0.45386266648896634,1.0
+Relative+novel,acute pain,novel_value,age,composite_pain,pearson,53,-0.004514222482731988,0.9746623753414331,1.0
+Relative+novel,chronic pain,factual_lr,age,composite_pain,pearson,78,0.03221098023655608,0.7809361836959908,1.0
+Relative+novel,chronic pain,counterfactual_lr,age,composite_pain,pearson,78,-0.14522306416090466,0.20760569512344076,0.8304227804937631
+Relative+novel,chronic pain,contextual_lr,age,composite_pain,pearson,78,0.1650704176087508,0.1513847332986683,0.7569236664933415
+Relative+novel,chronic pain,temperature,age,composite_pain,pearson,78,-0.058866446346307354,0.6110722906342883,1.0
+Relative+novel,chronic pain,novel_value,age,composite_pain,pearson,78,0.07891118807956823,0.4951239177165143,1.0
+Advantage+novel,all,factual_lr,age,composite_pain,pearson,239,-0.024199683710074502,0.7103222025166602,0.7103222025166602
+Advantage+novel,all,counterfactual_lr,age,composite_pain,pearson,239,-0.08424584178255587,0.19527106294309612,0.5858131888292883
+Advantage+novel,all,temperature,age,composite_pain,pearson,239,-0.13666424055953424,0.035104616662112426,0.1404184666484497
+Advantage+novel,all,weighting_factor,age,composite_pain,pearson,239,0.16110891407343372,0.012822538953237666,0.06411269476618833
+Advantage+novel,all,novel_value,age,composite_pain,pearson,239,0.08023398929281537,0.21747797379880737,0.5858131888292883
+Advantage+novel,no pain,factual_lr,age,composite_pain,pearson,108,-0.07965256639919852,0.41475643938441603,1.0
+Advantage+novel,no pain,counterfactual_lr,age,composite_pain,pearson,108,-0.12265187523719885,0.20818315756177255,0.8327326302470902
+Advantage+novel,no pain,temperature,age,composite_pain,pearson,108,-0.1660040970727629,0.08747520210514152,0.4373760105257076
+Advantage+novel,no pain,weighting_factor,age,composite_pain,pearson,108,0.04483056866299447,0.6465825666663664,1.0
+Advantage+novel,no pain,novel_value,age,composite_pain,pearson,108,0.0469895605399765,0.6307863467442231,1.0
+Advantage+novel,acute pain,factual_lr,age,composite_pain,pearson,53,-0.03638697262861519,0.7978763109895484,1.0
+Advantage+novel,acute pain,counterfactual_lr,age,composite_pain,pearson,53,0.08053842184354286,0.5703227984787854,1.0
+Advantage+novel,acute pain,temperature,age,composite_pain,pearson,53,-0.21185987975310905,0.13161104950513924,0.6580552475256962
+Advantage+novel,acute pain,weighting_factor,age,composite_pain,pearson,53,0.20388819686614676,0.14711517786532638,0.6580552475256962
+Advantage+novel,acute pain,novel_value,age,composite_pain,pearson,53,0.10990686223120845,0.43796297521776123,1.0
+Advantage+novel,chronic pain,factual_lr,age,composite_pain,pearson,78,0.11033899327551086,0.33942338457450005,1.0
+Advantage+novel,chronic pain,counterfactual_lr,age,composite_pain,pearson,78,-0.0742188581843832,0.5211971580658288,1.0
+Advantage+novel,chronic pain,temperature,age,composite_pain,pearson,78,0.021983965348932273,0.8494845568689915,1.0
+Advantage+novel,chronic pain,weighting_factor,age,composite_pain,pearson,78,0.19340953525433213,0.09191984154918442,0.4595992077459221
+Advantage+novel,chronic pain,novel_value,age,composite_pain,pearson,78,0.017727334415420376,0.8783790498034234,1.0
+Hybrid2012+novel,all,factual_lr,age,composite_pain,pearson,239,0.05220297334294557,0.42275255277320395,1.0
+Hybrid2012+novel,all,counterfactual_lr,age,composite_pain,pearson,239,-0.1443387794654698,0.025967348753549578,0.20773879002839662
+Hybrid2012+novel,all,factual_actor_lr,age,composite_pain,pearson,239,0.012568914331807636,0.847044714143681,1.0
+Hybrid2012+novel,all,counterfactual_actor_lr,age,composite_pain,pearson,239,-0.029729344976806512,0.6481539821959461,1.0
+Hybrid2012+novel,all,critic_lr,age,composite_pain,pearson,239,-0.04936545633480298,0.4484354699355496,1.0
+Hybrid2012+novel,all,temperature,age,composite_pain,pearson,239,-0.05600538249053558,0.38971439884027587,1.0
+Hybrid2012+novel,all,mixing_factor,age,composite_pain,pearson,239,-0.09116705258225118,0.16092323882915166,1.0
+Hybrid2012+novel,all,novel_value,age,composite_pain,pearson,239,0.05037542623470286,0.43919462820268285,1.0
+Hybrid2012+novel,no pain,factual_lr,age,composite_pain,pearson,108,-0.10553800523907626,0.2792988097396013,1.0
+Hybrid2012+novel,no pain,counterfactual_lr,age,composite_pain,pearson,108,-0.15455943093130958,0.1119330495113093,0.8702959775331853
+Hybrid2012+novel,no pain,factual_actor_lr,age,composite_pain,pearson,108,0.025416170385003302,0.7949710647595523,1.0
+Hybrid2012+novel,no pain,counterfactual_actor_lr,age,composite_pain,pearson,108,-0.13686193043893766,0.15981125541577124,0.9588675324946274
+Hybrid2012+novel,no pain,critic_lr,age,composite_pain,pearson,108,-0.11234375485303977,0.2492820859676046,1.0
+Hybrid2012+novel,no pain,temperature,age,composite_pain,pearson,108,-0.1559141551162433,0.10878699719164817,0.8702959775331853
+Hybrid2012+novel,no pain,mixing_factor,age,composite_pain,pearson,108,-0.018477484294806907,0.8501682554718705,1.0
+Hybrid2012+novel,no pain,novel_value,age,composite_pain,pearson,108,0.08753226970039572,0.3699706381580024,1.0
+Hybrid2012+novel,acute pain,factual_lr,age,composite_pain,pearson,53,0.126703398626788,0.37074671542453896,1.0
+Hybrid2012+novel,acute pain,counterfactual_lr,age,composite_pain,pearson,53,0.016596757166041205,0.9070347331013475,1.0
+Hybrid2012+novel,acute pain,factual_actor_lr,age,composite_pain,pearson,53,0.12294254763031878,0.3852297161032914,1.0
+Hybrid2012+novel,acute pain,counterfactual_actor_lr,age,composite_pain,pearson,53,0.04828701430333957,0.7339043158405241,1.0
+Hybrid2012+novel,acute pain,critic_lr,age,composite_pain,pearson,53,-0.05316197918235466,0.7081793895387098,1.0
+Hybrid2012+novel,acute pain,temperature,age,composite_pain,pearson,53,-0.031357855921186284,0.8253400046549924,1.0
+Hybrid2012+novel,acute pain,mixing_factor,age,composite_pain,pearson,53,-0.1829746392858928,0.19416115750978002,1.0
+Hybrid2012+novel,acute pain,novel_value,age,composite_pain,pearson,53,-0.05160580062663299,0.7163578274055593,1.0
+Hybrid2012+novel,chronic pain,factual_lr,age,composite_pain,pearson,78,0.20013719938931038,0.08095433703771658,0.6476346963017326
+Hybrid2012+novel,chronic pain,counterfactual_lr,age,composite_pain,pearson,78,-0.14870089279452725,0.19681061161984903,1.0
+Hybrid2012+novel,chronic pain,factual_actor_lr,age,composite_pain,pearson,78,-0.08972492342712568,0.43773589534493135,1.0
+Hybrid2012+novel,chronic pain,counterfactual_actor_lr,age,composite_pain,pearson,78,-0.002225838546829271,0.9846718207953988,1.0
+Hybrid2012+novel,chronic pain,critic_lr,age,composite_pain,pearson,78,-9.757585499896217e-05,0.9993280059883803,1.0
+Hybrid2012+novel,chronic pain,temperature,age,composite_pain,pearson,78,0.08506590835801386,0.46198883275423214,1.0
+Hybrid2012+novel,chronic pain,mixing_factor,age,composite_pain,pearson,78,-0.10409522980744512,0.36761896585004894,1.0
+Hybrid2012+novel,chronic pain,novel_value,age,composite_pain,pearson,78,0.0034405011504674184,0.9763090621943292,1.0

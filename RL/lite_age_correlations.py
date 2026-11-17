@@ -1,5 +1,6 @@
 """
-Correlate age with every fitted parameter of every model from saved fits,
+Correlate age with every fitted parameter of every model from saved fits (by default partial
+correlations controlling for composite pain scores),
 without re-running any model fitting.
 
 Run from the repo root (same as RL_fit_main.py):
@@ -7,7 +8,7 @@ Run from the repo root (same as RL_fit_main.py):
 
 Inputs:
     RL/modelling/fit_data_FIT.pkl          best-run fit per participant and model
-    RL/data/processed_learning_data.csv    contains each participant's age
+    RL/data/processed_learning_data.csv    contains each participant's age and composite pain score
 
 Outputs:
     RL/stats/age_parameter_correlations.csv                 all models and parameters, overall and within each pain group
@@ -42,6 +43,7 @@ LEARNING_FILE = 'RL/data/processed_learning_data.csv'
 MODELS = None        # None = every model in the pickle, or e.g. ['Advantage+novel']
 METHOD = 'pearson'   # 'pearson' or 'spearman'
 TRANSFORM = True     # log-transform skewed parameters before correlating
+CONTROLS = ['composite_pain']  # partial correlations controlling for these; [] for simple correlations
 
 
 if __name__ == '__main__':
@@ -53,12 +55,12 @@ if __name__ == '__main__':
     fit_data = {model: fit_data[model] for model in models}
     print(f'  Models: {models}')
 
-    print('Correlating age with model parameters...')
-    results = Analyses().run_age_correlations(fit_data, LEARNING_FILE, method=METHOD, transform=TRANSFORM)
+    print(f"Correlating age with model parameters{' controlling for ' + ', '.join(CONTROLS) if CONTROLS else ''}...")
+    results = Analyses().run_age_correlations(fit_data, LEARNING_FILE, method=METHOD, transform=TRANSFORM, controls=CONTROLS)
 
     print('')
     print('AGE CORRELATIONS (Holm-corrected across each model\'s parameters, separately for each group)')
     print('==========')
-    print(results.drop(columns=['covariate', 'method']).to_string(index=False, float_format=lambda v: f'{v:.4f}'))
+    print(results.drop(columns=['covariate', 'controlling_for', 'method']).to_string(index=False, float_format=lambda v: f'{v:.4f}'))
     print('==========')
     print('Saved RL/stats/age_parameter_correlations.csv and RL/plots/correlations/*_age_correlations.png/.svg')

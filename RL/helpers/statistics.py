@@ -298,11 +298,34 @@ class Statistics:
 
         return tukey_table
 
-    def correlation_tests(self, data: pd.DataFrame, variables: list[str], covariate: str, method: str = 'spearman') -> pd.DataFrame:
+    def residualize(self, values: pd.Series, controls: pd.DataFrame) -> np.ndarray:
+
+        """
+        Remove the linear effect of one or more control variables (plus an intercept) from a variable
+
+        Parameters
+        ----------
+        values : pd.Series
+            The variable to residualize
+        controls : pd.DataFrame
+            The control variables, one column each
+
+        Returns
+        -------
+        np.ndarray
+            The residuals of values after regressing out the controls
+        """
+
+        design = np.column_stack([np.ones(len(values)), controls.to_numpy(dtype=float)])
+        coefficients, *_ = np.linalg.lstsq(design, values.to_numpy(dtype=float), rcond=None)
+        return values.to_numpy(dtype=float) - design @ coefficients
+
+    def correlation_tests(self, data: pd.DataFrame, variables: list[str], covariate: str, method: str = 'spearman', controls: list[str] = None) -> pd.DataFrame:
 
         """
         Correlate each variable with a covariate (e.g., model parameters with age), with
-        Holm correction for multiple comparisons across the variables.
+        Holm correction for multiple comparisons across the variables. If control variables are
+        given, partial correlations are computed instead, controlling for those variables.
 
         Parameters
         ----------
@@ -313,7 +336,9 @@ class Statistics:
         covariate : str
             The column to correlate each variable with
         method : str, optional
-            'spearman' (default) or 'pearson'
+            'spearman' (default) or 'pearson'. For partial Spearman correlations, all variables are ranked first.
+        controls : list[str], optional
+            Variables to control for (partial correlation), e.g. ['composite_pain']. Default is None (simple correlations).
 
         Returns
         -------
@@ -323,16 +348,30 @@ class Statistics:
 
         if method not in ['spearman', 'pearson']:
             raise ValueError(f"Invalid correlation method {method}. Choose either 'spearman' or 'pearson'.")
-        correlation_function = sp.stats.spearmanr if method == 'spearman' else sp.stats.pearsonr
+        controls = controls or []
 
         results = []
         for variable in variables:
-            pair = data[[variable, covariate]].astype(float).dropna()
-            r, p = correlation_function(pair[variable], pair[covariate])
+            subset = data[[variable, covariate] + controls].astype(float).dropna()
+            if method == 'spearman':
+                subset = subset.rank()
+
+            if controls:
+                #Partial correlation: correlate the residuals after regressing out the controls
+                x = self.residualize(subset[variable], subset[controls])
+                y = self.residualize(subset[covariate], subset[controls])
+                r = np.corrcoef(x, y)[0, 1]
+                df = len(subset) - 2 - len(controls)
+                t = r * np.sqrt(df / (1 - r**2))
+                p = 2 * sp.stats.t.sf(np.abs(t), df)
+            else:
+                r, p = sp.stats.pearsonr(subset[variable], subset[covariate])
+
             results.append({'parameter': variable,
                             'covariate': covariate,
+                            'controlling_for': ', '.join(controls) if controls else 'none',
                             'method': method,
-                            'n': len(pair),
+                            'n': len(subset),
                             'r': r,
                             'p': p})
 
